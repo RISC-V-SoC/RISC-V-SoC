@@ -1,0 +1,9 @@
+# Vim common
+*.swp
+*.lst
+
+# VUnit
+vunit_out/
+
+#ctags
+tags
