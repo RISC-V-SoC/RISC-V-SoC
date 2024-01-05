@@ -63,11 +63,6 @@ architecture behaviourial of riscv32_processor is
     signal bus_slv_to_cpz_data : riscv32_data_type;
     signal cpz_to_bus_slv_data : riscv32_data_type;
 
-    signal pipeline_to_cpz_address : natural range 0 to 31 := 0;
-    signal pipeline_to_cpz_doWrite : boolean := false;
-    signal pipeline_to_cpz_data : riscv32_data_type := (others => 'X');
-    signal cpz_to_pipeline_data : riscv32_data_type;
-
     signal bus_slv_to_regFile_address : natural range 0 to 31;
     signal bus_slv_to_regFile_doWrite : boolean;
     signal bus_slv_to_regFile_data : riscv32_data_type;
@@ -174,13 +169,9 @@ begin
         clk => clk,
         rst => rst,
         address_from_controller => bus_slv_to_cpz_address,
-        address_from_pipeline => pipeline_to_cpz_address,
         write_from_controller => bus_slv_to_cpz_doWrite,
-        write_from_pipeline => pipeline_to_cpz_doWrite,
         data_from_controller => bus_slv_to_cpz_data,
-        data_from_pipeline => pipeline_to_cpz_data,
         data_to_controller => cpz_to_bus_slv_data,
-        data_to_pipeline => cpz_to_pipeline_data,
         cpu_reset => controllerReset,
         cpu_stall => controllerStall
     );

@@ -14,16 +14,12 @@ entity riscv32_coprocessor_zero is
         rst : in std_logic;
 
         address_from_controller : in natural range 0 to 31;
-        address_from_pipeline : in natural range 0 to 31;
 
         write_from_controller : in boolean;
-        write_from_pipeline : in boolean;
 
         data_from_controller : in riscv32_pkg.riscv32_data_type;
-        data_from_pipeline : in riscv32_pkg.riscv32_data_type;
 
         data_to_controller : out riscv32_pkg.riscv32_data_type;
-        data_to_pipeline : out riscv32_pkg.riscv32_data_type;
 
         cpu_reset : out boolean;
         cpu_stall : out boolean
@@ -49,15 +45,6 @@ begin
         end if;
     end process;
 
-    pipeline_reader : process(address_from_pipeline, regFile)
-    begin
-        if address_from_pipeline > regFile'high then
-            data_to_pipeline <= (others => '0');
-        else
-            data_to_pipeline <= regFile(address_from_pipeline);
-        end if;
-    end process;
-
     regZeroControl: process(clk)
         variable regZero_buf : riscv32_pkg.riscv32_data_type := (0 => '1', others => '0');
     begin
@@ -65,10 +52,6 @@ begin
             if rst = '1' then
                 regZero_buf := (0 => '1', others => '0');
             else
-                if write_from_pipeline and address_from_pipeline = 0 then
-                    regZero_buf := data_from_pipeline;
-                end if;
-
                 if  write_from_controller and address_from_controller = 0 then
                     regZero_buf := data_from_controller;
                 end if;
