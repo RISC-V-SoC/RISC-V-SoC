@@ -13,6 +13,7 @@ package riscv32_pkg is
     constant riscv32_byte_width : natural := 2**riscv32_byte_width_log2b;
 
     subtype riscv32_address_type is std_logic_vector(2**riscv32_address_width_log2b - 1 downto  0);
+    subtype riscv32_csr_address_type is std_logic_vector(11 downto 0);
     subtype riscv32_data_type is std_logic_vector(2**riscv32_data_width_log2b -1 downto 0);
     subtype riscv32_instruction_type is std_logic_vector(2**riscv32_instruction_width_log2b - 1 downto 0);
     subtype riscv32_byte_type is std_logic_vector(2**riscv32_byte_width_log2b - 1 downto 0);
@@ -32,6 +33,15 @@ package riscv32_pkg is
     type riscv32_exec_type is (riscv32_exec_alu_imm, riscv32_exec_alu_rtype, riscv32_exec_calcReturn, riscv32_exec_lui, riscv32_exec_auipc);
     type riscv32_alu_cmd is (cmd_alu_add, cmd_alu_slt, cmd_alu_sltu, cmd_alu_and, cmd_alu_or, cmd_alu_xor, cmd_alu_sub, cmd_alu_sll, cmd_alu_srl, cmd_alu_sra);
     type riscv32_branch_cmd is (cmd_branch_eq, cmd_branch_ne, cmd_branch_lt, cmd_branch_ltu, cmd_branch_ge, cmd_branch_geu, cmd_branch_jalr);
+    type riscv32_csr_cmd is (csr_rw, csr_rs, csr_rc);
+
+    type riscv32_to_csr_type is record
+        command : riscv32_csr_cmd;
+        address : riscv32_csr_address_type;
+        data_in : riscv32_data_type;
+        do_write : boolean;
+        do_read : boolean;
+    end record;
 
     type riscv32_InstructionDecodeControlWord_type is record
         jump : boolean;
