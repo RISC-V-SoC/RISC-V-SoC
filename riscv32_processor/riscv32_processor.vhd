@@ -58,10 +58,10 @@ architecture behaviourial of riscv32_processor is
     signal memoryStall : boolean;
     signal forbidBusInteraction : boolean;
 
-    signal bus_slv_to_cpz_address : natural range 0 to 31;
-    signal bus_slv_to_cpz_doWrite : boolean;
-    signal bus_slv_to_cpz_data : riscv32_data_type;
-    signal cpz_to_bus_slv_data : riscv32_data_type;
+    signal bus_slv_to_ci_address : natural range 0 to 31;
+    signal bus_slv_to_ci_doWrite : boolean;
+    signal bus_slv_to_ci_data : riscv32_data_type;
+    signal ci_to_bus_slv_data : riscv32_data_type;
 
     signal bus_slv_to_regFile_address : natural range 0 to 31;
     signal bus_slv_to_regFile_doWrite : boolean;
@@ -112,10 +112,10 @@ begin
         rst => rst,
         mst2slv => mst2control,
         slv2mst => control2mst,
-        address_to_cpz => bus_slv_to_cpz_address,
-        write_to_cpz => bus_slv_to_cpz_doWrite,
-        data_to_cpz => bus_slv_to_cpz_data,
-        data_from_cpz => cpz_to_bus_slv_data,
+        address_to_ci => bus_slv_to_ci_address,
+        write_to_ci => bus_slv_to_ci_doWrite,
+        data_to_ci => bus_slv_to_ci_data,
+        data_from_ci => ci_to_bus_slv_data,
         address_to_regFile => bus_slv_to_regFile_address,
         write_to_regFile => bus_slv_to_regFile_doWrite,
         data_to_regFile => bus_slv_to_regFile_data,
@@ -162,16 +162,16 @@ begin
         stall => memoryStall
     );
 
-    coprocessor_zero : entity work.riscv32_coprocessor_zero
+    control_interface : entity work.riscv32_control_interface
     generic map (
         clk_period => clk_period
     ) port map (
         clk => clk,
         rst => rst,
-        address_from_controller => bus_slv_to_cpz_address,
-        write_from_controller => bus_slv_to_cpz_doWrite,
-        data_from_controller => bus_slv_to_cpz_data,
-        data_to_controller => cpz_to_bus_slv_data,
+        address_from_controller => bus_slv_to_ci_address,
+        write_from_controller => bus_slv_to_ci_doWrite,
+        data_from_controller => bus_slv_to_ci_data,
+        data_to_controller => ci_to_bus_slv_data,
         cpu_reset => controllerReset,
         cpu_stall => controllerStall
     );

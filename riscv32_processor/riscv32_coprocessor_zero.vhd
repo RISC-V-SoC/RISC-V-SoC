@@ -5,7 +5,7 @@ use IEEE.numeric_std.all;
 library work;
 use work.riscv32_pkg;
 
-entity riscv32_coprocessor_zero is
+entity riscv32_control_interface is
     generic (
         clk_period : time
     );
@@ -26,7 +26,7 @@ entity riscv32_coprocessor_zero is
     );
 end entity;
 
-architecture behaviourial of riscv32_coprocessor_zero is
+architecture behaviourial of riscv32_control_interface is
     constant clk_frequency : natural := (1 sec)/clk_period;
     signal regFile : riscv32_pkg.riscv32_data_array(0 to 1);
 begin

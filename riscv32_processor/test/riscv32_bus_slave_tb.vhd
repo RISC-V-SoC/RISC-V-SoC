@@ -24,10 +24,10 @@ architecture tb of riscv32_bus_slave_tb is
     signal mst2slv : bus_mst2slv_type := BUS_MST2SLV_IDLE;
     signal slv2mst : bus_slv2mst_type := BUS_SLV2MST_IDLE;
 
-    signal address_to_cpz : natural range 0 to 31;
-    signal write_to_cpz : boolean;
-    signal data_to_cpz :  riscv32_data_type;
-    signal data_from_cpz :  riscv32_data_type := (others => '0');
+    signal address_to_ci : natural range 0 to 31;
+    signal write_to_ci : boolean;
+    signal data_to_ci :  riscv32_data_type;
+    signal data_from_ci :  riscv32_data_type := (others => '0');
 
     signal address_to_regFile : natural range 0 to 31;
     signal write_to_regFile : boolean;
@@ -68,28 +68,28 @@ begin
             elsif run("Read works") then
                 actualAddress := X"00000014";
                 mst2slv <= bus_mst2slv_read(address => actualAddress);
-                wait until address_to_cpz = 5;
-                check(not write_to_cpz);
+                wait until address_to_ci = 5;
+                check(not write_to_ci);
                 check(not write_to_regFile);
-                data_from_cpz <= X"01234567";
+                data_from_ci <= X"01234567";
                 wait until rising_edge(clk) and read_transaction(mst2slv, slv2mst);
-                check_equal(data_from_cpz, slv2mst.readData);
+                check_equal(data_from_ci, slv2mst.readData);
             elsif run("Write works") then
                 actualAddress := X"00000070";
                 writeValue := X"AABBCCDD";
                 mst2slv <= bus_mst2slv_write(address => actualAddress, write_data => writeValue);
-                wait until address_to_cpz = 28;
-                check(write_to_cpz);
+                wait until address_to_ci = 28;
+                check(write_to_ci);
                 check(not write_to_regFile);
-                check(data_to_cpz = writeValue);
+                check(data_to_ci = writeValue);
                 wait until rising_edge(clk) and write_transaction(mst2slv, slv2mst);
-            elsif run("write_to_cpz is only active for 1 cycle") then
+            elsif run("write_to_ci is only active for 1 cycle") then
                 actualAddress := X"00000070";
                 writeValue := X"AABBCCDD";
                 mst2slv <= bus_mst2slv_write(address => actualAddress, write_data => writeValue);
-                wait until rising_edge(clk) and write_to_cpz;
+                wait until rising_edge(clk) and write_to_ci;
                 wait until rising_edge(clk);
-                check(not write_to_cpz);
+                check(not write_to_ci);
             elsif run("rst works") then
                 actualAddress := X"00000014";
                 mst2slv <= bus_mst2slv_read(address => actualAddress);
@@ -101,7 +101,7 @@ begin
                 actualAddress := X"00000084";
                 mst2slv <= bus_mst2slv_read(address => actualAddress);
                 wait until address_to_regFile = 1;
-                check(not write_to_cpz);
+                check(not write_to_ci);
                 check(not write_to_regFile);
                 data_from_regFile <= X"01234567";
                 wait until rising_edge(clk) and read_transaction(mst2slv, slv2mst);
@@ -111,7 +111,7 @@ begin
                 writeValue := X"AABBCCDD";
                 mst2slv <= bus_mst2slv_write(address => actualAddress, write_data => writeValue);
                 wait until address_to_regFile = 1;
-                check(not write_to_cpz);
+                check(not write_to_ci);
                 check(write_to_regFile);
                 check(data_to_regFile = writeValue);
                 wait until rising_edge(clk) and write_transaction(mst2slv, slv2mst);
@@ -138,10 +138,10 @@ begin
         rst => rst,
         mst2slv => mst2slv,
         slv2mst => slv2mst,
-        address_to_cpz => address_to_cpz,
-        write_to_cpz => write_to_cpz,
-        data_to_cpz => data_to_cpz,
-        data_from_cpz => data_from_cpz,
+        address_to_ci => address_to_ci,
+        write_to_ci => write_to_ci,
+        data_to_ci => data_to_ci,
+        data_from_ci => data_from_ci,
         address_to_regFile => address_to_regFile,
         write_to_regFile => write_to_regFile,
         data_to_regFile => data_to_regFile,

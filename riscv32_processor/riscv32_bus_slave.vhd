@@ -14,10 +14,10 @@ entity riscv32_bus_slave is
         mst2slv : in bus_mst2slv_type;
         slv2mst : out bus_slv2mst_type;
 
-        address_to_cpz : out natural range 0 to 31;
-        write_to_cpz : out boolean;
-        data_to_cpz : out riscv32_data_type;
-        data_from_cpz : in riscv32_data_type;
+        address_to_ci : out natural range 0 to 31;
+        write_to_ci : out boolean;
+        data_to_ci : out riscv32_data_type;
+        data_from_ci : in riscv32_data_type;
 
         address_to_regFile : out natural range 0 to 31;
         write_to_regFile : out boolean;
@@ -34,23 +34,23 @@ architecture behaviourial of riscv32_bus_slave is
     signal do_write_internal : boolean;
 begin
     recalculated_address <= unsigned(address_internal(address_internal'high downto 2));
-    data_to_cpz <= data_out_internal;
+    data_to_ci <= data_out_internal;
     data_to_regFile <= data_out_internal;
 
-    demuxer: process(recalculated_address, data_from_cpz, data_from_regFile, do_write_internal)
+    demuxer: process(recalculated_address, data_from_ci, data_from_regFile, do_write_internal)
         variable temp_address : unsigned(recalculated_address'range);
     begin
-        address_to_cpz <= to_integer(recalculated_address(4 downto 0));
+        address_to_ci <= to_integer(recalculated_address(4 downto 0));
         if recalculated_address >= 32 then
             temp_address := recalculated_address - 32;
             address_to_regFile <= to_integer(temp_address(4 downto 0));
             data_in_internal <= data_from_regFile;
             write_to_regFile <= do_write_internal;
-            write_to_cpz <= false;
+            write_to_ci <= false;
         else
             address_to_regFile <= 0;
-            data_in_internal <= data_from_cpz;
-            write_to_cpz <= do_write_internal;
+            data_in_internal <= data_from_ci;
+            write_to_ci <= do_write_internal;
             write_to_regFile <= false;
         end if;
     end process;

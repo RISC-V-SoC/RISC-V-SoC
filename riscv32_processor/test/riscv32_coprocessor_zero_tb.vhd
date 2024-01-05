@@ -9,12 +9,12 @@ context vunit_lib.vc_context;
 library src;
 use src.riscv32_pkg;
 
-entity riscv32_coprocessor_zero_tb is
+entity riscv32_control_interface_tb is
     generic (
         runner_cfg : string);
 end entity;
 
-architecture tb of riscv32_coprocessor_zero_tb is
+architecture tb of riscv32_control_interface_tb is
     constant clk_period : time := 20 ns;
     constant clk_frequency : natural := (1 sec)/clk_period;
 
@@ -117,7 +117,7 @@ begin
 
     test_runner_watchdog(runner,  1 us);
 
-    coprocessor_zero : entity src.riscv32_coprocessor_zero
+    control_interface : entity src.riscv32_control_interface
     generic map (
         clk_period => clk_period
     ) port map (
