@@ -249,7 +249,8 @@ begin
         memAddress => dataAddress,
         memByteMask => dataByteMask,
         dataToMem => dataOut,
-        dataFromMem => dataIn
+        dataFromMem => dataIn,
+        csrReadData => (others => '0')
     );
 
     memWbReg : entity work.riscv32_pipeline_memwbRegister

@@ -34,6 +34,8 @@ architecture tb of riscv32_pipeline_memory_tb is
     signal memByteMask : riscv32_byte_mask_type;
     signal dataToMem : riscv32_data_type;
     signal dataFromMem : riscv32_data_type;
+    signal csrOut : riscv32_to_csr_type;
+    signal csrReadData : riscv32_data_type;
 
     signal instruction : riscv32_instruction_type;
 begin
@@ -225,6 +227,45 @@ begin
                 wait for 1 ns;
                 check_equal(memDataRead(7 downto 0), dataFromMem(31 downto 24));
                 check_equal(memDataRead(31 downto 8), std_logic_vector'(X"ffffff"));
+            elsif run("CSR read and write with address 0xC01 creates expected csrOut") then
+                instruction <= construct_itype_instruction(opcode => riscv32_opcode_system, rs1 => 1, rd => 2, funct3 => riscv32_funct3_csrrw);
+                rs1Data <= X"01020304";
+                requestAddress <= X"fffffc01";
+                wait for 1 ns;
+                check(csrOut.command = csr_rw);
+                check_equal(csrOut.address, requestAddress(11 downto 0));
+                check_equal(csrOut.data_in, rs1Data);
+                check(csrOut.do_write);
+                check(csrOut.do_read);
+            elsif run("No CSR during memory read") then
+                instruction <= construct_itype_instruction(opcode => riscv32_opcode_load, funct3 => riscv32_funct3_lb);
+                requestAddress <= X"00004007";
+                wait for 1 ns;
+                check(not csrOut.do_write);
+                check(not csrOut.do_read);
+            elsif run("Check read only CSR") then
+                instruction <= construct_itype_instruction(opcode => riscv32_opcode_system, rs1 => 0, rd => 2, funct3 => riscv32_funct3_csrrs);
+                rs1Data <= X"01020304";
+                requestAddress <= X"fffffc01";
+                wait for 1 ns;
+                check(csrOut.command = csr_rs);
+                check(not csrOut.do_write);
+                check(csrOut.do_read);
+            elsif run("Check write only CSR") then
+                instruction <= construct_itype_instruction(opcode => riscv32_opcode_system, rs1 => 1, rd => 0, funct3 => riscv32_funct3_csrrw);
+                rs1Data <= X"01020304";
+                requestAddress <= X"fffffc01";
+                wait for 1 ns;
+                check(csrOut.command = csr_rw);
+                check(csrOut.do_write);
+                check(not csrOut.do_read);
+            elsif run("After a CSR read, the CSR data is memDataRead") then
+                instruction <= construct_itype_instruction(opcode => riscv32_opcode_system, rs1 => 0, rd => 2, funct3 => riscv32_funct3_csrrs);
+                rs1Data <= X"01020304";
+                requestAddress <= X"fffffc01";
+                csrReadData <= X"abcdef01";
+                wait for 1 ns;
+                check_equal(memDataRead, csrReadData);
             end if;
         end loop;
         wait for 5 ns;
@@ -247,7 +288,9 @@ begin
         memAddress => memAddress,
         memByteMask => memByteMask,
         dataToMem => dataToMem,
-        dataFromMem => dataFromMem
+        dataFromMem => dataFromMem,
+        csrOut => csrOut,
+        csrReadData => csrReadData
     );
 
     controlDecode : entity src.riscv32_control

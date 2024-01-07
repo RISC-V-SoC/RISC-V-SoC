@@ -25,7 +25,11 @@ entity riscv32_pipeline_memory is
         memAddress : out riscv32_address_type;
         memByteMask : out riscv32_byte_mask_type;
         dataToMem : out riscv32_data_type;
-        dataFromMem : in riscv32_data_type
+        dataFromMem : in riscv32_data_type;
+
+        -- To/from control and status registers
+        csrOut : out riscv32_to_csr_type;
+        csrReadData : in riscv32_data_type
     );
 end entity;
 
@@ -35,7 +39,7 @@ architecture behaviourial of riscv32_pipeline_memory is
     signal memWriteData : riscv32_data_type;
 begin
 
-    postProcessMemRead : process(dataFromMem, memoryControlWord, requestAddress)
+    postProcessMemRead : process(dataFromMem, memoryControlWord, requestAddress, csrReadData)
         variable memDataRead_buf : riscv32_data_type;
         variable shiftCount : natural range 0 to 31;
     begin
@@ -60,6 +64,10 @@ begin
                     memDataRead_buf(31 downto 8) := (others => '0');
                 end if;
         end case;
+
+        if memoryControlWord.csrOp then
+            memDataRead_buf := csrReadData;
+        end if;
         memDataRead <= memDataRead_buf;
     end process;
 
@@ -118,4 +126,11 @@ begin
     memByteMask <= byteMaskToMem;
     doMemWrite <= memoryControlWord.MemOp and memoryControlWord.MemOpIsWrite;
     doMemRead <= memoryControlWord.MemOp and not memoryControlWord.MemOpIsWrite;
+
+    -- csr out
+    csrOut.command <= memoryControlWord.csrCmd;
+    csrOut.address <= requestAddress(11 downto 0);
+    csrOut.data_in <= rs1Data;
+    csrOut.do_write <= memoryControlWord.csrOp and memoryControlWord.csrWrite;
+    csrOut.do_read <= memoryControlWord.csrOp and memoryControlWord.csrRead;
 end architecture;
