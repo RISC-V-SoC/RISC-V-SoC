@@ -61,6 +61,11 @@ package riscv32_pkg is
         MemOpIsWrite : boolean;
         memReadSignExtend : boolean;
         loadStoreSize : riscv32_load_store_size;
+        csrOp : boolean;
+        csrCmd : riscv32_csr_cmd;
+        csrRead : boolean;
+        csrWrite : boolean;
+        csrUseUimm : boolean;
     end record;
 
     type riscv32_WriteBackControlWord_type is record
@@ -85,7 +90,12 @@ package riscv32_pkg is
         MemOp => false,
         MemOpIsWrite => false,
         memReadSignExtend => false,
-        loadStoreSize => ls_word
+        loadStoreSize => ls_word,
+        csrOp => false,
+        csrCmd => csr_rw,
+        csrRead => false,
+        csrWrite => false,
+        csrUseUimm => false
     );
 
     constant riscv32_writeBackControlWordAllFalse : riscv32_WriteBackControlWord_type := (
@@ -144,5 +154,13 @@ package riscv32_pkg is
 
     constant riscv32_funct7_ecall : riscv32_funct7_type := 16#0#;
     constant riscv32_funct7_ebreak : riscv32_funct7_type := 16#1#;
+
+    -- Zicsr extension
+    constant riscv32_funct3_csrrw : riscv32_funct3_type := 16#1#;
+    constant riscv32_funct3_csrrs : riscv32_funct3_type := 16#2#;
+    constant riscv32_funct3_csrrc : riscv32_funct3_type := 16#3#;
+    constant riscv32_funct3_csrrwi : riscv32_funct3_type := 16#5#;
+    constant riscv32_funct3_csrrsi : riscv32_funct3_type := 16#6#;
+    constant riscv32_funct3_csrrci : riscv32_funct3_type := 16#7#;
 
 end package;

@@ -36,6 +36,10 @@ begin
         variable invalid_branch : boolean := false;
         variable invalid_store : boolean := false;
         variable invalid_load : boolean := false;
+        variable invalid_csr : boolean := false;
+
+        variable rdIsZero : boolean := false;
+        variable rs1IsZero : boolean := false;
     begin
         instructionDecodeControlWord_buf := riscv32_instructionDecodeControlWordAllFalse;
         executeControlWord_buf := riscv32_executeControlWordAllFalse;
@@ -50,6 +54,10 @@ begin
         invalid_branch := false;
         invalid_store := false;
         invalid_load := false;
+        invalid_csr := false;
+
+        rdIsZero := instruction(11 downto 7) = "00000";
+        rs1IsZero := instruction(19 downto 15) = "00000";
 
         case funct3 is
             when riscv32_funct3_add_sub =>
@@ -138,6 +146,32 @@ begin
                 invalid_load := true;
         end case;
 
+        case funct3 is
+            when riscv32_funct3_csrrw | riscv32_funct3_csrrwi =>
+                memoryControlWord_buf.csrCmd := csr_rw;
+                memoryControlWord_buf.csrRead := not rdIsZero;
+                memoryControlWord_buf.csrWrite := true;
+            when riscv32_funct3_csrrs | riscv32_funct3_csrrsi =>
+                memoryControlWord_buf.csrCmd := csr_rs;
+                memoryControlWord_buf.csrRead := true;
+                memoryControlWord_buf.csrWrite := not rs1IsZero;
+            when riscv32_funct3_csrrc | riscv32_funct3_csrrci =>
+                memoryControlWord_buf.csrCmd := csr_rc;
+                memoryControlWord_buf.csrRead := true;
+                memoryControlWord_buf.csrWrite := not rs1IsZero;
+            when others =>
+                invalid_csr := true;
+        end case;
+
+        case funct3 is
+            when riscv32_funct3_csrrw | riscv32_funct3_csrrs | riscv32_funct3_csrrc =>
+                memoryControlWord_buf.csrUseUimm := false;
+            when riscv32_funct3_csrrwi | riscv32_funct3_csrrsi | riscv32_funct3_csrrci =>
+                memoryControlWord_buf.csrUseUimm := true;
+            when others =>
+                invalid_csr := true;
+        end case;
+
         case opcode is
             when riscv32_opcode_jalr =>
                 executeControlWord_buf.exec_directive := riscv32_exec_calcReturn;
@@ -195,6 +229,13 @@ begin
                 writeBackControlWord_buf.regWrite := false;
                 writeBackControlWord_buf.MemtoReg := false;
                 illegal_instruction <= invalid_store;
+            when riscv32_opcode_system =>
+                instructionDecodeControlWord_buf.immidiate_type := riscv32_i_immidiate;
+                illegal_instruction <= invalid_csr;
+                executeControlWord_buf.exec_directive := riscv32_exec_lui;
+                memoryControlWord_buf.csrOp := true;
+                writeBackControlWord_buf.regWrite := memoryControlWord_buf.csrRead;
+                writeBackControlWord_buf.MemtoReg := memoryControlWord_buf.csrRead;
             when others =>
                 illegal_instruction <= true;
         end case;
