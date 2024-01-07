@@ -31,6 +31,7 @@ architecture tb of riscv32_pipeline_idexRegister_tb is
     signal rs2DataIn : riscv32_data_type := (others => '0');
     signal rs2AddressIn : riscv32_registerFileAddress_type := 0;
     signal immidiateIn : riscv32_data_type := (others => '0');
+    signal uimmidiateIn : riscv32_data_type := (others => '0');
     signal rdAddressIn : riscv32_registerFileAddress_type := 0;
     -- Pipeline control out
     signal executeControlWordOut : riscv32_ExecuteControlWord_type;
@@ -43,6 +44,7 @@ architecture tb of riscv32_pipeline_idexRegister_tb is
     signal rs2DataOut : riscv32_data_type;
     signal rs2AddressOut : riscv32_registerFileAddress_type;
     signal immidiateOut : riscv32_data_type;
+    signal uimmididateOut : riscv32_data_type;
     signal rdAddressOut : riscv32_registerFileAddress_type;
 begin
     clk <= not clk after (clk_period/2);
@@ -118,6 +120,7 @@ begin
         rs2DataIn => rs2DataIn,
         rs2AddressIn => rs2AddressIn,
         immidiateIn => immidiateIn,
+        uimmidiateIn => uimmidiateIn,
         rdAddressIn => rdAddressIn,
         -- Pipeline control out
         executeControlWordOut => executeControlWordOut,
@@ -130,6 +133,7 @@ begin
         rs2DataOut => rs2DataOut,
         rs2AddressOut => rs2AddressOut,
         immidiateOut => immidiateOut,
+        uimmididateOut => uimmididateOut,
         rdAddressOut => rdAddressOut
     );
 end architecture;

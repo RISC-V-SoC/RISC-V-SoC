@@ -29,6 +29,7 @@ entity riscv32_pipeline_instructionDecode is
         rs1Address : out riscv32_registerFileAddress_type;
         rs2Address : out riscv32_registerFileAddress_type;
         immidiate : out riscv32_data_type;
+        uimmidiate : out riscv32_data_type;
         rdAddress : out riscv32_registerFileAddress_type;
 
         -- From load hazard detected
@@ -54,6 +55,8 @@ begin
     rs1Address <= to_integer(unsigned(instructionFromInstructionFetch(19 downto 15)));
     rs2Address <= to_integer(unsigned(instructionFromInstructionFetch(24 downto 20)));
     rdAddress <= to_integer(unsigned(instructionFromInstructionFetch(11 downto 7)));
+
+    uimmidiate <= std_logic_vector(resize(unsigned(instructionFromInstructionFetch(19 downto 15)), uimmidiate'length));
 
     nopOutput <= loadHazardDetected;
     writeBackControlWord <= decodedWriteBackControlWord;

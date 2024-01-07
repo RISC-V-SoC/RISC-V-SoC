@@ -22,6 +22,7 @@ entity riscv32_pipeline_idexRegister is
         rs2DataIn : in riscv32_data_type;
         rs2AddressIn : in riscv32_registerFileAddress_type;
         immidiateIn : in riscv32_data_type;
+        uimmidiateIn : in riscv32_data_type;
         rdAddressIn : in riscv32_registerFileAddress_type;
         -- Pipeline control out
         executeControlWordOut : out riscv32_ExecuteControlWord_type;
@@ -34,6 +35,7 @@ entity riscv32_pipeline_idexRegister is
         rs2DataOut : out riscv32_data_type;
         rs2AddressOut : out riscv32_registerFileAddress_type;
         immidiateOut : out riscv32_data_type;
+        uimmididateOut : out riscv32_data_type;
         rdAddressOut : out riscv32_registerFileAddress_type
     );
 end entity;
@@ -60,6 +62,7 @@ begin
                 rs2DataOut <= rs2DataIn;
                 rs2AddressOut <= rs2AddressIn;
                 immidiateOut <= immidiateIn;
+                uimmididateOut <= uimmidiateIn;
                 rdAddressOut <= rdAddressIn;
             end if;
         end if;

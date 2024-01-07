@@ -50,6 +50,7 @@ architecture behaviourial of riscv32_pipeline is
     signal rs1AddressFromId : riscv32_registerFileAddress_type;
     signal rs2AddressFromId : riscv32_registerFileAddress_type;
     signal immidiateFromId : riscv32_data_type;
+    signal uimmidiateFromId : riscv32_data_type;
     signal rdAddressFromId : riscv32_registerFileAddress_type;
     -- Registerfile to id/ex
     signal rs1DataFromRegFile : riscv32_data_type;
@@ -64,6 +65,7 @@ architecture behaviourial of riscv32_pipeline is
     signal rs2DataFromIdEx : riscv32_data_type;
     signal rs2AddressFromIdEx : riscv32_registerFileAddress_type;
     signal immidiateFromIdEx : riscv32_data_type;
+    signal uimmidiateFromIdEx : riscv32_data_type;
     signal rdAddrFromIdEx : riscv32_registerFileAddress_type;
     -- Instruction decode to forwarding
     signal rs1DataToFwU : riscv32_data_type;
@@ -85,6 +87,7 @@ architecture behaviourial of riscv32_pipeline is
     signal wbControlWordFromExMem : riscv32_WriteBackControlWord_type;
     signal execResFromExMem : riscv32_data_type;
     signal rs2DataFromExMem : riscv32_data_type;
+    signal uimmidiateFromExMem : riscv32_data_type;
     signal rdAddrFromExMem : riscv32_registerFileAddress_type;
     -- Execute to instruction fetch
     signal overrideProgramCounterFromEx : boolean;
@@ -148,6 +151,7 @@ begin
         rs1Address => rs1AddressFromId,
         rs2Address => rs2AddressFromId,
         immidiate => immidiateFromId,
+        uimmidiate => uimmidiateFromId,
         rdAddress => rdAddressFromId,
 
         loadHazardDetected => loadHazardDetected
@@ -170,6 +174,7 @@ begin
         rs2DataIn => rs2DataFromRegFile,
         rs2AddressIn => rs2AddressFromId,
         immidiateIn => immidiateFromId,
+        uimmidiateIn => uimmidiateFromId,
         rdAddressIn => rdAddressFromId,
         -- Pipeline control out
         executeControlWordOut => exControlWordFromIdEx,
@@ -182,6 +187,7 @@ begin
         rs2DataOut => rs2DataFromIdEx,
         rs2AddressOut => rs2AddressFromIdEx,
         immidiateOut => immidiateFromIdEx,
+        uimmididateOut => uimmidiateFromIdEx,
         rdAddressOut => rdAddrFromIdEx
     );
 
@@ -213,13 +219,15 @@ begin
        execResultIn => execResFromExec,
        rs2DataIn => rs2DataFromFwu,
        rdAddressIn => rdAddrFromIdEx,
+       uimmidiateIn => uimmidiateFromIdEx,
 
        memoryControlWordOut => memControlWordFromExMem,
        writeBackControlWordOut => wbControlWordFromExMem,
 
        execResultOut => execResFromExMem,
        rs2DataOut => rs2DataFromExMem,
-       rdAddressOut => rdAddrFromExMem
+       rdAddressOut => rdAddrFromExMem,
+       uimmididateOut => uimmidiateFromExMem
    );
 
     memory : entity work.riscv32_pipeline_memory
@@ -228,6 +236,7 @@ begin
 
         requestAddress => execResFromExMem,
         rs2Data => rs2DataFromExMem,
+        uimmidiate => uimmidiateFromExMem,
 
         memDataRead => memDataFromMem,
 
