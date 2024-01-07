@@ -12,6 +12,7 @@ entity riscv32_pipeline_memory is
 
         -- From execute stage: data
         requestAddress : in riscv32_data_type;
+        rs1Data : in riscv32_data_type;
         rs2Data : in riscv32_data_type;
         uimmidiate : in riscv32_data_type;
 

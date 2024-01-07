@@ -25,6 +25,7 @@ architecture tb of riscv32_pipeline_exmemRegister_tb is
     signal writeBackControlWordIn : riscv32_WriteBackControlWord_type := riscv32_writeBackControlWordAllFalse;
     -- Pipeline data in
     signal execResultIn : riscv32_data_type := (others => '0');
+    signal rs1DataIn : riscv32_data_type := (others => '0');
     signal rs2DataIn : riscv32_data_type := (others => '0');
     signal rdAddressIn : riscv32_registerFileAddress_type := 0;
     signal uimmidiateIn : riscv32_data_type := (others => '0');
@@ -33,6 +34,7 @@ architecture tb of riscv32_pipeline_exmemRegister_tb is
     signal writeBackControlWordOut : riscv32_WriteBackControlWord_type;
     -- Pipeline data out
     signal execResultOut : riscv32_data_type;
+    signal rs1DataOut : riscv32_data_type;
     signal rs2DataOut : riscv32_data_type;
     signal rdAddressOut : riscv32_registerFileAddress_type;
     signal uimmididateOut : riscv32_data_type;
@@ -103,6 +105,7 @@ begin
         writeBackControlWordIn => writeBackControlWordIn,
         -- Pipeline data in
         execResultIn => execResultIn,
+        rs1DataIn => rs1DataIn,
         rs2DataIn => rs2DataIn,
         rdAddressIn => rdAddressIn,
         uimmidiateIn => uimmidiateIn,
@@ -111,6 +114,7 @@ begin
         writeBackControlWordOut => writeBackControlWordOut,
         -- Pipeline data out
         execResultOut => execResultOut,
+        rs1DataOut => rs1DataOut,
         rs2DataOut => rs2DataOut,
         rdAddressOut => rdAddressOut,
         uimmididateOut => uimmididateOut

@@ -22,6 +22,7 @@ architecture tb of riscv32_pipeline_memory_tb is
     signal memoryControlWord : riscv32_MemoryControlWord_type := riscv32_memoryControlWordAllFalse;
 
     signal requestAddress : riscv32_data_type := (others => '0');
+    signal rs1Data : riscv32_data_type := (others => '0');
     signal rs2Data : riscv32_data_type := (others => '0');
     signal uimmidiate : riscv32_data_type := (others => '0');
 
@@ -237,6 +238,7 @@ begin
     port map (
         memoryControlWord => memoryControlWord,
         requestAddress => requestAddress,
+        rs1Data => rs1Data,
         rs2Data => rs2Data,
         uimmidiate => uimmidiate,
         memDataRead => memDataRead,

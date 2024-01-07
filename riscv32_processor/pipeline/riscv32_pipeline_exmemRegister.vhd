@@ -16,6 +16,7 @@ entity riscv32_pipeline_exmemRegister is
         writeBackControlWordIn : in riscv32_WriteBackControlWord_type;
         -- Pipeline data in
         execResultIn : in riscv32_data_type;
+        rs1DataIn : in riscv32_data_type;
         rs2DataIn : in riscv32_data_type;
         rdAddressIn : in riscv32_registerFileAddress_type;
         uimmidiateIn : in riscv32_data_type;
@@ -24,6 +25,7 @@ entity riscv32_pipeline_exmemRegister is
         writeBackControlWordOut : out riscv32_WriteBackControlWord_type;
         -- Pipeline data out
         execResultOut : out riscv32_data_type;
+        rs1DataOut : out riscv32_data_type;
         rs2DataOut : out riscv32_data_type;
         rdAddressOut : out riscv32_registerFileAddress_type;
         uimmididateOut : out riscv32_data_type
@@ -44,6 +46,7 @@ begin
                 memoryControlWordOut_buf := memoryControlWordIn;
                 writeBackControlWordOut_buf := writeBackControlWordIn;
                 execResultOut <= execResultIn;
+                rs1DataOut <= rs1DataIn;
                 rs2DataOut <= rs2DataIn;
                 rdAddressOut <= rdAddressIn;
                 uimmididateOut <= uimmidiateIn;
