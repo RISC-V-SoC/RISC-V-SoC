@@ -19,6 +19,7 @@ begin
 
     process(csr_in, systemtimer_value)
     begin
+        error <= false;
         read_data <= (others => 'X');
         if csr_in.do_write then
             error <= true;
