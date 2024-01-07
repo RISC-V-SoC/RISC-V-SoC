@@ -68,9 +68,16 @@ architecture behaviourial of riscv32_processor is
     signal bus_slv_to_regFile_data : riscv32_data_type;
     signal regFile_to_bus_slv_data : riscv32_data_type;
 
+    signal pipeline_to_csr : riscv32_to_csr_type;
+    signal csr_to_pipeline : riscv32_data_type;
+
+    signal systemtimer_value : unsigned(63 downto 0);
+    signal systemtimer_reset : boolean;
+
 begin
     pipelineStall <= controllerStall or instructionStall or memoryStall;
     forbidBusInteraction <= controllerReset or controllerStall;
+    systemtimer_reset <= controllerReset;
 
     process(rst, controllerReset)
     begin
@@ -103,7 +110,9 @@ begin
             address_to_regFile => bus_slv_to_regFile_address,
             write_to_regFile => bus_slv_to_regFile_doWrite,
             data_to_regFile => bus_slv_to_regFile_data,
-            data_from_regFile => regFile_to_bus_slv_data
+            data_from_regFile => regFile_to_bus_slv_data,
+            csr_out => pipeline_to_csr,
+            csr_data => csr_to_pipeline
         );
 
     bus_slave : entity work.riscv32_bus_slave
@@ -174,5 +183,22 @@ begin
         data_to_controller => ci_to_bus_slv_data,
         cpu_reset => controllerReset,
         cpu_stall => controllerStall
+    );
+
+    csr : entity work.riscv32_csr
+    port map (
+        csr_in => pipeline_to_csr,
+        systemtimer_value => systemtimer_value,
+        read_data => csr_to_pipeline
+    );
+
+    systemtimer : entity work.riscv32_systemtimer
+    generic map (
+        clk_period => clk_period,
+        timer_period => 1 us
+    ) port map (
+        clk => clk,
+        reset => systemtimer_reset,
+        value => systemtimer_value
     );
 end architecture;

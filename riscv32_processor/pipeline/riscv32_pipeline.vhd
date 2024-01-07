@@ -28,7 +28,11 @@ entity riscv32_pipeline is
         address_to_regFile : in riscv32_registerFileAddress_type;
         write_to_regFile : in boolean;
         data_to_regFile : in riscv32_data_type;
-        data_from_regFile : out riscv32_data_type
+        data_from_regFile : out riscv32_data_type;
+
+        -- From/to control status register
+        csr_out : out riscv32_to_csr_type;
+        csr_data : in riscv32_data_type
     );
 end entity;
 
@@ -250,7 +254,8 @@ begin
         memByteMask => dataByteMask,
         dataToMem => dataOut,
         dataFromMem => dataIn,
-        csrReadData => (others => '0')
+        csrOut => csr_out,
+        csrReadData => csr_data
     );
 
     memWbReg : entity work.riscv32_pipeline_memwbRegister
