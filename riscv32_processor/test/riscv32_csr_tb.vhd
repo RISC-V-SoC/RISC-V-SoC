@@ -17,6 +17,7 @@ end entity;
 architecture tb of riscv32_csr_tb is
     signal csr_in : riscv32_to_csr_type;
     signal read_data : riscv32_data_type;
+    signal systemtimer_value : unsigned(63 downto 0);
     signal error : boolean;
 begin
     main : process
@@ -47,6 +48,26 @@ begin
                 csr_in.do_read <= false;
                 wait for 1 ns;
                 check(error);
+            elsif run("Read request from 0xC01 returns lower 32 bit of system time") then
+                systemtimer_value <= X"a1a1a1a1b2b2b2b2";
+                csr_in.command <= csr_rw;
+                csr_in.address <= X"C01";
+                csr_in.data_in <= (others => '0');
+                csr_in.do_write <= false;
+                csr_in.do_read <= true;
+                wait for 1 ns;
+                check(not error);
+                check_equal(unsigned(read_data), systemtimer_value(31 downto 0));
+            elsif run("Read request from 0xC81 returns upper 32 bit of system time") then
+                systemtimer_value <= X"a1a1a1a1b2b2b2b2";
+                csr_in.command <= csr_rw;
+                csr_in.address <= X"C81";
+                csr_in.data_in <= (others => '0');
+                csr_in.do_write <= false;
+                csr_in.do_read <= true;
+                wait for 1 ns;
+                check(not error);
+                check_equal(unsigned(read_data), systemtimer_value(63 downto 32));
             end if;
         end loop;
         test_runner_cleanup(runner);
@@ -56,6 +77,7 @@ begin
     processor : entity src.riscv32_csr
     port map (
         csr_in => csr_in,
+        systemtimer_value => systemtimer_value,
         read_data => read_data,
         error => error
     );
