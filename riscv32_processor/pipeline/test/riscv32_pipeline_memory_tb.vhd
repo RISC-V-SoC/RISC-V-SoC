@@ -19,6 +19,8 @@ entity riscv32_pipeline_memory_tb is
 end entity;
 
 architecture tb of riscv32_pipeline_memory_tb is
+    signal stall : boolean := false;
+
     signal memoryControlWord : riscv32_MemoryControlWord_type := riscv32_memoryControlWordAllFalse;
 
     signal requestAddress : riscv32_data_type := (others => '0');
@@ -266,6 +268,14 @@ begin
                 csrReadData <= X"abcdef01";
                 wait for 1 ns;
                 check_equal(memDataRead, csrReadData);
+            elsif run("During stall, no CSR read or write will be active") then
+                instruction <= construct_itype_instruction(opcode => riscv32_opcode_system, rs1 => 1, rd => 2, funct3 => riscv32_funct3_csrrw);
+                rs1Data <= X"01020304";
+                requestAddress <= X"fffffc01";
+                stall <= true;
+                wait for 1 ns;
+                check(not csrOut.do_write);
+                check(not csrOut.do_read);
             end if;
         end loop;
         wait for 5 ns;
@@ -277,6 +287,7 @@ begin
 
     memoryStage : entity src.riscv32_pipeline_memory
     port map (
+        stall => stall,
         memoryControlWord => memoryControlWord,
         requestAddress => requestAddress,
         rs1Data => rs1Data,

@@ -239,6 +239,8 @@ begin
 
     memory : entity work.riscv32_pipeline_memory
     port map (
+        stall => stall,
+
         memoryControlWord => memControlWordFromExMem,
 
         requestAddress => execResFromExMem,
