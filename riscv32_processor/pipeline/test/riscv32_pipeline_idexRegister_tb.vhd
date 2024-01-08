@@ -25,6 +25,7 @@ architecture tb of riscv32_pipeline_idexRegister_tb is
     signal memoryControlWordIn : riscv32_MemoryControlWord_type := riscv32_memoryControlWordAllFalse;
     signal writeBackControlWordIn : riscv32_WriteBackControlWord_type := riscv32_writeBackControlWordAllFalse;
     -- Pipeline data
+    signal isBubbleIn : boolean := false;
     signal programCounterIn : riscv32_address_type := (others => '0');
     signal rs1DataIn : riscv32_data_type := (others => '0');
     signal rs1AddressIn : riscv32_registerFileAddress_type := 0;
@@ -38,6 +39,7 @@ architecture tb of riscv32_pipeline_idexRegister_tb is
     signal memoryControlWordOut : riscv32_MemoryControlWord_type;
     signal writeBackControlWordOut : riscv32_WriteBackControlWord_type;
     -- Pipeline data
+    signal isBubbleOut : boolean;
     signal programCounterOut : riscv32_address_type;
     signal rs1DataOut : riscv32_data_type;
     signal rs1AddressOut : riscv32_registerFileAddress_type;
@@ -58,6 +60,7 @@ begin
                 check(executeControlWordOut = riscv32_executeControlWordAllFalse);
                 check(memoryControlWordOut = riscv32_memoryControlWordAllFalse);
                 check(writeBackControlWordOut = riscv32_writeBackControlWordAllFalse);
+                check(isBubbleOut);
             elsif run("Forwards input on rising edge if stall = nop = false") then
                 wait until falling_edge(clk);
                 stall <= false;
@@ -94,6 +97,17 @@ begin
                 stall <= true;
                 wait until falling_edge(clk);
                 check(memoryControlWordOut.memOp);
+            elsif run("isBubbleOut is false if no nop and no isBubbleIn") then
+                wait until falling_edge(clk);
+                nop <= false;
+                isBubbleIn <= false;
+                wait until falling_edge(clk);
+                check(not isBubbleOut);
+            elsif run("isBubbleOut is true if no stall and isBubbleIn") then
+                wait until falling_edge(clk);
+                isBubbleIn <= true;
+                wait until falling_edge(clk);
+                check(isBubbleOut);
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -114,6 +128,7 @@ begin
         memoryControlWordIn => memoryControlWordIn,
         writeBackControlWordIn => writeBackControlWordIn,
         -- Pipeline data in
+        isBubbleIn => isBubbleIn,
         programCounterIn => programCounterIn,
         rs1DataIn => rs1DataIn,
         rs1AddressIn => rs1AddressIn,
@@ -127,6 +142,7 @@ begin
         memoryControlWordOut => memoryControlWordOut,
         writeBackControlWordOut => writeBackControlWordOut,
         -- Pipeline data out
+        isBubbleOut => isBubbleOut,
         programCounterOut => programCounterOut,
         rs1DataOut => rs1DataOut,
         rs1AddressOut => rs1AddressOut,

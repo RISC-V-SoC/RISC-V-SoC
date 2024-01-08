@@ -40,6 +40,7 @@ architecture behaviourial of riscv32_pipeline is
     -- Instruction fetch to instruction decode
     signal instructionToID : riscv32_instruction_type;
     signal programCounterFromIf : riscv32_address_type;
+    signal isBubbleFromIF : boolean;
     -- Instruction decode to instruction fetch
     signal overrideProgramCounterFromID : boolean;
     signal newProgramCounterFromID : riscv32_address_type;
@@ -63,6 +64,7 @@ architecture behaviourial of riscv32_pipeline is
     signal exControlWordFromIdEx : riscv32_ExecuteControlWord_type;
     signal memControlWordFromIdEx : riscv32_MemoryControlWord_type;
     signal wbControlWordFromIdEx : riscv32_WriteBackControlWord_type;
+    signal isBubbleFromIdEx : boolean;
     signal programCounterFromIdEx : riscv32_address_type;
     signal rs1DataFromIdEx : riscv32_data_type;
     signal rs1AddressFromIdEx : riscv32_registerFileAddress_type;
@@ -124,6 +126,7 @@ begin
 
         requestFromBusAddress => instructionAddress,
         instructionFromBus => instruction,
+        isBubble => isBubbleFromIF,
 
         instructionToInstructionDecode => instructionToID,
         programCounter => programCounterFromIf,
@@ -173,6 +176,7 @@ begin
         memoryControlWordIn => memControlWordFromId,
         writeBackControlWordIn => wbControlWordFromId,
         -- Pipeline data in
+        isBubbleIn => isBubbleFromIF,
         programCounterIn => programCounterFromIf,
         rs1DataIn => rs1DataFromRegFile,
         rs1AddressIn => rs1AddressFromId,
@@ -186,6 +190,7 @@ begin
         memoryControlWordOut => memControlWordFromIdEx,
         writeBackControlWordOut => wbControlWordFromIdEx,
         -- Pipeline data out
+        isBubbleOut => isBubbleFromIdEx,
         programCounterOut => programCounterFromIdEx,
         rs1DataOut => rs1DataFromIdEx,
         rs1AddressOut => rs1AddressFromIdEx,
