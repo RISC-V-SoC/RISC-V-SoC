@@ -19,6 +19,7 @@ entity riscv32_pipeline_instructionFetch is
         instructionFromBus : in riscv32_instruction_type;
 
         -- To instructionDecode
+        isBubble : out boolean;
         instructionToInstructionDecode : out riscv32_instruction_type;
         programCounter : out riscv32_address_type;
 
@@ -42,6 +43,7 @@ architecture behaviourial of riscv32_pipeline_instructionFetch is
     signal outputNop : boolean := false;
     signal instructionToInstructionDecode_buf : riscv32_instruction_type;
     signal currentInstructionTransfersControl : boolean := false;
+    signal isBubble_buf : boolean := true;
 begin
 
     requestFromBusAddress <= programCounter_buf;
@@ -82,9 +84,11 @@ begin
     determineOutputInstruction : process(outputNop, instructionFromBus)
     begin
         if outputNop then
+            isBubble_buf <= true;
             instructionToInstructionDecode_buf <= riscv32_instructionNop;
             currentInstructionTransfersControl <= false;
         else
+            isBubble_buf <= false;
             instructionToInstructionDecode_buf <= instructionFromBus;
             currentInstructionTransfersControl <= instructionFromBus(6 downto 4) = "110";
         end if;
@@ -92,15 +96,19 @@ begin
 
     IFIDRegs : process(clk)
         variable instructionBuf : riscv32_instruction_type := riscv32_instructionNop;
+        variable isBubble_out : boolean := true;
     begin
         if rising_edge(clk) then
             if rst = '1' then
                 instructionBuf := riscv32_instructionNop;
+                isBubble_out := true;
             elsif not stall then
                 instructionBuf := instructionToInstructionDecode_buf;
                 programCounter <= programCounter_buf;
+                isBubble_out := isBubble_buf;
             end if;
         end if;
         instructionToInstructionDecode <= instructionBuf;
+        isBubble <= isBubble_out;
     end process;
 end architecture;

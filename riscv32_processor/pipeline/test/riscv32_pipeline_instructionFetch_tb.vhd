@@ -31,6 +31,7 @@ architecture tb of riscv32_pipeline_instructionFetch_tb is
     signal instructionFromBus : riscv32_instruction_type := (others => '1');
     signal overrideProgramCounterFromID : boolean := false;
     signal newProgramCounterFromID : riscv32_instruction_type := (others => '1');
+    signal isBubble : boolean;
     signal overrideProgramCounterFromEx : boolean := false;
     signal newProgramCounterFromEx : riscv32_instruction_type := (others => '1');
     signal stall : boolean := false;
@@ -78,6 +79,7 @@ begin
             elsif run("On the first rising edge, a nop should be send to ID") then
                 wait until rising_edge(clk);
                 check_equal(instructionToInstructionDecode, riscv32_instructionNop);
+                check(isBubble);
             elsif run("On the second rising edge, the expected instruction and start address should be send to ID") then
                 expectedInstruction := construct_itype_instruction(opcode => riscv32_opcode_opimm, rs1 =>4, rd => 6, funct3 => riscv32_funct3_add_sub, imm12 => X"fe9");
                 instructionFromBus <= expectedInstruction;
@@ -87,6 +89,7 @@ begin
                 wait until rising_edge(clk);
                 check_equal(expectedInstruction, instructionToInstructionDecode);
                 check_equal(programCounter, expectedAddress);
+                check(not isBubble);
             elsif run("InjectBubble freezes the pc") then
                 expectedAddress := std_logic_vector(unsigned(startAddress) + 4);
                 wait until falling_edge(clk);
@@ -101,6 +104,7 @@ begin
                 injectBubble <= false;
                 wait until falling_edge(clk);
                 check_equal(instructionToInstructionDecode, riscv32_instructionNop);
+                check(isBubble);
             elsif run("During stall, injectBubble does nothing") then
                 instructionFromBus <= X"FF00FF00";
                 wait until falling_edge(clk);
@@ -119,12 +123,14 @@ begin
                 check_equal(requestFromBusAddress, startAddress);
                 -- ID stage determines and calculates jump
                 check_equal(instructionToInstructionDecode, instructionFromBus);
+                check(not isBubble);
                 overrideProgramCounterFromID <= true;
                 newProgramCounterFromID <= std_logic_vector(unsigned(startAddress) + 40);
                 wait for clk_period;
                 -- Now IF should jump and forward a single nop
                 check_equal(requestFromBusAddress, std_logic_vector(unsigned(startAddress) + 40));
                 check_equal(instructionToInstructionDecode, riscv32_instructionNop);
+                check(isBubble);
                 instructionFromBus <= construct_itype_instruction(opcode => riscv32_opcode_opimm, rs1 => 12, rd => 23, funct3 => riscv32_funct3_sll, imm12 => X"005");
                 overrideProgramCounterFromID <= false;
                 newProgramCounterFromID <= (others => 'U');
@@ -141,11 +147,13 @@ begin
                 check_equal(requestFromBusAddress, startAddress);
                 -- ID stage determines again that this is a jump and will tell IF to bubble
                 check_equal(instructionToInstructionDecode, instructionFromBus);
+                check(not isBubble);
                 injectBubble <= true;
                 wait for clk_period;
                 -- On a bubble, the PC should remain frozen
                 check_equal(requestFromBusAddress, startAddress);
                 check_equal(instructionToInstructionDecode, riscv32_instructionNop);
+                check(isBubble);
                 -- Now EX will determine the jump target
                 overrideProgramCounterFromEX <= true;
                 newProgramCounterFromEX <= std_logic_vector(unsigned(startAddress) + 40);
@@ -154,12 +162,14 @@ begin
                 -- Now IF should jump and forward another nop
                 check_equal(requestFromBusAddress, std_logic_vector(unsigned(startAddress) + 40));
                 check_equal(instructionToInstructionDecode, riscv32_instructionNop);
+                check(isBubble);
                 instructionFromBus <= construct_itype_instruction(opcode => riscv32_opcode_opimm, rs1 => 12, rd => 23, funct3 => riscv32_funct3_sll, imm12 => X"005");
                 overrideProgramCounterFromEX <= false;
                 wait for clk_period;
                 -- IF should move forward to the next instruction
                 check_equal(requestFromBusAddress, std_logic_vector(unsigned(startAddress) + 44));
                 check_equal(instructionToInstructionDecode, instructionFromBus);
+                check(not isBubble);
             elsif run("Check branch not taken instruction flow") then
                 -- We start at the falling edge of the clock
                 check_equal(requestFromBusAddress, startAddress);
@@ -169,17 +179,20 @@ begin
                 check_equal(requestFromBusAddress, startAddress);
                 -- ID stage determines again that this is a branch and will tell IF to bubble
                 check_equal(instructionToInstructionDecode, instructionFromBus);
+                check(not isBubble);
                 injectBubble <= true;
                 wait for clk_period;
                 -- On a bubble, the PC should remain frozen
                 check_equal(requestFromBusAddress, startAddress);
                 check_equal(instructionToInstructionDecode, riscv32_instructionNop);
+                check(isBubble);
                 -- Now EX will determine branch not taken
                 injectBubble <= false;
                 wait for clk_period;
                 -- Now IF should move forward like normal
                 check_equal(requestFromBusAddress, std_logic_vector(unsigned(startAddress) + 4));
                 check_equal(instructionToInstructionDecode, riscv32_instructionNop);
+                check(isBubble);
                 instructionFromBus <= construct_itype_instruction(opcode => riscv32_opcode_opimm, rs1 => 12, rd => 23, funct3 => riscv32_funct3_sll, imm12 => X"005");
             end if;
         end loop;
@@ -203,6 +216,7 @@ begin
         programCounter => programCounter,
         overrideProgramCounterFromID => overrideProgramCounterFromID,
         newProgramCounterFromID => newProgramCounterFromID,
+        isBubble => isBubble,
         overrideProgramCounterFromEx => overrideProgramCounterFromEx,
         newProgramCounterFromEx => newProgramCounterFromEx,
         injectBubble => injectBubble,
