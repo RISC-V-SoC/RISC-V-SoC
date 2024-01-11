@@ -91,6 +91,7 @@ architecture behaviourial of riscv32_pipeline is
     -- From ex/mem
     signal memControlWordFromExMem : riscv32_MemoryControlWord_type;
     signal wbControlWordFromExMem : riscv32_WriteBackControlWord_type;
+    signal isBubbleFromExMem : boolean;
     signal execResFromExMem : riscv32_data_type;
     signal rs1DataFromExMem : riscv32_data_type;
     signal rs2DataFromExMem : riscv32_data_type;
@@ -226,6 +227,7 @@ begin
        memoryControlWordIn => memControlWordFromIdEx,
        writeBackControlWordIn => wbControlWordFromIdEx,
 
+       isBubbleIn => isBubbleFromIdEx,
        execResultIn => execResFromExec,
        rs1DataIn => rs1DataFromFwu,
        rs2DataIn => rs2DataFromFwu,
@@ -235,6 +237,7 @@ begin
        memoryControlWordOut => memControlWordFromExMem,
        writeBackControlWordOut => wbControlWordFromExMem,
 
+       isBubbleOut => isBubbleFromExMem,
        execResultOut => execResFromExMem,
        rs1DataOut => rs1DataFromExMem,
        rs2DataOut => rs2DataFromExMem,

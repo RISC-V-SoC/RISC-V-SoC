@@ -15,6 +15,7 @@ entity riscv32_pipeline_exmemRegister is
         memoryControlWordIn : in riscv32_MemoryControlWord_type;
         writeBackControlWordIn : in riscv32_WriteBackControlWord_type;
         -- Pipeline data in
+        isBubbleIn : in boolean;
         execResultIn : in riscv32_data_type;
         rs1DataIn : in riscv32_data_type;
         rs2DataIn : in riscv32_data_type;
@@ -24,6 +25,7 @@ entity riscv32_pipeline_exmemRegister is
         memoryControlWordOut : out riscv32_MemoryControlWord_type;
         writeBackControlWordOut : out riscv32_WriteBackControlWord_type;
         -- Pipeline data out
+        isBubbleOut : out boolean;
         execResultOut : out riscv32_data_type;
         rs1DataOut : out riscv32_data_type;
         rs2DataOut : out riscv32_data_type;
@@ -37,9 +39,11 @@ begin
     process(clk)
         variable memoryControlWordOut_buf : riscv32_MemoryControlWord_type := riscv32_memoryControlWordAllFalse;
         variable writeBackControlWordOut_buf : riscv32_WriteBackControlWord_type := riscv32_writeBackControlWordAllFalse;
+        variable isBubbleOut_buf : boolean := true;
     begin
         if rising_edge(clk) then
             if nop and not stall then
+                isBubbleOut_buf := true;
                 memoryControlWordOut_buf := riscv32_memoryControlWordAllFalse;
                 writeBackControlWordOut_buf := riscv32_writeBackControlWordAllFalse;
             elsif not stall then
@@ -50,9 +54,11 @@ begin
                 rs2DataOut <= rs2DataIn;
                 rdAddressOut <= rdAddressIn;
                 uimmididateOut <= uimmidiateIn;
+                isBubbleOut_buf := isBubbleIn;
             end if;
         end if;
         memoryControlWordOut <= memoryControlWordOut_buf;
         writeBackControlWordOut <= writeBackControlWordOut_buf;
+        isBubbleOut <= isBubbleOut_buf;
     end process;
 end architecture;
