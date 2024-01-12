@@ -105,6 +105,7 @@ architecture behaviourial of riscv32_pipeline is
     signal cpzDataFromMem : riscv32_data_type;
     -- From mem/wb
     signal wbControlWordFromMemWb : riscv32_WriteBackControlWord_type;
+    signal isBubbleFromMemWb : boolean;
     signal execResFromMemWb : riscv32_data_type;
     signal memDataFromMemWb : riscv32_data_type;
     signal rdAddressFromMemWb : riscv32_registerFileAddress_type;
@@ -277,12 +278,14 @@ begin
 
        writeBackControlWordIn => wbControlWordFromExMem,
 
+       isBubbleIn => isBubbleFromExMem,
        execResultIn => execResFromExMem,
        memDataReadIn => memDataFromMem,
        rdAddressIn => rdAddrFromExMem,
 
        writeBackControlWordOut => wbControlWordFromMemWb,
 
+       isBubbleOut => isBubbleFromMemWb,
        execResultOut => execResFromMemWb,
        memDataReadOut => memDataFromMemWb,
        rdAddressOut => rdAddressFromMemWb

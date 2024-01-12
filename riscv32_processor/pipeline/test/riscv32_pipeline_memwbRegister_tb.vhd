@@ -23,12 +23,14 @@ architecture tb of riscv32_pipeline_memwbRegister_tb is
     -- Pipeline control in
     signal writeBackControlWordIn : riscv32_WriteBackControlWord_type := riscv32_writeBackControlWordAllFalse;
     -- Pipeline data in
+    signal isBubbleIn : boolean := false;
     signal execResultIn : riscv32_data_type := (others => '0');
     signal memDataReadIn : riscv32_data_type := (others => '0');
     signal rdAddressIn : riscv32_registerFileAddress_type := 0;
     -- Pipeline control out
     signal writeBackControlWordOut : riscv32_WriteBackControlWord_type;
     -- Pipeline data out
+    signal isBubbleOut : boolean;
     signal execResultOut : riscv32_data_type;
     signal memDataReadOut : riscv32_data_type;
     signal rdAddressOut : riscv32_registerFileAddress_type;
@@ -42,6 +44,7 @@ begin
             if run("Push nop on first rising edge") then
                 wait until rising_edge(clk);
                 check(writeBackControlWordOut = riscv32_writeBackControlWordAllFalse);
+                check(isBubbleOut);
             elsif run("Forwards input on rising edge if stall = nop = false") then
                 wait until falling_edge(clk);
                 stall <= false;
@@ -78,6 +81,17 @@ begin
                 stall <= true;
                 wait until falling_edge(clk);
                 check(writeBackControlWordOut.regWrite);
+            elsif run("isBubbleOut is false if no nop and no isBubbleIn") then
+                wait until falling_edge(clk);
+                nop <= false;
+                isBubbleIn <= false;
+                wait until falling_edge(clk);
+                check(not isBubbleOut);
+            elsif run("isBubbleOut is true if no stall and isBubbleIn") then
+                wait until falling_edge(clk);
+                isBubbleIn <= true;
+                wait until falling_edge(clk);
+                check(isBubbleOut);
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -96,12 +110,14 @@ begin
         -- Pipeline control in
         writeBackControlWordIn => writeBackControlWordIn,
         -- Pipeline data in
+        isBubbleIn => isBubbleIn,
         execResultIn => execResultIn,
         memDataReadIn => memDataReadIn,
         rdAddressIn => rdAddressIn,
         -- Pipeline control out
         writeBackControlWordOut => writeBackControlWordOut,
         -- Pipeline data out
+        isBubbleOut => isBubbleOut,
         execResultOut => execResultOut,
         memDataReadOut => memDataReadOut,
         rdAddressOut => rdAddressOut
