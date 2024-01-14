@@ -1,7 +1,7 @@
 #include "asm_utils.h"
 
- uint64_t time;
+ uint64_t count;
 
 void main() {
-    time = getSystemTime();
+    count = getInstructionsRetiredCount();
 }

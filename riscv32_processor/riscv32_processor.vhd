@@ -74,6 +74,8 @@ architecture behaviourial of riscv32_processor is
     signal systemtimer_value : unsigned(63 downto 0);
     signal systemtimer_reset : boolean;
 
+    signal instructionsRetired_value : unsigned(63 downto 0);
+
 begin
     pipelineStall <= controllerStall or instructionStall or memoryStall;
     forbidBusInteraction <= controllerReset or controllerStall;
@@ -112,7 +114,8 @@ begin
             data_to_regFile => bus_slv_to_regFile_data,
             data_from_regFile => regFile_to_bus_slv_data,
             csr_out => pipeline_to_csr,
-            csr_data => csr_to_pipeline
+            csr_data => csr_to_pipeline,
+            instructionsRetiredCount => instructionsRetired_value
         );
 
     bus_slave : entity work.riscv32_bus_slave
@@ -189,7 +192,7 @@ begin
     port map (
         csr_in => pipeline_to_csr,
         systemtimer_value => systemtimer_value,
-        instructionsRetired_value => (others => '0'),
+        instructionsRetired_value => instructionsRetired_value,
         read_data => csr_to_pipeline
     );
 

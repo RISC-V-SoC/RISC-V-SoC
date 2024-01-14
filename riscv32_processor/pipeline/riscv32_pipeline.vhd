@@ -32,7 +32,9 @@ entity riscv32_pipeline is
 
         -- From/to control status register
         csr_out : out riscv32_to_csr_type;
-        csr_data : in riscv32_data_type
+        csr_data : in riscv32_data_type;
+
+        instructionsRetiredCount : out unsigned(63 downto 0)
     );
 end entity;
 
@@ -355,6 +357,15 @@ begin
     port map (
         executeControlWord => exControlWordFromId,
         injectBubble => injectBubbleFromBranchHelper
+    );
+
+    instructionsRetiredCounter : entity work.riscv32_pipeline_instructionsRetiredCounter
+    port map (
+        clk => clk,
+        rst => rst,
+        stall => stall,
+        isBubble => isBubbleFromMemWb,
+        instructionsRetiredCount => instructionsRetiredCount
     );
 
 end architecture;
