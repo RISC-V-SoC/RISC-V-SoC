@@ -3,5 +3,5 @@
  uint64_t count;
 
 void main() {
-    count = getInstructionsRetiredCount();
+    count = getCycleCount();
 }

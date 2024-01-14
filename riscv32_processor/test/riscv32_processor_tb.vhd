@@ -166,6 +166,13 @@ begin
                 expectedReadData := X"0000000b";
                 readAddr := std_logic_vector(to_unsigned(16#70#, bus_address_type'length));
                 check_word_at_address(net, readAddr, expectedReadData);
+            elsif run("rdcycle") then
+                simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/rdcycle.txt");
+                start_cpu(test2slv, slv2test);
+                wait for 10 us;
+                expectedReadData := X"00000099";
+                readAddr := std_logic_vector(to_unsigned(16#88#, bus_address_type'length));
+                check_word_at_address(net, readAddr, expectedReadData);
             end if;
         end loop;
         wait until rising_edge(clk);

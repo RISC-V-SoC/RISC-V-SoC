@@ -1,5 +1,13 @@
+.global getCycleCount
 .global getSystemTime
 .global getInstructionsRetiredCount
+
+getCycleCount:
+    rdcycleh a1
+    rdcycle a0
+    rdcycleh a4
+    bne a1, a4, getCycleCount
+    ret
 
 getSystemTime:
     rdtimeh a1

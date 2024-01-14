@@ -71,15 +71,13 @@ architecture behaviourial of riscv32_processor is
     signal pipeline_to_csr : riscv32_to_csr_type;
     signal csr_to_pipeline : riscv32_data_type;
 
+    signal cycleCounter_value : unsigned(63 downto 0);
     signal systemtimer_value : unsigned(63 downto 0);
-    signal systemtimer_reset : boolean;
-
     signal instructionsRetired_value : unsigned(63 downto 0);
 
 begin
     pipelineStall <= controllerStall or instructionStall or memoryStall;
     forbidBusInteraction <= controllerReset or controllerStall;
-    systemtimer_reset <= controllerReset;
 
     process(rst, controllerReset)
     begin
@@ -191,6 +189,7 @@ begin
     csr : entity work.riscv32_csr
     port map (
         csr_in => pipeline_to_csr,
+        cycleCounter_value => cycleCounter_value,
         systemtimer_value => systemtimer_value,
         instructionsRetired_value => instructionsRetired_value,
         read_data => csr_to_pipeline
@@ -202,7 +201,14 @@ begin
         timer_period => 1 us
     ) port map (
         clk => clk,
-        reset => systemtimer_reset,
+        reset => controllerReset,
         value => systemtimer_value
+    );
+
+    cycleCounter : entity work.riscv32_cycleCounter
+    port map (
+        clk => clk,
+        reset => controllerReset,
+        value => cycleCounter_value 
     );
 end architecture;
