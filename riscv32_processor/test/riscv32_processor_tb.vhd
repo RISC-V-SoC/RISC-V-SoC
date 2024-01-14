@@ -78,6 +78,17 @@ architecture tb of riscv32_processor_tb is
         mst2slv <= BUS_MST2SLV_IDLE;
     end procedure;
 
+    procedure reset_cpu (signal mst2slv : inout bus_mst2slv_type; signal slv2mst : in bus_slv2mst_type) is
+    begin
+        mst2slv <= bus_mst2slv_write(
+            address => std_logic_vector(to_unsigned(controllerAddress, bus_address_type'length)),
+            write_data => X"00000001",
+            byte_mask => (others => '1'));
+        wait until rising_edge(clk) and any_transaction(mst2slv, slv2mst);
+        check(write_transaction(mst2slv, slv2mst));
+        mst2slv <= BUS_MST2SLV_IDLE;
+    end procedure;
+
     procedure check_word_at_address(
         signal net : inout network_t;
         constant address : in bus_address_type;
@@ -172,6 +183,17 @@ begin
                 wait for 10 us;
                 expectedReadData := X"00000099";
                 readAddr := std_logic_vector(to_unsigned(16#88#, bus_address_type'length));
+                check_word_at_address(net, readAddr, expectedReadData);
+            elsif run("Run, reset and then run again") then
+                simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/storeEleven.txt");
+                start_cpu(test2slv, slv2test);
+                wait for 20 us;
+                reset_cpu(test2slv, slv2test);
+                simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/loopedAdd.txt");
+                start_cpu(test2slv, slv2test);
+                wait for 20 us;
+                expectedReadData := X"00000007";
+                readAddr := std_logic_vector(to_unsigned(16#24#, bus_address_type'length));
                 check_word_at_address(net, readAddr, expectedReadData);
             end if;
         end loop;
