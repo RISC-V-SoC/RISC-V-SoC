@@ -189,6 +189,7 @@ begin
     port map (
         csr_in => pipeline_to_csr,
         systemtimer_value => systemtimer_value,
+        instructionsRetired_value => (others => '0'),
         read_data => csr_to_pipeline
     );
 
