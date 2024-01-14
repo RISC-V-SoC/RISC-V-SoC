@@ -129,12 +129,21 @@ begin
                 check_equal(count, 0);
                 check(underflow);
             elsif run("Reset works") then
-                data_in <= X"12";
-                push_data <= true;
+                for i in 0 to 15 loop
+                    data_in <= std_logic_vector(to_unsigned(i, data_in'length));
+                    push_data <= true;
+                    wait until rising_edge(clk);
+                end loop;
+                push_data <= false;
+                wait until falling_edge(clk);
                 wait until rising_edge(clk);
                 wait until rising_edge(clk);
                 wait until falling_edge(clk);
-                push_data <= false;
+                check_equal(count, 16);
+                check(full);
+                check(almost_full);
+                check(not empty);
+                check(not almost_empty);
                 reset <= true;
                 wait until falling_edge(clk);
                 check_equal(0, count);
