@@ -19,7 +19,7 @@ end entity;
 architecture behaviourial of riscv32_csr is
 begin
 
-    process(csr_in, systemtimer_value)
+    process(csr_in, systemtimer_value, cycleCounter_value, instructionsRetired_value)
     begin
         error <= false;
         read_data <= (others => 'X');
