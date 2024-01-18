@@ -71,7 +71,7 @@ begin
                 nop <= true;
                 wait until falling_edge(clk);
                 check(not writeBackControlWordOut.regWrite);
-            elsif run("Nop during stall must be ignored") then
+            elsif run("Nop during stall must not be ignored") then
                 wait until falling_edge(clk);
                 stall <= false;
                 nop <= false;
@@ -80,7 +80,7 @@ begin
                 nop <= true;
                 stall <= true;
                 wait until falling_edge(clk);
-                check(writeBackControlWordOut.regWrite);
+                check(not writeBackControlWordOut.regWrite);
             elsif run("isBubbleOut is false if no nop and no isBubbleIn") then
                 wait until falling_edge(clk);
                 nop <= false;

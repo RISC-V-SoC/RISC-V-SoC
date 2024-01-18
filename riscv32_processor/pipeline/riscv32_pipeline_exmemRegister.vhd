@@ -42,7 +42,7 @@ begin
         variable isBubbleOut_buf : boolean := true;
     begin
         if rising_edge(clk) then
-            if nop and not stall then
+            if nop then
                 isBubbleOut_buf := true;
                 memoryControlWordOut_buf := riscv32_memoryControlWordAllFalse;
                 writeBackControlWordOut_buf := riscv32_writeBackControlWordAllFalse;

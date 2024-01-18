@@ -51,6 +51,7 @@ architecture behaviourial of riscv32_pipeline is
     signal injectBubbleFromBranchHelper : boolean;
     -- Instruction decode to id/ex
     signal nopOutputFromId : boolean;
+    signal nopOutputToIdEx : boolean;
     signal exControlWordFromId : riscv32_ExecuteControlWord_type;
     signal memControlWordFromId : riscv32_MemoryControlWord_type;
     signal wbControlWordFromId : riscv32_WriteBackControlWord_type;
@@ -120,6 +121,7 @@ architecture behaviourial of riscv32_pipeline is
 
 begin
     instructionFetchStall <= stall or repeatInstruction;
+    nopOutputToIdEx <= not stall and nopOutputFromId;
 
     instructionFetch : entity work.riscv32_pipeline_instructionFetch
     generic map (
@@ -174,7 +176,7 @@ begin
         clk => clk,
         -- Control in
         stall => stall,
-        nop => nopOutputFromId or rst = '1',
+        nop => nopOutputToIdEx or rst = '1',
         -- Pipeline control in
         executeControlWordIn => exControlWordFromId,
         memoryControlWordIn => memControlWordFromId,

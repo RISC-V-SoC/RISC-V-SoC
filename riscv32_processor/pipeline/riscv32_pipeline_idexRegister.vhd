@@ -51,7 +51,7 @@ begin
         variable isBubbleOut_buf : boolean := true;
     begin
         if rising_edge(clk) then
-            if nop and not stall then
+            if nop then
                 executeControlWord_var := riscv32_executeControlWordAllFalse;
                 memoryControlWord_var := riscv32_memoryControlWordAllFalse;
                 writeBackControlWord_var := riscv32_writeBackControlWordAllFalse;
