@@ -127,7 +127,12 @@ begin
         write_from_controller,
         data_from_controller,
         data_to_controller,
-        cpu_reset,
-        cpu_stall
+        instructionAddress => (others => '0'),
+        if_fault => false,
+        if_faultData => (others => '0'),
+        mem_fault => false,
+        mem_faultData => (others => '0'),
+        cpu_reset => cpu_reset,
+        cpu_stall => cpu_stall
     );
 end architecture;

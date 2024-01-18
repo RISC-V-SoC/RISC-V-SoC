@@ -182,6 +182,11 @@ begin
         write_from_controller => bus_slv_to_ci_doWrite,
         data_from_controller => bus_slv_to_ci_data,
         data_to_controller => ci_to_bus_slv_data,
+        instructionAddress => instructionAddress,
+        if_fault => instructionFetchHasFault,
+        if_faultData => instructionFetchFaultData,
+        mem_fault => memoryHasFault,
+        mem_faultData => memoryFaultData,
         cpu_reset => controllerReset,
         cpu_stall => controllerStall
     );
