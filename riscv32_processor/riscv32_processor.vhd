@@ -88,10 +88,6 @@ begin
         end if;
     end process;
 
-    process(controllerStall, instructionStall)
-    begin
-    end process;
-
     pipeline : entity work.riscv32_pipeline
         generic map (
             startAddress => startAddress
