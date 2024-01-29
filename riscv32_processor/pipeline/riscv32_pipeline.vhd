@@ -356,8 +356,10 @@ begin
     );
 
     branchHelper : entity work.riscv32_pipeline_branchHelper
-    port map (
-        executeControlWord => exControlWordFromId,
+    generic map (
+        array_size => 1
+    ) port map (
+        executeControlWords(0) => exControlWordFromId,
         injectBubble => injectBubbleFromBranchHelper
     );
 

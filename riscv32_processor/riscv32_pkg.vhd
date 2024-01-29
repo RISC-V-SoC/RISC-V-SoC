@@ -73,6 +73,8 @@ package riscv32_pkg is
         MemtoReg : boolean;
     end record;
 
+    type riscv32_ExecuteControlWord_array is array (natural range <>) of riscv32_ExecuteControlWord_type;
+
     constant riscv32_instructionDecodeControlWordAllFalse : riscv32_InstructionDecodeControlWord_type := (
         jump => false,
         PCSrc => false,

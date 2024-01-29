@@ -19,9 +19,11 @@ end entity;
 
 architecture tb of riscv32_pipeline_branchHelper_tb is
     signal executeControlWord : riscv32_ExecuteControlWord_type := riscv32_executeControlWordAllFalse;
+    signal otherExecuteControlWord : riscv32_ExecuteControlWord_type := riscv32_executeControlWordAllFalse;
     signal injectBubble : boolean;
 
     signal instruction : riscv32_instruction_type := (others => '0');
+    signal otherInstruction : riscv32_instruction_type := (others => '0');
 begin
     main : process
     begin
@@ -39,6 +41,10 @@ begin
                 instruction <= construct_itype_instruction(opcode => riscv32_opcode_jalr);
                 wait for 1 ns;
                 check(injectBubble);
+            elsif run("BRANCH from second control word also causes bubble") then
+                otherInstruction <= construct_btype_instruction(opcode => riscv32_opcode_branch);
+                wait for 1 ns;
+                check(injectBubble);
             end if;
         end loop;
         test_runner_cleanup(runner);
@@ -48,8 +54,11 @@ begin
     test_runner_watchdog(runner, 5 ns);
 
     branchHelper : entity src.riscv32_pipeline_branchHelper
-    port map (
-        executeControlWord => executeControlWord,
+    generic map (
+        array_size => 2
+    ) port map (
+        executeControlWords(0) => executeControlWord,
+        executeControlWords(1) => otherExecuteControlWord,
         injectBubble => injectBubble
     );
 
@@ -57,5 +66,11 @@ begin
     port map (
         instruction => instruction,
         executeControlWord => executeControlWord
+    );
+
+    otherControlDecode : entity src.riscv32_control
+    port map (
+        instruction => otherInstruction,
+        executeControlWord => otherExecuteControlWord
     );
 end architecture;
