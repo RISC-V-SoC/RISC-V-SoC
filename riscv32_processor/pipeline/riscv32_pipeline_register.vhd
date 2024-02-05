@@ -45,7 +45,7 @@ begin
     exMemOpIsMemLoad <= exMemWriteBackControlWord.memToReg;
     exMemOpDoesStore <= exMemWriteBackControlWord.regWrite;
 
-    determineHazard : process(exMemOpIsMemLoad, regExOpDoesStore, rs1Address, rs2Address) is
+    determineHazard : process(exMemOpIsMemLoad, regExOpDoesStore, rs1Address, rs2Address, regExRdAddress, exMemRdAddress) is
         impure function hasHazard (address : riscv32_registerFileAddress_type) return boolean is
         begin
             if address = 0 then
@@ -65,7 +65,7 @@ begin
 
     repeatInstruction <= (rs1Hazard or rs2Hazard);
 
-    determineForwarding : process(rs1Address, rs1DataFromRegFile, exMemExecResult, exMemRdAddress, exMemOpDoesStore)
+    determineForwarding : process(rs1Address, rs1DataFromRegFile, rs2Address, rs2DataFromRegFile, exMemExecResult, exMemRdAddress, exMemOpDoesStore)
         impure function forwardData (address : riscv32_registerFileAddress_type; regData : riscv32_data_type) return riscv32_data_type is
         begin
             if address = 0 then

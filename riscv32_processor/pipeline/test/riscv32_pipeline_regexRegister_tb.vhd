@@ -42,7 +42,7 @@ architecture tb of riscv32_pipeline_regexRegister_tb is
     signal rs1DataOut : riscv32_data_type;
     signal rs2DataOut : riscv32_data_type;
     signal immidiateOut : riscv32_data_type;
-    signal uimmididateOut : riscv32_data_type;
+    signal uimmidiateOut : riscv32_data_type;
     signal rdAddressOut : riscv32_registerFileAddress_type;
 begin
     clk <= not clk after (clk_period/2);
@@ -141,7 +141,7 @@ begin
         rs1DataOut => rs1DataOut,
         rs2DataOut => rs2DataOut,
         immidiateOut => immidiateOut,
-        uimmididateOut => uimmididateOut,
+        uimmidiateOut => uimmidiateOut,
         rdAddressOut => rdAddressOut
     );
 end architecture;

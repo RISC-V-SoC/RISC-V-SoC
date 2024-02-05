@@ -46,12 +46,9 @@ architecture behaviourial of riscv32_pipeline is
     -- Instruction decode to instruction fetch
     signal overrideProgramCounterFromID : boolean;
     signal newProgramCounterFromID : riscv32_address_type;
-    signal repeatInstruction : boolean;
     -- Branchhelper to IF
     signal injectBubbleFromBranchHelper : boolean;
-    -- Instruction decode to id/ex
-    signal nopOutputFromId : boolean;
-    signal nopOutputToIdEx : boolean;
+    -- From ID
     signal exControlWordFromId : riscv32_ExecuteControlWord_type;
     signal memControlWordFromId : riscv32_MemoryControlWord_type;
     signal wbControlWordFromId : riscv32_WriteBackControlWord_type;
@@ -60,35 +57,39 @@ architecture behaviourial of riscv32_pipeline is
     signal immidiateFromId : riscv32_data_type;
     signal uimmidiateFromId : riscv32_data_type;
     signal rdAddressFromId : riscv32_registerFileAddress_type;
-    -- Registerfile to id/ex
+    -- Registerfile to register stage
     signal rs1DataFromRegFile : riscv32_data_type;
     signal rs2DataFromRegFile : riscv32_data_type;
-    -- From id/ex
-    signal exControlWordFromIdEx : riscv32_ExecuteControlWord_type;
-    signal memControlWordFromIdEx : riscv32_MemoryControlWord_type;
-    signal wbControlWordFromIdEx : riscv32_WriteBackControlWord_type;
-    signal isBubbleFromIdEx : boolean;
-    signal programCounterFromIdEx : riscv32_address_type;
-    signal rs1DataFromIdEx : riscv32_data_type;
-    signal rs1AddressFromIdEx : riscv32_registerFileAddress_type;
-    signal rs2DataFromIdEx : riscv32_data_type;
-    signal rs2AddressFromIdEx : riscv32_registerFileAddress_type;
-    signal immidiateFromIdEx : riscv32_data_type;
-    signal uimmidiateFromIdEx : riscv32_data_type;
-    signal rdAddrFromIdEx : riscv32_registerFileAddress_type;
-    -- Instruction decode to forwarding
-    signal rs1DataToFwU : riscv32_data_type;
-    signal rs1AddressToFwU : riscv32_registerFileAddress_type;
-    signal rs2DataToFwU : riscv32_data_type;
-    signal rs2AddressToFwU : riscv32_registerFileAddress_type;
-    -- Instruction decode to loadHazardDetector
-    signal portOneAddrToLHD : riscv32_registerFileAddress_type;
-    signal portTwoAddrToLHD : riscv32_registerFileAddress_type;
-    -- loadHazardDetector to ID
-    signal loadHazardDetected : boolean;
-    -- Forwarding unit to execute
-    signal rs1DataFromFwu : riscv32_data_type;
-    signal rs2DataFromFwu : riscv32_data_type;
+    -- From id/reg
+    signal exControlWordFromIdReg : riscv32_ExecuteControlWord_type;
+    signal memControlWordFromIdReg : riscv32_MemoryControlWord_type;
+    signal wbControlWordFromIdReg : riscv32_WriteBackControlWord_type;
+    signal isBubbleFromIdReg : boolean;
+    signal programCounterFromIdReg : riscv32_address_type;
+    signal rs1DataFromIdReg : riscv32_data_type;
+    signal rs1AddressFromIdReg : riscv32_registerFileAddress_type;
+    signal rs2DataFromIdReg : riscv32_data_type;
+    signal rs2AddressFromIdReg : riscv32_registerFileAddress_type;
+    signal immidiateFromIdReg : riscv32_data_type;
+    signal uimmidiateFromIdReg : riscv32_data_type;
+    signal rdAddrFromIdReg : riscv32_registerFileAddress_type;
+    -- From Reg
+    signal rs1DataFromReg : riscv32_data_type;
+    signal rs2DataFromReg : riscv32_data_type;
+    signal repeatInstructionFromReg : boolean;
+    -- From reg/ex
+    signal exControlWordFromRegEx : riscv32_ExecuteControlWord_type;
+    signal memControlWordFromRegEx : riscv32_MemoryControlWord_type;
+    signal wbControlWordFromRegEx : riscv32_WriteBackControlWord_type;
+    signal isBubbleFromRegEx : boolean;
+    signal programCounterFromRegEx : riscv32_address_type;
+    signal rs1DataFromRegEx : riscv32_data_type;
+    signal rs1AddressFromRegEx : riscv32_registerFileAddress_type;
+    signal rs2DataFromRegEx : riscv32_data_type;
+    signal rs2AddressFromRegEx : riscv32_registerFileAddress_type;
+    signal immidiateFromRegEx : riscv32_data_type;
+    signal uimmidiateFromRegEx : riscv32_data_type;
+    signal rdAddrFromRegEx : riscv32_registerFileAddress_type;
     -- Execute to memory
     signal execResFromExec : riscv32_data_type;
     -- From ex/mem
@@ -117,11 +118,14 @@ architecture behaviourial of riscv32_pipeline is
     signal regWriteAddrFromWb : riscv32_registerFileAddress_type;
     signal regWriteDataFromWb : riscv32_data_type;
 
-    signal instructionFetchStall : boolean;
+    signal stallToResolveHazard : boolean;
+    signal nopOutputToResolveHazard : boolean;
 
 begin
-    instructionFetchStall <= stall or repeatInstruction;
-    nopOutputToIdEx <= not stall and nopOutputFromId;
+    stallToResolveHazard <= stall or repeatInstructionFromReg;
+    nopOutputToResolveHazard <= not stall and repeatInstructionFromReg;
+
+    -- IF stage
 
     instructionFetch : entity work.riscv32_pipeline_instructionFetch
     generic map (
@@ -144,20 +148,32 @@ begin
         newProgramCounterFromEx => newProgramCounterFromEx,
 
         injectBubble => injectBubbleFromBranchHelper,
-        stall => instructionFetchStall
+        stall => stallToResolveHazard
     );
+
+    branchHelper : entity work.riscv32_pipeline_branchHelper
+    generic map (
+        array_size => 2
+    ) port map (
+        executeControlWords(0) => exControlWordFromId,
+        executeControlWords(1) => exControlWordFromIdReg,
+        injectBubble => injectBubbleFromBranchHelper
+    );
+
+
+    -- ID stage
 
     instructionDecode : entity work.riscv32_pipeline_instructionDecode
     port map (
         overrideProgramCounter => overrideProgramCounterFromID,
-        repeatInstruction => repeatInstruction,
+        --repeatInstruction => repeatInstruction,
 
         instructionFromInstructionFetch => instructionToID,
         programCounter => programCounterFromIf,
 
         newProgramCounter => newProgramCounterFromID,
 
-        nopOutput => nopOutputFromId,
+        --nopOutput => nopOutputFromId,
 
         executeControlWord => exControlWordFromId,
         memoryControlWord => memControlWordFromId,
@@ -168,15 +184,15 @@ begin
         uimmidiate => uimmidiateFromId,
         rdAddress => rdAddressFromId,
 
-        loadHazardDetected => loadHazardDetected
+        loadHazardDetected => false
     );
 
-    idexReg : entity work.riscv32_pipeline_idexRegister
+    idregReg : entity work.riscv32_pipeline_idregRegister
     port map (
         clk => clk,
         -- Control in
-        stall => stall,
-        nop => nopOutputToIdEx or rst = '1',
+        stall => stall or stallToResolveHazard,
+        nop => rst = '1',
         -- Pipeline control in
         executeControlWordIn => exControlWordFromId,
         memoryControlWordIn => memControlWordFromId,
@@ -184,37 +200,103 @@ begin
         -- Pipeline data in
         isBubbleIn => isBubbleFromIF,
         programCounterIn => programCounterFromIf,
-        rs1DataIn => rs1DataFromRegFile,
         rs1AddressIn => rs1AddressFromId,
-        rs2DataIn => rs2DataFromRegFile,
         rs2AddressIn => rs2AddressFromId,
         immidiateIn => immidiateFromId,
         uimmidiateIn => uimmidiateFromId,
         rdAddressIn => rdAddressFromId,
         -- Pipeline control out
-        executeControlWordOut => exControlWordFromIdEx,
-        memoryControlWordOut => memControlWordFromIdEx,
-        writeBackControlWordOut => wbControlWordFromIdEx,
+        executeControlWordOut => exControlWordFromIdReg,
+        memoryControlWordOut => memControlWordFromIdReg,
+        writeBackControlWordOut => wbControlWordFromIdReg,
         -- Pipeline data out
-        isBubbleOut => isBubbleFromIdEx,
-        programCounterOut => programCounterFromIdEx,
-        rs1DataOut => rs1DataFromIdEx,
-        rs1AddressOut => rs1AddressFromIdEx,
-        rs2DataOut => rs2DataFromIdEx,
-        rs2AddressOut => rs2AddressFromIdEx,
-        immidiateOut => immidiateFromIdEx,
-        uimmididateOut => uimmidiateFromIdEx,
-        rdAddressOut => rdAddrFromIdEx
+        isBubbleOut => isBubbleFromIdReg,
+        programCounterOut => programCounterFromIdReg,
+        rs1AddressOut => rs1AddressFromIdReg,
+        rs2AddressOut => rs2AddressFromIdReg,
+        immidiateOut => immidiateFromIdReg,
+        uimmidiateOut => uimmidiateFromIdReg,
+        rdAddressOut => rdAddrFromIdReg
     );
+
+    -- Register stage
+
+    pipelineRegister : entity work.riscv32_pipeline_register
+    port map (
+        repeatInstruction => repeatInstructionFromReg,
+        execControlWord => exControlWordFromIdReg,
+        writeBackControlWord => wbControlWordFromIdReg,
+        regExWriteBackControlWord => wbControlWordFromRegEx,
+        exMemWriteBackControlWord => wbControlWordFromExMem,
+        regExRdAddress => rdAddrFromRegEx,
+        exMemRdAddress => rdAddrFromExMem,
+        exMemExecResult => execResFromExMem,
+        rs1Address => rs1AddressFromIdReg,
+        rs2Address => rs2AddressFromIdReg,
+        rs1DataFromRegFile => rs1DataFromRegFile,
+        rs2DataFromRegFile => rs2DataFromRegFile,
+        rs1DataOut => rs1DataFromReg,
+        rs2DataOut => rs2DataFromReg
+    );
+
+    -- Lives in reg stage
+    registerFile : entity work.riscv32_pipeline_registerFile
+    port map (
+        clk => clk,
+        readPortOneAddress => rs1AddressFromIdReg,
+        readPortOneData => rs1DataFromRegFile,
+        readPortTwoAddress => rs2AddressFromIdReg,
+        readPortTwoData => rs2DataFromRegFile,
+        writePortDoWrite => regWriteFromWb,
+        writePortAddress => regWriteAddrFromWb,
+        writePortData => regWriteDataFromWb,
+        extPortAddress => address_to_regFile,
+        readPortExtData => data_from_regFile,
+        writePortExtDoWrite => write_to_regFile,
+        writePortExtData => data_to_regFile
+    );
+
+    regexReg : entity work.riscv32_pipeline_regexRegister
+    port map (
+        clk => clk,
+        -- Control in
+        stall => stall,
+        nop => rst = '1' or nopOutputToResolveHazard,
+        -- Pipeline control in
+        executeControlWordIn => exControlWordFromIdReg,
+        memoryControlWordIn => memControlWordFromIdReg,
+        writeBackControlWordIn => wbControlWordFromIdReg,
+        -- Pipeline data in
+        isBubbleIn => isBubbleFromIdReg,
+        programCounterIn => programCounterFromIdReg,
+        rs1DataIn => rs1DataFromReg,
+        rs2DataIn => rs2DataFromReg,
+        immidiateIn => immidiateFromIdReg,
+        uimmidiateIn => uimmidiateFromIdReg,
+        rdAddressIn => rdAddrFromIdReg,
+        -- Pipeline control out
+        executeControlWordOut => exControlWordFromRegEx,
+        memoryControlWordOut => memControlWordFromRegEx,
+        writeBackControlWordOut => wbControlWordFromRegEx,
+        -- Pipeline data out
+        isBubbleOut => isBubbleFromRegEx,
+        programCounterOut => programCounterFromRegEx,
+        rs1DataOut => rs1DataFromRegEx,
+        rs2DataOut => rs2DataFromRegEx,
+        immidiateOut => immidiateFromRegEx,
+        uimmidiateOut => uimmidiateFromRegEx,
+        rdAddressOut => rdAddrFromRegEx
+    );
+
 
     execute : entity work.riscv32_pipeline_execute
     port map (
-        executeControlWord => exControlWordFromIdEx,
+        executeControlWord => exControlWordFromRegEx,
 
-        rs1Data => rs1DataFromFwu,
-        rs2Data => rs2DataFromFwu,
-        immidiate => immidiateFromIdEx,
-        programCounter => programCounterFromIdEx,
+        rs1Data => rs1DataFromRegEx,
+        rs2Data => rs2DataFromRegEx,
+        immidiate => immidiateFromRegEx,
+        programCounter => programCounterFromRegEx,
 
         execResult => execResFromExec,
 
@@ -229,15 +311,15 @@ begin
        stall => stall,
        nop => rst = '1',
 
-       memoryControlWordIn => memControlWordFromIdEx,
-       writeBackControlWordIn => wbControlWordFromIdEx,
+       memoryControlWordIn => memControlWordFromRegEx,
+       writeBackControlWordIn => wbControlWordFromRegEx,
 
-       isBubbleIn => isBubbleFromIdEx,
+       isBubbleIn => isBubbleFromRegEx,
        execResultIn => execResFromExec,
-       rs1DataIn => rs1DataFromFwu,
-       rs2DataIn => rs2DataFromFwu,
-       rdAddressIn => rdAddrFromIdEx,
-       uimmidiateIn => uimmidiateFromIdEx,
+       rs1DataIn => rs1DataFromRegEx,
+       rs2DataIn => rs2DataFromRegEx,
+       rdAddressIn => rdAddrFromRegEx,
+       uimmidiateIn => uimmidiateFromRegEx,
 
        memoryControlWordOut => memControlWordFromExMem,
        writeBackControlWordOut => wbControlWordFromExMem,
@@ -247,7 +329,7 @@ begin
        rs1DataOut => rs1DataFromExMem,
        rs2DataOut => rs2DataFromExMem,
        rdAddressOut => rdAddrFromExMem,
-       uimmididateOut => uimmidiateFromExMem
+       uimmidiateOut => uimmidiateFromExMem
    );
 
     memory : entity work.riscv32_pipeline_memory
@@ -306,61 +388,6 @@ begin
         regWrite => regWriteFromWb,
         regWriteAddress => regWriteAddrFromWb,
         regWriteData => regWriteDataFromWb
-    );
-
-    -- Lives in EX stage
-    forwarding_unit : entity work.riscv32_pipeline_forwarding_unit
-    port map (
-        rs1DataFromID => rs1DataFromIdEx,
-        rs1AddressFromID => rs1AddressFromIdEx,
-        rs2DataFromID => rs2DataFromIdEx,
-        rs2AddressFromID => rs2AddressFromIdEx,
-
-        regDataFromEx => execResFromExMem,
-        regAddressFromEx => rdAddrFromExMem,
-        regWriteFromEx => wbControlWordFromExMem.regWrite,
-
-        regDataFromMem => regWriteDataFromWb,
-        regAddressFromMem => regWriteAddrFromWb,
-        regWriteFromMem => regWriteFromWb,
-
-        rs1Data => rs1DataFromFwu,
-        rs2Data => rs2DataFromFwu
-    );
-
-    -- Lives in ID stage
-    loadHazardDetector : entity work.riscv32_pipeline_loadHazardDetector
-    port map (
-        writeBackControlWordFromEx => wbControlWordFromIdEx,
-        targetRegFromEx => rdAddrFromIdEx,
-        readPortOneAddressFromID => rs2AddressFromId,
-        readPortTwoAddressFromID => rs1AddressFromId,
-        loadHazardDetected => loadHazardDetected
-    );
-
-    -- Lives in ID stage
-    registerFile : entity work.riscv32_pipeline_registerFile
-    port map (
-        clk => clk,
-        readPortOneAddress => rs1AddressFromId,
-        readPortOneData => rs1DataFromRegFile,
-        readPortTwoAddress => rs2AddressFromId,
-        readPortTwoData => rs2DataFromRegFile,
-        writePortDoWrite => regWriteFromWb,
-        writePortAddress => regWriteAddrFromWb,
-        writePortData => regWriteDataFromWb,
-        extPortAddress => address_to_regFile,
-        readPortExtData => data_from_regFile,
-        writePortExtDoWrite => write_to_regFile,
-        writePortExtData => data_to_regFile
-    );
-
-    branchHelper : entity work.riscv32_pipeline_branchHelper
-    generic map (
-        array_size => 1
-    ) port map (
-        executeControlWords(0) => exControlWordFromId,
-        injectBubble => injectBubbleFromBranchHelper
     );
 
     instructionsRetiredCounter : entity work.riscv32_pipeline_instructionsRetiredCounter

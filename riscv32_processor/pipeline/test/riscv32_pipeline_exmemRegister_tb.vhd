@@ -39,7 +39,7 @@ architecture tb of riscv32_pipeline_exmemRegister_tb is
     signal rs1DataOut : riscv32_data_type;
     signal rs2DataOut : riscv32_data_type;
     signal rdAddressOut : riscv32_registerFileAddress_type;
-    signal uimmididateOut : riscv32_data_type;
+    signal uimmidiateOut : riscv32_data_type;
 begin
     clk <= not clk after (clk_period/2);
 
@@ -133,6 +133,6 @@ begin
         rs1DataOut => rs1DataOut,
         rs2DataOut => rs2DataOut,
         rdAddressOut => rdAddressOut,
-        uimmididateOut => uimmididateOut
+        uimmidiateOut => uimmidiateOut
     );
 end architecture;

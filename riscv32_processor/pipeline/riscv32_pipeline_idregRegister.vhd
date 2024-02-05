@@ -33,7 +33,7 @@ entity riscv32_pipeline_idregRegister is
         rs1AddressOut : out riscv32_registerFileAddress_type;
         rs2AddressOut : out riscv32_registerFileAddress_type;
         immidiateOut : out riscv32_data_type;
-        uimmididateOut : out riscv32_data_type;
+        uimmidiateOut : out riscv32_data_type;
         rdAddressOut : out riscv32_registerFileAddress_type
     );
 end entity;
@@ -60,7 +60,7 @@ begin
                 rs1AddressOut <= rs1AddressIn;
                 rs2AddressOut <= rs2AddressIn;
                 immidiateOut <= immidiateIn;
-                uimmididateOut <= uimmidiateIn;
+                uimmidiateOut <= uimmidiateIn;
                 rdAddressOut <= rdAddressIn;
                 isBubbleOut_buf := isBubbleIn;
             end if;

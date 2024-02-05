@@ -30,7 +30,7 @@ entity riscv32_pipeline_exmemRegister is
         rs1DataOut : out riscv32_data_type;
         rs2DataOut : out riscv32_data_type;
         rdAddressOut : out riscv32_registerFileAddress_type;
-        uimmididateOut : out riscv32_data_type
+        uimmidiateOut : out riscv32_data_type
     );
 end entity;
 
@@ -53,7 +53,7 @@ begin
                 rs1DataOut <= rs1DataIn;
                 rs2DataOut <= rs2DataIn;
                 rdAddressOut <= rdAddressIn;
-                uimmididateOut <= uimmidiateIn;
+                uimmidiateOut <= uimmidiateIn;
                 isBubbleOut_buf := isBubbleIn;
             end if;
         end if;

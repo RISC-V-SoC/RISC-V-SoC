@@ -33,7 +33,7 @@ entity riscv32_pipeline_regexRegister is
         rs1DataOut : out riscv32_data_type;
         rs2DataOut : out riscv32_data_type;
         immidiateOut : out riscv32_data_type;
-        uimmididateOut : out riscv32_data_type;
+        uimmidiateOut : out riscv32_data_type;
         rdAddressOut : out riscv32_registerFileAddress_type
     );
 end entity;
@@ -60,7 +60,7 @@ begin
                 rs1DataOut <= rs1DataIn;
                 rs2DataOut <= rs2DataIn;
                 immidiateOut <= immidiateIn;
-                uimmididateOut <= uimmidiateIn;
+                uimmidiateOut <= uimmidiateIn;
                 rdAddressOut <= rdAddressIn;
                 isBubbleOut_buf := isBubbleIn;
             end if;
