@@ -21,6 +21,7 @@ architecture tb of riscv32_pipeline_idregRegister_tb is
     signal stall : boolean := false;
     signal nop : boolean := false;
     -- Pipeline control in
+    signal registerControlWordIn : riscv32_RegisterControlWord_type := riscv32_registerControlWordAllFalse;
     signal executeControlWordIn : riscv32_ExecuteControlWord_type := riscv32_executeControlWordAllFalse;
     signal memoryControlWordIn : riscv32_MemoryControlWord_type := riscv32_memoryControlWordAllFalse;
     signal writeBackControlWordIn : riscv32_WriteBackControlWord_type := riscv32_writeBackControlWordAllFalse;
@@ -33,6 +34,7 @@ architecture tb of riscv32_pipeline_idregRegister_tb is
     signal uimmidiateIn : riscv32_data_type := (others => '0');
     signal rdAddressIn : riscv32_registerFileAddress_type := 0;
     -- Pipeline control out
+    signal registerControlWordOut : riscv32_RegisterControlWord_type;
     signal executeControlWordOut : riscv32_ExecuteControlWord_type;
     signal memoryControlWordOut : riscv32_MemoryControlWord_type;
     signal writeBackControlWordOut : riscv32_WriteBackControlWord_type;
@@ -57,6 +59,7 @@ begin
                 check(executeControlWordOut = riscv32_executeControlWordAllFalse);
                 check(memoryControlWordOut = riscv32_memoryControlWordAllFalse);
                 check(writeBackControlWordOut = riscv32_writeBackControlWordAllFalse);
+                check(registerControlWordOut = riscv32_registerControlWordAllFalse);
                 check(isBubbleOut);
             elsif run("Forwards input on rising edge if stall = nop = false") then
                 wait until falling_edge(clk);
@@ -121,6 +124,7 @@ begin
         stall => stall,
         nop => nop,
         -- Pipeline control in
+        registerControlWordIn => registerControlWordIn,
         executeControlWordIn => executeControlWordIn,
         memoryControlWordIn => memoryControlWordIn,
         writeBackControlWordIn => writeBackControlWordIn,
@@ -133,6 +137,7 @@ begin
         uimmidiateIn => uimmidiateIn,
         rdAddressIn => rdAddressIn,
         -- Pipeline control out
+        registerControlWordOut => registerControlWordOut,
         executeControlWordOut => executeControlWordOut,
         memoryControlWordOut => memoryControlWordOut,
         writeBackControlWordOut => writeBackControlWordOut,

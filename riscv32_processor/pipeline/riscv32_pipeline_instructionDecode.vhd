@@ -19,6 +19,7 @@ entity riscv32_pipeline_instructionDecode is
         newProgramCounter : out riscv32_address_type;
 
         -- Data output
+        registerControlWord : out riscv32_RegisterControlWord_type;
         executeControlWord : out riscv32_ExecuteControlWord_type;
         memoryControlWord : out riscv32_MemoryControlWord_type;
         writeBackControlWord : out riscv32_WriteBackControlWord_type;
@@ -102,7 +103,8 @@ begin
         instructionDecodeControlWord => decodedInstructionDecodeControlWord,
         executeControlWord => decodedExecuteControlWord,
         memoryControlWord => decodedMemoryControlWord,
-        writeBackControlWord => decodedWriteBackControlWord
+        writeBackControlWord => decodedWriteBackControlWord,
+        registerControlWord => registerControlWord
     );
 
 end architecture;

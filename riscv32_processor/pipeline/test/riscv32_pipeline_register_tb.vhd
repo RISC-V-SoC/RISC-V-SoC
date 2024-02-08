@@ -20,6 +20,8 @@ end entity;
 architecture tb of riscv32_pipeline_register_tb is
     signal repeatInstruction : boolean;
 
+    signal registerControlWord : riscv32_RegisterControlWord_type := riscv32_registerControlWordAllFalse;
+
     signal instructionFromInstructionDecode : riscv32_instruction_type := riscv32_instructionNop;
     signal execControlWord : riscv32_ExecuteControlWord_type;
     signal writeBackControlWord : riscv32_WriteBackControlWord_type;
@@ -140,6 +142,56 @@ begin
                 rs2DataFromRegFile <= X"01230123";
                 wait for 1 fs;
                 check_equal(rs2DataOut, rs2DataFromRegFile);
+            elsif run("LUI does not cause repeat") then
+                instructionFromInstructionDecode <= construct_utype_instruction(opcode => riscv32_opcode_lui);
+                instructionInRegEx <= construct_rtype_instruction(opcode => riscv32_opcode_op, funct3 => riscv32_funct3_add_sub);
+                instructionInExMem <= construct_rtype_instruction(opcode => riscv32_opcode_op, funct3 => riscv32_funct3_add_sub);
+                regExRdAddress <= 1;
+                exMemRdAddress <= 1;
+                rs1Address <= 1;
+                rs2Address <= 1;
+                wait for 1 fs;
+                check(not repeatInstruction);
+            elsif run("AUIPC does not cause repeat") then
+                instructionFromInstructionDecode <= construct_utype_instruction(opcode => riscv32_opcode_auipc);
+                instructionInRegEx <= construct_rtype_instruction(opcode => riscv32_opcode_op, funct3 => riscv32_funct3_add_sub);
+                instructionInExMem <= construct_rtype_instruction(opcode => riscv32_opcode_op, funct3 => riscv32_funct3_add_sub);
+                regExRdAddress <= 1;
+                exMemRdAddress <= 1;
+                rs1Address <= 1;
+                rs2Address <= 1;
+                wait for 1 fs;
+                check(not repeatInstruction);
+            elsif run("JAL does not cause repeat") then
+                instructionFromInstructionDecode <= construct_utype_instruction(opcode => riscv32_opcode_jal);
+                instructionInRegEx <= construct_rtype_instruction(opcode => riscv32_opcode_op, funct3 => riscv32_funct3_add_sub);
+                instructionInExMem <= construct_rtype_instruction(opcode => riscv32_opcode_op, funct3 => riscv32_funct3_add_sub);
+                regExRdAddress <= 1;
+                exMemRdAddress <= 1;
+                rs1Address <= 1;
+                rs2Address <= 1;
+                wait for 1 fs;
+                check(not repeatInstruction);
+            elsif run("Load instructions ignore rs2 dependencies") then
+                instructionFromInstructionDecode <= construct_itype_instruction(opcode => riscv32_opcode_load);
+                instructionInRegEx <= construct_rtype_instruction(opcode => riscv32_opcode_op, funct3 => riscv32_funct3_add_sub);
+                instructionInExMem <= construct_rtype_instruction(opcode => riscv32_opcode_op, funct3 => riscv32_funct3_add_sub);
+                regExRdAddress <= 1;
+                exMemRdAddress <= 1;
+                rs1Address <= 2;
+                rs2Address <= 1;
+                wait for 1 fs;
+                check(not repeatInstruction);
+            elsif run("immidiate instructions ignore rs2 dependencies") then
+                instructionFromInstructionDecode <= construct_itype_instruction(opcode => riscv32_opcode_opimm);
+                instructionInRegEx <= construct_rtype_instruction(opcode => riscv32_opcode_op, funct3 => riscv32_funct3_add_sub);
+                instructionInExMem <= construct_rtype_instruction(opcode => riscv32_opcode_op, funct3 => riscv32_funct3_add_sub);
+                regExRdAddress <= 1;
+                exMemRdAddress <= 1;
+                rs1Address <= 2;
+                rs2Address <= 1;
+                wait for 1 fs;
+                check(not repeatInstruction);
             end if;
         end loop;
         test_runner_cleanup(runner);
@@ -149,6 +201,7 @@ begin
     pipelineRegister : entity src.riscv32_pipeline_register
     port map (
         repeatInstruction => repeatInstruction,
+        registerControlWord => registerControlWord,
         execControlWord => execControlWord,
         writeBackControlWord => writeBackControlWord,
         regExWriteBackControlWord => regExWriteBackControlWord,
@@ -167,6 +220,7 @@ begin
     idControlDecode : entity src.riscv32_control
     port map (
         instruction => instructionFromInstructionDecode,
+        registerControlWord => registerControlWord,
         executeControlWord => execControlWord,
         writeBackControlWord => writeBackControlWord
     );

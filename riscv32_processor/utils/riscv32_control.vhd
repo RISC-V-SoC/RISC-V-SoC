@@ -10,6 +10,7 @@ entity riscv32_control is
     port (
         instruction : in riscv32_instruction_type;
 
+        registerControlWord : out riscv32_RegisterControlWord_type;
         instructionDecodeControlWord : out riscv32_InstructionDecodeControlWord_type;
         executeControlWord : out riscv32_ExecuteControlWord_type;
         memoryControlWord : out riscv32_MemoryControlWord_type;
@@ -27,6 +28,7 @@ begin
         variable executeControlWord_buf : riscv32_ExecuteControlWord_type;
         variable memoryControlWord_buf : riscv32_MemoryControlWord_type;
         variable writeBackControlWord_buf : riscv32_WriteBackControlWord_type;
+        variable registerControlWord_buf : riscv32_RegisterControlWord_type;
 
         variable opcode : riscv32_opcode_type;
         variable funct3 : riscv32_funct3_type;
@@ -45,6 +47,7 @@ begin
         executeControlWord_buf := riscv32_executeControlWordAllFalse;
         memoryControlWord_buf := riscv32_memoryControlWordAllFalse;
         writeBackControlWord_buf := riscv32_writeBackControlWordAllFalse;
+        registerControlWord_buf := riscv32_registerControlWordAllFalse;
 
         opcode := to_integer(unsigned(instruction(6 downto 0)));
         funct3 := to_integer(unsigned(instruction(14 downto 12)));
@@ -180,12 +183,14 @@ begin
                 writeBackControlWord_buf.regWrite := true;
                 writeBackControlWord_buf.MemtoReg := false;
             when riscv32_opcode_jal =>
+                registerControlWord_buf.no_dependencies := true;
                 instructionDecodeControlWord_buf.jump := true;
                 executeControlWord_buf.exec_directive := riscv32_exec_calcReturn;
                 writeBackControlWord_buf.regWrite := true;
                 writeBackControlWord_buf.MemtoReg := false;
             when riscv32_opcode_opimm =>
                 instructionDecodeControlWord_buf.immidiate_type := riscv32_i_immidiate;
+                registerControlWord_buf.ignore_rs2_dependencies := true;
                 executeControlWord_buf.exec_directive := riscv32_exec_alu_imm;
                 writeBackControlWord_buf.regWrite := true;
                 writeBackControlWord_buf.MemtoReg := false;
@@ -196,11 +201,13 @@ begin
                 writeBackControlWord_buf.regWrite := true;
                 writeBackControlWord_buf.MemtoReg := false;
             when riscv32_opcode_lui =>
+                registerControlWord_buf.no_dependencies := true;
                 instructionDecodeControlWord_buf.immidiate_type := riscv32_u_immidiate;
                 executeControlWord_buf.exec_directive := riscv32_exec_lui;
                 writeBackControlWord_buf.regWrite := true;
                 writeBackControlWord_buf.MemtoReg := false;
             when riscv32_opcode_auipc =>
+                registerControlWord_buf.no_dependencies := true;
                 instructionDecodeControlWord_buf.immidiate_type := riscv32_u_immidiate;
                 executeControlWord_buf.exec_directive := riscv32_exec_auipc;
                 writeBackControlWord_buf.regWrite := true;
@@ -213,6 +220,7 @@ begin
                 writeBackControlWord_buf.MemtoReg := false;
             when riscv32_opcode_load =>
                 instructionDecodeControlWord_buf.immidiate_type := riscv32_i_immidiate;
+                registerControlWord_buf.ignore_rs2_dependencies := true;
                 executeControlWord_buf.exec_directive := riscv32_exec_alu_imm;
                 executeControlWord_buf.alu_cmd := cmd_alu_add;
                 memoryControlWord_buf.MemOp := true;
@@ -241,10 +249,10 @@ begin
         end case;
 
         instructionDecodeControlWord <= instructionDecodeControlWord_buf;
+        registerControlWord <= registerControlWord_buf;
         executeControlWord <= executeControlWord_buf;
         memoryControlWord <= memoryControlWord_buf;
         writeBackControlWord <= writeBackControlWord_buf;
-
     end process;
 
 

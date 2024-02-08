@@ -49,6 +49,11 @@ package riscv32_pkg is
         immidiate_type : riscv32_immidiate_type;
     end record;
 
+    type riscv32_RegisterControlWord_type is record
+        no_dependencies : boolean;
+        ignore_rs2_dependencies : boolean;
+    end record;
+
     type riscv32_ExecuteControlWord_type is record
         exec_directive : riscv32_exec_type;
         is_branch_op : boolean;
@@ -74,6 +79,11 @@ package riscv32_pkg is
     end record;
 
     type riscv32_ExecuteControlWord_array is array (natural range <>) of riscv32_ExecuteControlWord_type;
+
+    constant riscv32_registerControlWordAllFalse : riscv32_RegisterControlWord_type := (
+        no_dependencies => false,
+        ignore_rs2_dependencies => false
+    );
 
     constant riscv32_instructionDecodeControlWordAllFalse : riscv32_InstructionDecodeControlWord_type := (
         jump => false,

@@ -49,6 +49,7 @@ architecture behaviourial of riscv32_pipeline is
     -- Branchhelper to IF
     signal injectBubbleFromBranchHelper : boolean;
     -- From ID
+    signal regControlwordFromId : riscv32_RegisterControlWord_type;
     signal exControlWordFromId : riscv32_ExecuteControlWord_type;
     signal memControlWordFromId : riscv32_MemoryControlWord_type;
     signal wbControlWordFromId : riscv32_WriteBackControlWord_type;
@@ -61,6 +62,7 @@ architecture behaviourial of riscv32_pipeline is
     signal rs1DataFromRegFile : riscv32_data_type;
     signal rs2DataFromRegFile : riscv32_data_type;
     -- From id/reg
+    signal regControlwordFromIdReg : riscv32_RegisterControlWord_type;
     signal exControlWordFromIdReg : riscv32_ExecuteControlWord_type;
     signal memControlWordFromIdReg : riscv32_MemoryControlWord_type;
     signal wbControlWordFromIdReg : riscv32_WriteBackControlWord_type;
@@ -172,6 +174,7 @@ begin
 
         newProgramCounter => newProgramCounterFromID,
 
+        registerControlWord => regControlwordFromId,
         executeControlWord => exControlWordFromId,
         memoryControlWord => memControlWordFromId,
         writeBackControlWord => wbControlWordFromId,
@@ -189,6 +192,7 @@ begin
         stall => stall or stallToResolveHazard,
         nop => rst = '1',
         -- Pipeline control in
+        registerControlWordIn => regControlwordFromId,
         executeControlWordIn => exControlWordFromId,
         memoryControlWordIn => memControlWordFromId,
         writeBackControlWordIn => wbControlWordFromId,
@@ -201,6 +205,7 @@ begin
         uimmidiateIn => uimmidiateFromId,
         rdAddressIn => rdAddressFromId,
         -- Pipeline control out
+        registerControlWordOut => regControlwordFromIdReg,
         executeControlWordOut => exControlWordFromIdReg,
         memoryControlWordOut => memControlWordFromIdReg,
         writeBackControlWordOut => wbControlWordFromIdReg,
@@ -215,10 +220,10 @@ begin
     );
 
     -- Register stage
-
-    pipelineRegister : entity work.riscv32_pipeline_register
+    RegisterStage : entity work.riscv32_pipeline_register
     port map (
         repeatInstruction => repeatInstructionFromReg,
+        registerControlWord => regControlwordFromIdReg,
         execControlWord => exControlWordFromIdReg,
         writeBackControlWord => wbControlWordFromIdReg,
         regExWriteBackControlWord => wbControlWordFromRegEx,

@@ -12,6 +12,7 @@ entity riscv32_pipeline_register is
         repeatInstruction : out boolean;
 
         -- Control input
+        registerControlWord : in riscv32_RegisterControlWord_type;
         execControlWord : in riscv32_ExecuteControlWord_type;
         writeBackControlWord : in riscv32_WriteBackControlWord_type;
         regExWriteBackControlWord : in riscv32_WriteBackControlWord_type;
@@ -45,7 +46,7 @@ begin
     exMemOpIsMemLoad <= exMemWriteBackControlWord.memToReg;
     exMemOpDoesStore <= exMemWriteBackControlWord.regWrite;
 
-    determineHazard : process(exMemOpIsMemLoad, regExOpDoesStore, rs1Address, rs2Address, regExRdAddress, exMemRdAddress) is
+    determineHazard : process(exMemOpIsMemLoad, regExOpDoesStore, rs1Address, rs2Address, regExRdAddress, exMemRdAddress, registerControlWord.ignore_rs2_dependencies) is
         impure function hasHazard (address : riscv32_registerFileAddress_type) return boolean is
         begin
             if address = 0 then
@@ -60,10 +61,10 @@ begin
         end function;
     begin
         rs1Hazard <= hasHazard(rs1Address);
-        rs2Hazard <= hasHazard(rs2Address);
+        rs2Hazard <= hasHazard(rs2Address) and not registerControlWord.ignore_rs2_dependencies;
     end process;
 
-    repeatInstruction <= (rs1Hazard or rs2Hazard);
+    repeatInstruction <= (rs1Hazard or rs2Hazard) and not registerControlWord.no_dependencies;
 
     determineForwarding : process(rs1Address, rs1DataFromRegFile, rs2Address, rs2DataFromRegFile, exMemExecResult, exMemRdAddress, exMemOpDoesStore)
         impure function forwardData (address : riscv32_registerFileAddress_type; regData : riscv32_data_type) return riscv32_data_type is

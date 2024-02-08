@@ -12,6 +12,7 @@ entity riscv32_pipeline_idregRegister is
         stall : in boolean;
         nop : in boolean;
         -- Pipeline control in
+        registerControlWordIn : in riscv32_RegisterControlWord_type;
         executeControlWordIn : in riscv32_ExecuteControlWord_type;
         memoryControlWordIn : in riscv32_MemoryControlWord_type;
         writeBackControlWordIn : in riscv32_WriteBackControlWord_type;
@@ -24,6 +25,7 @@ entity riscv32_pipeline_idregRegister is
         uimmidiateIn : in riscv32_data_type;
         rdAddressIn : in riscv32_registerFileAddress_type;
         -- Pipeline control out
+        registerControlWordOut : out riscv32_RegisterControlWord_type;
         executeControlWordOut : out riscv32_ExecuteControlWord_type;
         memoryControlWordOut : out riscv32_MemoryControlWord_type;
         writeBackControlWordOut : out riscv32_WriteBackControlWord_type;
@@ -41,6 +43,7 @@ end entity;
 architecture behaviourial of riscv32_pipeline_idregRegister is
 begin
     process(clk)
+        variable registerControlWord_var : riscv32_RegisterControlWord_type := riscv32_registerControlWordAllFalse;
         variable executeControlWord_var : riscv32_ExecuteControlWord_type := riscv32_executeControlWordAllFalse;
         variable memoryControlWord_var : riscv32_MemoryControlWord_type := riscv32_memoryControlWordAllFalse;
         variable writeBackControlWord_var : riscv32_WriteBackControlWord_type := riscv32_writeBackControlWordAllFalse;
@@ -51,11 +54,13 @@ begin
                 executeControlWord_var := riscv32_executeControlWordAllFalse;
                 memoryControlWord_var := riscv32_memoryControlWordAllFalse;
                 writeBackControlWord_var := riscv32_writeBackControlWordAllFalse;
+                registerControlWord_var := riscv32_registerControlWordAllFalse;
                 isBubbleOut_buf := true;
             elsif not stall then
                 executeControlWord_var := executeControlWordIn;
                 memoryControlWord_var := memoryControlWordIn;
                 writeBackControlWord_var := writeBackControlWordIn;
+                registerControlWord_var := registerControlWordIn;
                 programCounterOut <= programCounterIn;
                 rs1AddressOut <= rs1AddressIn;
                 rs2AddressOut <= rs2AddressIn;
@@ -65,6 +70,7 @@ begin
                 isBubbleOut_buf := isBubbleIn;
             end if;
         end if;
+        registerControlWordOut <= registerControlWord_var;
         executeControlWordOut <= executeControlWord_var;
         memoryControlWordOut <= memoryControlWord_var;
         writeBackControlWordOut <= writeBackControlWord_var;
