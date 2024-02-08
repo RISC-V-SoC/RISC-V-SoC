@@ -166,14 +166,11 @@ begin
     instructionDecode : entity work.riscv32_pipeline_instructionDecode
     port map (
         overrideProgramCounter => overrideProgramCounterFromID,
-        --repeatInstruction => repeatInstruction,
 
         instructionFromInstructionFetch => instructionToID,
         programCounter => programCounterFromIf,
 
         newProgramCounter => newProgramCounterFromID,
-
-        --nopOutput => nopOutputFromId,
 
         executeControlWord => exControlWordFromId,
         memoryControlWord => memControlWordFromId,
@@ -182,9 +179,7 @@ begin
         rs2Address => rs2AddressFromId,
         immidiate => immidiateFromId,
         uimmidiate => uimmidiateFromId,
-        rdAddress => rdAddressFromId,
-
-        loadHazardDetected => false
+        rdAddress => rdAddressFromId
     );
 
     idregReg : entity work.riscv32_pipeline_idregRegister

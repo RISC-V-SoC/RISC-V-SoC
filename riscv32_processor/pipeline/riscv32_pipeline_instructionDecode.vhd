@@ -10,7 +10,6 @@ entity riscv32_pipeline_instructionDecode is
     port (
         -- From/to instruction fetch: control
         overrideProgramCounter : out boolean;
-        repeatInstruction : out boolean;
 
         -- From instruction fetch: data
         instructionFromInstructionFetch : in riscv32_instruction_type;
@@ -18,9 +17,6 @@ entity riscv32_pipeline_instructionDecode is
 
         -- To instruction fetch: data
         newProgramCounter : out riscv32_address_type;
-
-        -- To id/ex register: control
-        nopOutput : out boolean;
 
         -- Data output
         executeControlWord : out riscv32_ExecuteControlWord_type;
@@ -30,10 +26,7 @@ entity riscv32_pipeline_instructionDecode is
         rs2Address : out riscv32_registerFileAddress_type;
         immidiate : out riscv32_data_type;
         uimmidiate : out riscv32_data_type;
-        rdAddress : out riscv32_registerFileAddress_type;
-
-        -- From load hazard detected
-        loadHazardDetected : in boolean
+        rdAddress : out riscv32_registerFileAddress_type
     );
 end entity;
 
@@ -48,7 +41,6 @@ architecture behaviourial of riscv32_pipeline_instructionDecode is
     signal overrideProgramCounter_buf : boolean := false;
 
 begin
-    repeatInstruction <= loadHazardDetected;
     overrideProgramCounter <= decodedInstructionDecodeControlWord.jump;
     newProgramCounter <= jumpTarget;
 
@@ -58,7 +50,6 @@ begin
 
     uimmidiate <= std_logic_vector(resize(unsigned(instructionFromInstructionFetch(19 downto 15)), uimmidiate'length));
 
-    nopOutput <= loadHazardDetected;
     writeBackControlWord <= decodedWriteBackControlWord;
     memoryControlWord <= decodedMemoryControlWord;
     executeControlWord <= decodedExecuteControlWord;

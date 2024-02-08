@@ -21,14 +21,11 @@ architecture tb of riscv32_pipeline_instructionDecode_tb is
     constant clk_period : time := 20 ns;
 
     signal overrideProgramCounter : boolean;
-    signal repeatInstruction : boolean;
 
     signal instructionFromInstructionFetch : riscv32_instruction_type := riscv32_instructionNop;
     signal programCounter : riscv32_address_type := (others => '1');
 
     signal newProgramCounter : riscv32_address_type;
-
-    signal nopOutput : boolean;
 
     signal writeBackControlWord : riscv32_WriteBackControlWord_type;
     signal memoryControlWord : riscv32_MemoryControlWord_type;
@@ -37,8 +34,6 @@ architecture tb of riscv32_pipeline_instructionDecode_tb is
     signal rs2Address : riscv32_registerFileAddress_type;
     signal immidiate : riscv32_data_type;
     signal rdAddress : riscv32_registerFileAddress_type;
-
-    signal loadHazardDetected : boolean := false;
 begin
     main : process
         variable instructionIn : riscv32_instruction_type;
@@ -89,10 +84,6 @@ begin
                 check_equal(rdAddress, 12);
                 check_equal(rs1Address, 31);
                 check_equal(rs2Address, 30);
-            elsif run("Load hazard detected causes repeat") then
-                loadHazardDetected <= true;
-                wait for 1 ns;
-                check(repeatInstruction);
             elsif run("Branch instructions cause correct rs2, rs1 and immidiate") then
                 instructionFromInstructionFetch <= construct_btype_instruction(opcode => riscv32_opcode_branch, rs1 => 1, rs2 => 2, funct3 => riscv32_funct3_bne, imm5 => "10100", imm7 => "0000000");
                 wait for 1 ns;
@@ -125,18 +116,15 @@ begin
     instructionDecode : entity src.riscv32_pipeline_instructionDecode
     port map (
         overrideProgramCounter => overrideProgramCounter,
-        repeatInstruction => repeatInstruction,
         instructionFromInstructionFetch => instructionFromInstructionFetch,
         programCounter => programCounter,
         newProgramCounter => newProgramCounter,
-        nopOutput => nopOutput,
         writeBackControlWord => writeBackControlWord,
         memoryControlWord => memoryControlWord,
         executeControlWord => executeControlWord,
         rs1Address => rs1Address,
         rs2Address => rs2Address,
         immidiate => immidiate,
-        rdAddress => rdAddress,
-        loadHazardDetected => loadHazardDetected
+        rdAddress => rdAddress
     );
 end architecture;
