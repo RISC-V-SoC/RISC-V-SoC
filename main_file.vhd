@@ -7,7 +7,7 @@ use work.bus_pkg.all;
 
 entity main_file is
     generic (
-        clk_period : time;
+        clk_freq_hz : natural;
         baud_rate : positive := 115200
     );
     port (
@@ -28,11 +28,17 @@ architecture Behavioral of main_file is
 
     constant spiMemStartAddress : natural := 16#100000#;
     constant procStartAddress : bus_address_type := std_logic_vector(to_unsigned(spiMemStartAddress, bus_address_type'length));
+    constant clk_period : time := (1 sec) / clk_freq_hz;
 
     constant address_map : addr_range_and_mapping_array := (
         address_range_and_map(
             low => std_logic_vector(to_unsigned(16#1000#, bus_address_type'length)),
             high => std_logic_vector(to_unsigned(16#100c# - 1, bus_address_type'length)),
+            mapping => bus_map_constant(bus_address_type'high - 4, '0') & bus_map_range(4, 0)
+        ),
+        address_range_and_map(
+            low => std_logic_vector(to_unsigned(16#100c#, bus_address_type'length)),
+            high => std_logic_vector(to_unsigned(16#1010# - 1, bus_address_type'length)),
             mapping => bus_map_constant(bus_address_type'high - 4, '0') & bus_map_range(4, 0)
         ),
         address_range_and_map(
@@ -70,6 +76,9 @@ architecture Behavioral of main_file is
     signal demux2uartSlave : bus_mst2slv_type;
     signal uartSlave2demux : bus_slv2mst_type;
 
+    signal demux2staticInfo : bus_mst2slv_type;
+    signal staticInfo2demux : bus_slv2mst_type;
+
     signal mem_spi_sio_out : std_logic_vector(3 downto 0);
     signal mem_spi_sio_in : std_logic_vector(3 downto 0);
     signal mem_spi_cs_n : std_logic_vector(2 downto 0);
@@ -100,9 +109,9 @@ begin
     generic map (
         startAddress => procStartAddress,
         clk_period => clk_period,
-        iCache_range => address_map(2).addr_range,
+        iCache_range => address_map(3).addr_range,
         iCache_word_count_log2b => 8,
-        dCache_range => address_map(2).addr_range,
+        dCache_range => address_map(3).addr_range,
         dCache_word_count_log2b => 8
     ) port map (
         clk => clk,
@@ -138,11 +147,13 @@ begin
         mst2demux => arbiter2demux,
         demux2mst => demux2arbiter,
         demux2slv(0) => demux2uartSlave,
-        demux2slv(1) => demux2control,
-        demux2slv(2) => demux2spimem,
+        demux2slv(1) => demux2staticInfo,
+        demux2slv(2) => demux2control,
+        demux2slv(3) => demux2spimem,
         slv2demux(0) => uartSlave2demux,
-        slv2demux(1) => control2demux,
-        slv2demux(2) => spimem2demux
+        slv2demux(1) => staticInfo2demux,
+        slv2demux(2) => control2demux,
+        slv2demux(3) => spimem2demux
     );
 
     spimem : entity work.triple_23lc1024_controller
@@ -169,4 +180,12 @@ begin
         slv2mst => uartSlave2demux
     );
 
+    static_soc_info : entity work.static_soc_info
+    generic map (
+        clk_freq_hz => clk_freq_hz
+    ) port map (
+        clk => clk,
+        mst2slv => demux2staticInfo,
+        slv2mst => staticInfo2demux
+    );
 end Behavioral;

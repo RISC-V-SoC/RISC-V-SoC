@@ -175,7 +175,7 @@ begin
 
     main_file : entity src.main_file
     generic map (
-        clk_period => clk_period,
+        clk_freq_hz => (1 sec)/clk_period,
         baud_rate => baud_rate
     ) port map (
         JA_gpio(0) => si_sio0,
