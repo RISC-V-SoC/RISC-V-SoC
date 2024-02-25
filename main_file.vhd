@@ -13,6 +13,7 @@ entity main_file is
     port (
         JA_gpio : inout  STD_LOGIC_VECTOR (3 downto 0);
         JB_gpio : out  STD_LOGIC_VECTOR (3 downto 0);
+        general_gpio : inout std_logic_vector(7 downto 0);
         clk : in  STD_LOGIC;
         global_reset : in std_logic;
 
@@ -47,6 +48,11 @@ architecture Behavioral of main_file is
             mapping => bus_map_constant(bus_address_type'high - 8, '0') & bus_map_range(8, 0)
         ),
         address_range_and_map(
+            low => std_logic_vector(to_unsigned(16#3000#, bus_address_type'length)),
+            high => std_logic_vector(to_unsigned(16#3010# - 1, bus_address_type'length)),
+            mapping => bus_map_constant(bus_address_type'high - 4, '0') & bus_map_range(4, 0)
+        ),
+        address_range_and_map(
             low => std_logic_vector(to_unsigned(spiMemStartAddress, bus_address_type'length)),
             high => std_logic_vector(to_unsigned(16#160000# - 1, bus_address_type'length)),
             mapping => bus_map_constant(bus_address_type'high - 18, '0') & bus_map_range(18, 0)
@@ -79,6 +85,9 @@ architecture Behavioral of main_file is
     signal demux2staticInfo : bus_mst2slv_type;
     signal staticInfo2demux : bus_slv2mst_type;
 
+    signal demux2gpio : bus_mst2slv_type;
+    signal gpio2demux : bus_slv2mst_type;
+
     signal mem_spi_sio_out : std_logic_vector(3 downto 0);
     signal mem_spi_sio_in : std_logic_vector(3 downto 0);
     signal mem_spi_cs_n : std_logic_vector(2 downto 0);
@@ -109,9 +118,9 @@ begin
     generic map (
         startAddress => procStartAddress,
         clk_period => clk_period,
-        iCache_range => address_map(3).addr_range,
+        iCache_range => address_map(4).addr_range,
         iCache_word_count_log2b => 8,
-        dCache_range => address_map(3).addr_range,
+        dCache_range => address_map(4).addr_range,
         dCache_word_count_log2b => 8
     ) port map (
         clk => clk,
@@ -149,11 +158,13 @@ begin
         demux2slv(0) => demux2uartSlave,
         demux2slv(1) => demux2staticInfo,
         demux2slv(2) => demux2control,
-        demux2slv(3) => demux2spimem,
+        demux2slv(3) => demux2gpio,
+        demux2slv(4) => demux2spimem,
         slv2demux(0) => uartSlave2demux,
         slv2demux(1) => staticInfo2demux,
         slv2demux(2) => control2demux,
-        slv2demux(3) => spimem2demux
+        slv2demux(3) => gpio2demux,
+        slv2demux(4) => spimem2demux
     );
 
     spimem : entity work.triple_23lc1024_controller
@@ -187,5 +198,15 @@ begin
         clk => clk,
         mst2slv => demux2staticInfo,
         slv2mst => staticInfo2demux
+    );
+
+    gpio_controller : entity work.gpio_controller
+    generic map (
+        gpio_count => general_gpio'length
+    ) port map (
+        clk => clk,
+        gpio => general_gpio,
+        mst2slv => demux2gpio,
+        slv2mst => gpio2demux
     );
 end Behavioral;

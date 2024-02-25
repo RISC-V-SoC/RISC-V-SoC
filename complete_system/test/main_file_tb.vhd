@@ -46,6 +46,8 @@ architecture tb of main_file_tb is
     signal slv_tx : std_logic;
     signal slv_rx : std_logic;
 
+    signal general_gpio : std_logic_vector(7 downto 0);
+
     signal rst : std_logic := '0';
 
     procedure write(
@@ -184,6 +186,7 @@ begin
         JA_gpio(3) => hold_n_sio3,
         JB_gpio(3 downto 1) => cs_n,
         JB_gpio(0) => sck,
+        general_gpio => general_gpio,
         clk => clk,
         global_reset => rst,
         master_rx => rx,
