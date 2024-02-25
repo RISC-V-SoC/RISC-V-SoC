@@ -29,26 +29,21 @@ begin
         test_runner_setup(runner, runner_cfg);
         while test_suite loop
             gpio <= (others => 'Z');
-            if run("By default, all gpio is disabled") then
+            if run("By default, all gpio is input") then
                 for i in 0 to gpio_count - 1 loop
                     mst2slv <= bus_pkg.bus_mst2slv_read(std_logic_vector(to_unsigned(i, bus_pkg.bus_address_type'length)), "0001");
                     wait until rising_edge(clk) and bus_pkg.read_transaction(mst2slv, slv2mst);
                     check_equal(slv2mst.readData(7 downto 0), std_logic_vector'(X"00"));
                 end loop;
             elsif run("Test config write then read") then
-                write_data(1 downto 0) := "10";
+                write_data(1 downto 0) := "01";
                 mst2slv <= bus_pkg.bus_mst2slv_write(X"00000004", write_data, "0001");
                 wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
                 mst2slv <= bus_pkg.bus_mst2slv_read(X"00000004");
                 wait until rising_edge(clk) and bus_pkg.read_transaction(mst2slv, slv2mst);
-                check_equal(slv2mst.readData(1 downto 0), std_logic_vector'("10"));
-            elsif run("GPIO can be set to WEAK_PULLUP") then
-                write_data(1 downto 0) := "10";
-                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000003", write_data, "0001");
-                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
-                check_equal(gpio(3), 'H');
+                check_equal(slv2mst.readData(1 downto 0), std_logic_vector'("01"));
             elsif run("Byte mask works") then
-                write_data(1 downto 0) := "10";
+                write_data(1 downto 0) := "01";
                 mst2slv <= bus_pkg.bus_mst2slv_write(X"00000004", write_data, "1110");
                 wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
                 mst2slv <= bus_pkg.bus_mst2slv_read(X"00000004");
@@ -62,7 +57,7 @@ begin
                 wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
                 check_equal(gpio(0), '1');
             elsif run("Inputs can be read") then
-                write_data(1 downto 0) := "10";
+                write_data(1 downto 0) := "00";
                 gpio(0) <= '1';
                 mst2slv <= bus_pkg.bus_mst2slv_write(X"00000000", write_data, "0001");
                 wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);

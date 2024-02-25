@@ -21,10 +21,8 @@ end entity;
 
 architecture behavioral of gpio_controller is
     type inout_type is (
-        DISABLED,
-        OUTPUT,
-        WEAK_PULLUP,
-        WEAK_PULLDOWN);
+        INPUT,
+        OUTPUT);
     subtype inout_type_enum_index is natural range 0 to inout_type'pos(inout_type'high);
     type inout_type_array is array (natural range <>) of inout_type;
     constant inout_type_bitlength : natural := integer(ceil(log2(real(inout_type'pos(inout_type'high)))));
@@ -37,7 +35,7 @@ architecture behavioral of gpio_controller is
     constant data_high_address : natural := data_base_address + bytes_required - 1;
 
     signal slv2mst_buf : bus_pkg.bus_slv2mst_type := bus_pkg.BUS_SLV2MST_IDLE;
-    signal inout_array : inout_type_array(gpio_count - 1 downto 0) := (others => DISABLED);
+    signal inout_array : inout_type_array(gpio_count - 1 downto 0) := (others => INPUT);
     signal inout_byte_array : bus_pkg.bus_byte_array(0 to bytes_required - 1) := (others => (others => '0'));
     signal data_out_array : std_logic_vector(gpio_count - 1 downto 0) := (others => '0');
     signal data_in_array : std_logic_vector(gpio_count - 1 downto 0) := (others => '0');
@@ -91,7 +89,7 @@ begin
         for index in 0 to gpio_count - 1 loop
             numeric_value := to_integer(unsigned(inout_byte_array(index)));
             if numeric_value > inout_type'pos(inout_type'high) then
-                inout_array(index) <= DISABLED;
+                inout_array(index) <= INPUT;
             else
                 inout_array(index) <= inout_type'val(numeric_value);
             end if;
@@ -102,14 +100,10 @@ begin
     begin
         for index in 0 to gpio_count - 1 loop
             case inout_array(index) is
-                when DISABLED =>
+                when INPUT =>
                     gpio(index) <= 'Z';
                 when OUTPUT =>
                     gpio(index) <= data_out_array(index);
-                when WEAK_PULLUP =>
-                    gpio(index) <= 'H';
-                when WEAK_PULLDOWN =>
-                    gpio(index) <= 'L';
             end case;
         end loop;
     end process;
@@ -118,14 +112,10 @@ begin
     begin
         for index in 0 to gpio_count - 1 loop
             case inout_array(index) is
-                when DISABLED =>
-                    data_in_array(index) <= '0';
+                when INPUT =>
+                    data_in_array(index) <= gpio(index);
                 when OUTPUT =>
                     data_in_array(index) <= '0';
-                when WEAK_PULLUP =>
-                    data_in_array(index) <= gpio(index);
-                when WEAK_PULLDOWN =>
-                    data_in_array(index) <= gpio(index);
             end case;
         end loop;
     end process;
