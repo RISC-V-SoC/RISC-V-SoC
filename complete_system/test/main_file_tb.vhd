@@ -156,6 +156,12 @@ begin
                 wait for 200 us;
                 push_stream(net, slave_uart_master_stream, X"61");
                 check_stream(net, slave_uart_slave_stream, X"61");
+            elsif run("GPIO test") then
+                write_file(net, spimem0_start_address, "./complete_system/test/programs/gpioTest.txt");
+                write(net, processor_controller_start_address, X"00000000");
+                general_gpio(0) <= '1';
+                check_stream(net, slave_uart_slave_stream, X"31");
+                --wait for 200 us;
             end if;
         end loop;
         wait until rising_edge(clk) or falling_edge(clk);
