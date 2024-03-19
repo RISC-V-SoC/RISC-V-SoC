@@ -38,6 +38,9 @@ tb_library.add_source_files(SRC_PATH / "static_soc_info" / "test" / "*.vhd")
 src_library.add_source_files(SRC_PATH / "gpio_controller" / "*.vhd")
 tb_library.add_source_files(SRC_PATH / "gpio_controller" / "test" / "*.vhd")
 
+src_library.add_source_files(SRC_PATH / "spi_master_bus_slave" / "*.vhd")
+tb_library.add_source_files(SRC_PATH / "spi_master_bus_slave" / "test" / "*.vhd")
+
 src_library.add_source_files(SRC_PATH / "riscv32_processor" / "*.vhd")
 tb_library.add_source_files(SRC_PATH / "riscv32_processor" / "test" / "*.vhd")
 
