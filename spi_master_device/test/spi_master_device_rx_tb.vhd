@@ -9,12 +9,12 @@ context vunit_lib.vc_context;
 library src;
 use src.bus_pkg;
 
-entity spi_master_bus_slave_slave_tb is
+entity spi_master_device_rx_tb is
     generic (
         runner_cfg : string);
 end entity;
 
-architecture tb of spi_master_bus_slave_slave_tb is
+architecture tb of spi_master_device_rx_tb is
     constant clk_period : time := 20 ns;
     signal clk : std_logic := '0';
     signal miso : std_logic;
@@ -164,7 +164,7 @@ begin
 
     test_runner_watchdog(runner, 100 us);
 
-    spi_master_bus_slave_slave : entity src.spi_master_bus_slave_slave
+    spi_master_device_rx : entity src.spi_master_device_rx
     port map (
         clk => clk,
         miso => miso,

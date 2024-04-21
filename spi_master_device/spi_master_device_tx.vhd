@@ -6,7 +6,7 @@ use ieee.math_real.all;
 library work;
 use work.bus_pkg;
 
-entity spi_master_bus_slave_master is
+entity spi_master_device_tx is
     port (
         clk : in std_logic;
         mosi : out std_logic;
@@ -22,7 +22,7 @@ entity spi_master_bus_slave_master is
     );
 end entity;
 
-architecture behavioral of spi_master_bus_slave_master is
+architecture behavioral of spi_master_device_tx is
     signal data_buf : std_logic_vector(7 downto 0);
 begin
     process(clk)

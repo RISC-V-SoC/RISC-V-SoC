@@ -6,7 +6,7 @@ use ieee.math_real.all;
 library work;
 use work.bus_pkg;
 
-entity spi_master_bus_slave is
+entity spi_master_device is
     port (
         clk : in std_logic;
         mosi : out std_logic;
@@ -18,7 +18,7 @@ entity spi_master_bus_slave is
     );
 end entity;
 
-architecture behavioral of spi_master_bus_slave is
+architecture behavioral of spi_master_device is
     -- Address 0, bit 0: Enable
     -- Address 0, bit 1: CPOL, 0 means spi_clk low on idle, 1 means spi clk high on idle
     -- Address 0, bit 2: CPHA, 0 means data sampled on rising edge, 1 means data samples on falling edge. Data is shifted on opposite edge
@@ -156,7 +156,7 @@ begin
     end process;
 
 
-    tx_side : entity work.spi_master_bus_slave_master
+    tx_side : entity work.spi_master_device_tx
     port map (
         clk => clk,
         mosi => mosi,
@@ -193,7 +193,7 @@ begin
         target_value => '0' & baud_clk_ticks(31 downto 1)
     );
 
-    rx_side : entity work.spi_master_bus_slave_slave
+    rx_side : entity work.spi_master_device_rx
     port map (
         clk => clk,
         miso => miso,
