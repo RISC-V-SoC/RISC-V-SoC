@@ -23,10 +23,11 @@ entity spi_master_bus_slave_master is
 end entity;
 
 architecture behavioral of spi_master_bus_slave_master is
+    signal data_buf : std_logic_vector(7 downto 0);
 begin
     process(clk)
         variable started : boolean := false;
-        variable edge_count : natural range 0 to 17 := 0;
+        variable edge_count : natural range 0 to 16 := 0;
         variable data : std_logic_vector(7 downto 0);
         variable last_known_spi_clk : std_logic;
         variable start_detected : boolean;
@@ -37,8 +38,8 @@ begin
             if not is_enabled then
                 spi_clk_enable <= false;
                 started := false;
+                data_pop <= false;
             elsif not started then
-                spi_clk_enable <= false;
                 if data_available then
                     data_pop <= true;
                     started := true;
@@ -50,7 +51,12 @@ begin
                     else
                         start_detected := spi_clk = '0';
                     end if;
-                    additional_outrun := not start_detected;
+
+                    if start_detected then
+                        mosi <= data(7);
+                    end if;
+                else
+                    spi_clk_enable <= false;
                 end if;
             else
 
@@ -72,19 +78,18 @@ begin
                     else
                         data := data(6 downto 0) & '0';
                     end if;
+                    mosi <= data(7);
                 end if;
 
                 last_known_spi_clk := spi_clk;
                 spi_clk_enable <= true;
                 data_pop <= false;
-                mosi <= data(7);
 
-                if not additional_outrun and edge_count = 16 then
-                    started := false;
-                elsif edge_count = 17 then
+                if edge_count = 16 then
                     started := false;
                 end if;
             end if;
+            data_buf <= data;
         end if;
     end process;
 end architecture;
