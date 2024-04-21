@@ -1,6 +1,7 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.numeric_std.all;
+use ieee.math_real.all;
 
 library work;
 use work.bus_pkg.all;
@@ -27,36 +28,46 @@ end main_file;
 
 architecture Behavioral of main_file is
 
+    pure function create_address_map_entry (
+        start_address : natural;
+        mapping_size : natural
+    ) return addr_range_and_mapping_type is
+        variable end_address : natural;
+        variable address_bits_required : natural;
+    begin
+        end_address := start_address + mapping_size - 1;
+        address_bits_required := integer(ceil(log2(real(mapping_size)))) - 1;
+        return address_range_and_map(
+            low => std_logic_vector(to_unsigned(start_address, bus_address_type'length)),
+            high => std_logic_vector(to_unsigned(end_address, bus_address_type'length)),
+            mapping => bus_map_constant(bus_address_type'high - address_bits_required, '0') & bus_map_range(address_bits_required, 0)
+        );
+    end function;
+
+    constant uartDeviceStartAddress : natural := 16#1000#;
+    constant uartDeviceMappingSize : natural := 16#c#;
+
+    constant staticDeviceInfoStartAddress : natural := 16#100c#;
+    constant staticDeviceInfoMappingSize : natural := 16#4#;
+
+    constant riscvControlStartAddress : natural := 16#2000#;
+    constant riscvControlMappingSize : natural := 16#100#;
+
+    constant gpioDeviceStartAddress : natural := 16#3000#;
+    constant gpioDeviceMappingSize : natural := 16#10#;
+
     constant spiMemStartAddress : natural := 16#100000#;
+    constant spiMemMappingSize : natural := 16#60000#;
+
     constant procStartAddress : bus_address_type := std_logic_vector(to_unsigned(spiMemStartAddress, bus_address_type'length));
     constant clk_period : time := (1 sec) / clk_freq_hz;
 
     constant address_map : addr_range_and_mapping_array := (
-        address_range_and_map(
-            low => std_logic_vector(to_unsigned(16#1000#, bus_address_type'length)),
-            high => std_logic_vector(to_unsigned(16#100c# - 1, bus_address_type'length)),
-            mapping => bus_map_constant(bus_address_type'high - 4, '0') & bus_map_range(4, 0)
-        ),
-        address_range_and_map(
-            low => std_logic_vector(to_unsigned(16#100c#, bus_address_type'length)),
-            high => std_logic_vector(to_unsigned(16#1010# - 1, bus_address_type'length)),
-            mapping => bus_map_constant(bus_address_type'high - 4, '0') & bus_map_range(4, 0)
-        ),
-        address_range_and_map(
-            low => std_logic_vector(to_unsigned(16#2000#, bus_address_type'length)),
-            high => std_logic_vector(to_unsigned(16#2100# - 1, bus_address_type'length)),
-            mapping => bus_map_constant(bus_address_type'high - 8, '0') & bus_map_range(8, 0)
-        ),
-        address_range_and_map(
-            low => std_logic_vector(to_unsigned(16#3000#, bus_address_type'length)),
-            high => std_logic_vector(to_unsigned(16#3010# - 1, bus_address_type'length)),
-            mapping => bus_map_constant(bus_address_type'high - 4, '0') & bus_map_range(4, 0)
-        ),
-        address_range_and_map(
-            low => std_logic_vector(to_unsigned(spiMemStartAddress, bus_address_type'length)),
-            high => std_logic_vector(to_unsigned(16#160000# - 1, bus_address_type'length)),
-            mapping => bus_map_constant(bus_address_type'high - 18, '0') & bus_map_range(18, 0)
-        )
+        create_address_map_entry(uartDeviceStartAddress, uartDeviceMappingSize),
+        create_address_map_entry(staticDeviceInfoStartAddress, staticDeviceInfoMappingSize),
+        create_address_map_entry(riscvControlStartAddress, riscvControlMappingSize),
+        create_address_map_entry(gpioDeviceStartAddress, gpioDeviceMappingSize),
+        create_address_map_entry(spiMemStartAddress, spiMemMappingSize)
     );
 
     signal rst          : STD_LOGIC;
