@@ -48,6 +48,12 @@ architecture tb of main_file_tb is
 
     signal general_gpio : std_logic_vector(7 downto 0);
 
+    -- SPI Device
+    signal spi_ss : std_logic;
+    signal spi_clk : std_logic;
+    signal spi_mosi : std_logic;
+    signal spi_miso : std_logic;
+
     signal rst : std_logic := '0';
 
     procedure write(
@@ -198,7 +204,11 @@ begin
         master_rx => rx,
         master_tx => tx,
         slave_rx => slv_rx,
-        slave_tx => slv_tx
+        slave_tx => slv_tx,
+        spi_ss => spi_ss,
+        spi_clk => spi_clk,
+        spi_mosi => spi_mosi,
+        spi_miso => spi_miso
     );
 
     command_uart_slave : entity vunit_lib.uart_slave
