@@ -44,41 +44,43 @@ begin
 
     bus_handling : process(clk)
         variable slv2mst_tmp : bus_pkg.bus_slv2mst_type := bus_pkg.BUS_SLV2MST_IDLE;
-        variable answer_ready : boolean := false;
         variable address : unsigned(mst2slv.address'range);
-        variable data_low : natural;
-        variable data_high : natural;
+        variable byte_in : std_logic_vector(7 downto 0);
+        variable byte_out : std_logic_vector(7 downto 0);
     begin
         if rising_edge(clk) then
             if bus_pkg.any_transaction(mst2slv, slv2mst_buf) then
                 slv2mst_buf <= bus_pkg.BUS_SLV2MST_IDLE;
                 slv2mst_tmp := bus_pkg.BUS_SLV2MST_IDLE;
-            elsif answer_ready then
+            elsif slv2mst_tmp.valid then
                 slv2mst_buf <= slv2mst_tmp;
-                answer_ready := false;
             elsif bus_pkg.bus_requesting(mst2slv) then
                 address := unsigned(mst2slv.address);
                 for index in 0 to bus_pkg.bus_bytes_per_word - 1 loop
-                    data_low := index*bus_pkg.bus_byte_size;
-                    data_high := (index + 1) * bus_pkg.bus_byte_size - 1;
+
+                    byte_in := mst2slv.writeData(index*8 + 7 downto index*8);
+
+                    if mst2slv.byteMask(index) = '0' then
+                        next;
+                    end if;
 
                     if address + index >= config_base_address and address + index <= config_high_address then
-                        if mst2slv.writeReady = '1' and mst2slv.byteMask(index) = '1' then
-                            inout_byte_array(to_integer(address) + index) <= mst2slv.writeData(data_high downto data_low);
+                        if mst2slv.writeReady = '1' then
+                            inout_byte_array(to_integer(address) + index) <= byte_in;
                         end if;
-                        slv2mst_tmp.readData(data_high downto data_low) := inout_byte_array(to_integer(address) + index);
+                        byte_out := inout_byte_array(to_integer(address) + index);
                     end if;
 
                     if address + index >= data_base_address and address + index <= data_high_address then
-                        if mst2slv.writeReady = '1' and mst2slv.byteMask(index) = '1' then
-                            data_out_array(to_integer(address) + index - data_base_address) <= mst2slv.writeData(data_low);
+                        if mst2slv.writeReady = '1' then
+                            data_out_array(to_integer(address) + index - data_base_address) <= byte_in(0);
                         end if;
-                        slv2mst_tmp.readData(data_low) := data_in_array(to_integer(address) + index - data_base_address);
+                        byte_out(0) := data_in_array(to_integer(address) + index - data_base_address);
                     end if;
 
+                    slv2mst_tmp.readData((index + 1) * bus_pkg.bus_byte_size - 1 downto index*bus_pkg.bus_byte_size) := byte_out;
                 end loop;
                 slv2mst_tmp.valid := true;
-                answer_ready := true;
             end if;
         end if;
     end process;
