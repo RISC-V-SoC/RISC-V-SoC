@@ -56,7 +56,7 @@ architecture Behavioral of main_file is
     constant staticDeviceInfoMappingSize : natural := 16#4#;
 
     constant spiDeviceStartAddress : natural := 16#1010#;
-    constant spiDeviceInfoMappingSize : natural := 16#4#;
+    constant spiDeviceInfoMappingSize : natural := 16#c#;
 
     constant riscvControlStartAddress : natural := 16#2000#;
     constant riscvControlMappingSize : natural := 16#100#;
