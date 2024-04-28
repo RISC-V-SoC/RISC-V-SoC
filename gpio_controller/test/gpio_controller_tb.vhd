@@ -53,7 +53,7 @@ begin
                 write_data(1 downto 0) := "01";
                 mst2slv <= bus_pkg.bus_mst2slv_write(X"00000000", write_data, "0001");
                 wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
-                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000008", write_data, "0001");
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000005", write_data, "0001");
                 wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
                 check_equal(gpio(0), '1');
             elsif run("Inputs can be read") then
@@ -62,7 +62,7 @@ begin
                 mst2slv <= bus_pkg.bus_mst2slv_write(X"00000000", write_data, "0001");
                 wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
                 write_data(1 downto 0) := "01";
-                mst2slv <= bus_pkg.bus_mst2slv_read(X"00000008");
+                mst2slv <= bus_pkg.bus_mst2slv_read(X"00000005");
                 wait until rising_edge(clk) and bus_pkg.read_transaction(mst2slv, slv2mst);
                 check_equal(slv2mst.readData(0), '1');
             end if;

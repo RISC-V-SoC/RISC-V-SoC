@@ -31,7 +31,7 @@ architecture behavioral of gpio_controller is
     constant config_base_address : natural := 0;
     constant config_high_address : natural := config_base_address + bytes_required - 1;
 
-    constant data_base_address : natural := ((config_high_address + bus_pkg.bus_bytes_per_word)/bus_pkg.bus_bytes_per_word)*bus_pkg.bus_bytes_per_word;
+    constant data_base_address : natural := config_high_address + 1;
     constant data_high_address : natural := data_base_address + bytes_required - 1;
 
     signal slv2mst_buf : bus_pkg.bus_slv2mst_type := bus_pkg.BUS_SLV2MST_IDLE;
