@@ -33,6 +33,7 @@ architecture tb of triple_23LC1024_bus_parser_tb is
     signal has_fault : boolean;
     signal read_request : boolean;
     signal write_request : boolean;
+    signal virtual_write_burst : boolean;
     signal any_active : boolean := false;
 begin
     clk <= not clk after (clk_period/2);
@@ -165,6 +166,69 @@ begin
                 mst2slv <= bus_pkg.bus_mst2slv_read(X"00021100", byte_mask => "0101");
                 wait until rising_edge(clk) and has_fault;
                 check(fault_data = bus_pkg.bus_fault_illegal_byte_mask);
+            elsif run("Two sequential writes cause a virtual burst") then
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000000", X"0f0f0f0f");
+                wait until rising_edge(clk) and write_request;
+                transaction_valid <= true;
+                wait until rising_edge(clk) and not write_request;
+                transaction_valid <= false;
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000004", X"0f0f0f0f");
+                wait until rising_edge(clk) and write_request;
+                check(virtual_write_burst);
+            elsif run("Write after read with sequential address does not cause a virtual burst") then
+                mst2slv <= bus_pkg.bus_mst2slv_read(X"00000000");
+                wait until rising_edge(clk) and read_request;
+                transaction_valid <= true;
+                wait until rising_edge(clk) and not read_request;
+                transaction_valid <= false;
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000004", X"0f0f0f0f");
+                wait until rising_edge(clk) and write_request;
+                check(not virtual_write_burst);
+            elsif run("Non-sequential writes do not cause a virtual burst") then
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000000", X"0f0f0f0f");
+                wait until rising_edge(clk) and write_request;
+                transaction_valid <= true;
+                wait until rising_edge(clk) and not write_request;
+                transaction_valid <= false;
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000008", X"0f0f0f0f");
+                wait until rising_edge(clk) and write_request;
+                check(not virtual_write_burst);
+            elsif run("No write request means no virtual burst") then
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000000", X"0f0f0f0f");
+                wait until rising_edge(clk) and write_request;
+                transaction_valid <= true;
+                wait until rising_edge(clk) and not write_request;
+                transaction_valid <= false;
+                mst2slv <= bus_pkg.bus_mst2slv_read(X"00000004");
+                wait until rising_edge(clk) and read_request;
+                check(not virtual_write_burst);
+            elsif run("No virtual burst if lengths differ") then
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000000", X"0f0f0f0f");
+                wait until rising_edge(clk) and write_request;
+                transaction_valid <= true;
+                wait until rising_edge(clk) and not write_request;
+                transaction_valid <= false;
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000004", X"0f0f0f0f", "0011");
+                wait until rising_edge(clk) and write_request;
+                check(not virtual_write_burst);
+            elsif run("Virtual burst checks effective address") then
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000000", X"0f0f0f0f", "0001");
+                wait until rising_edge(clk) and write_request;
+                transaction_valid <= true;
+                wait until rising_edge(clk) and not write_request;
+                transaction_valid <= false;
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000000", X"0f0f0f0f", "0010");
+                wait until rising_edge(clk) and write_request;
+                check(virtual_write_burst);
+            elsif run("No virtual burst on segment crossing") then
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"0001fffc", X"0f0f0f0f");
+                wait until rising_edge(clk) and write_request;
+                transaction_valid <= true;
+                wait until rising_edge(clk) and not write_request;
+                transaction_valid <= false;
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"00020000", X"0f0f0f0f");
+                wait until rising_edge(clk) and write_request;
+                check(not virtual_write_burst);
             end if;
         end loop;
         wait for 2*clk_period;
@@ -188,6 +252,7 @@ begin
         address => address,
         has_fault => has_fault,
         read_request => read_request,
-        write_request => write_request
+        write_request => write_request,
+        virtual_write_burst => virtual_write_burst
     );
 end architecture;

@@ -23,11 +23,13 @@ entity triple_23lc1024_bus_parser is
 
         has_fault : out boolean;
         read_request : out boolean;
-        write_request : out boolean
+        write_request : out boolean;
+        virtual_write_burst : out boolean
     );
 end entity;
 
 architecture behavioral of triple_23lc1024_bus_parser is
+    subtype request_length_type is natural range 0 to bus_pkg.bus_bytes_per_word;
 
     pure function count_leading_zeros (
         byte_mask : bus_pkg.bus_byte_mask_type) return natural is
@@ -67,6 +69,20 @@ architecture behavioral of triple_23lc1024_bus_parser is
            end if;
        end loop;
        return ret_val;
+    end function;
+
+    pure function is_boundry_crossing(
+        first_address : unsigned(bus_pkg.bus_address_type'range);
+        second_address : unsigned(bus_pkg.bus_address_type'range)) return boolean is
+    begin
+        return first_address(16 downto 0) > second_address(16 downto 0);
+    end function;
+
+    pure function is_boundry_crossing(
+        first_address : bus_pkg.bus_address_type;
+        second_address : bus_pkg.bus_address_type) return boolean is
+    begin
+        return is_boundry_crossing(unsigned(first_address), unsigned(second_address));
     end function;
 
     procedure check_mask_alignment (
@@ -111,7 +127,7 @@ architecture behavioral of triple_23lc1024_bus_parser is
             if current_address > max_address then
                 has_fault_buf := true;
                 fault_data_buf := bus_pkg.bus_fault_address_out_of_range;
-            elsif mst2slv_buf.burst = '1' and current_address(16 downto 0) > next_address_on_burst(16 downto 0) then
+            elsif mst2slv_buf.burst = '1' and is_boundry_crossing(current_address, next_address_on_burst) then
                 has_fault_buf := true;
                 fault_data_buf := bus_pkg.bus_fault_illegal_address_for_burst;
             else
@@ -147,13 +163,25 @@ architecture behavioral of triple_23lc1024_bus_parser is
        return ret_val;
     end function;
 
-
+    pure function is_virtual_write_burst (
+        prev_address : bus_pkg.bus_address_type;
+        cur_address : bus_pkg.bus_address_type;
+        prev_length : request_length_type;
+        cur_length : request_length_type) return boolean is
+    begin
+        return (unsigned(cur_address) = unsigned(prev_address) + prev_length) and (prev_length = cur_length) and not is_boundry_crossing(prev_address, cur_address);
+    end function;
 begin
     process(clk)
         variable has_fault_buf : boolean := false;
         variable fault_data_buf : bus_pkg.bus_fault_type := bus_pkg.bus_fault_no_fault;
-        variable request_length_buf : natural range 0 to bus_pkg.bus_bytes_per_word;
+        variable request_length_buf : request_length_type;
         variable wait_out_active : boolean := false;
+        variable effective_address : bus_pkg.bus_address_type;
+
+        variable previous_operation_was_write : boolean := true;
+        variable previous_effective_address : bus_pkg.bus_address_type;
+        variable previous_request_length : request_length_type;
     begin
         if rising_edge(clk) then
             has_fault <= false;
@@ -177,6 +205,13 @@ begin
                     read_request <= true when mst2slv.readReady = '1' else false;
                     write_request <= true when mst2slv.writeReady = '1' else false;
                 end if;
+
+                if transaction_valid and not has_fault_buf then
+                    previous_operation_was_write := true when mst2slv.writeReady = '1' else false;
+                    previous_effective_address := effective_address;
+                    previous_request_length := request_length_buf;
+                end if;
+
                 cs_request <= encode_cs_request_type(mst2slv.address);
                 if mst2slv.readReady = '1' then
                     request_length_buf := determine_read_request_length(mst2slv.byteMask);
@@ -185,13 +220,21 @@ begin
                 end if;
             end if;
             write_data <= std_logic_vector(shift_right(unsigned(mst2slv.writeData), count_leading_zeros(mst2slv.byteMask)*bus_pkg.bus_byte_size));
-            address <= std_logic_vector(unsigned(mst2slv.address) + count_leading_zeros(mst2slv.byteMask));
+            effective_address := std_logic_vector(unsigned(mst2slv.address) + count_leading_zeros(mst2slv.byteMask));
+
             if request_length_buf = 0 then
                 request_length <= 1;
             else
                 request_length <= request_length_buf;
             end if;
+
+            if mst2slv.writeReady = '1' and previous_operation_was_write then
+                virtual_write_burst <= is_virtual_write_burst(previous_effective_address, effective_address, previous_request_length, request_length_buf);
+            else
+                virtual_write_burst <= false;
+            end if;
         end if;
+        address <= effective_address;
     end process;
 
 end architecture;
