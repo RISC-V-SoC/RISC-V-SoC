@@ -207,7 +207,7 @@ begin
         clk => clk,
         rst => rst,
         mst2slv => mst2slv,
-        transaction_ready => valid_write or valid_read,
+        transaction_valid => valid_write or valid_read,
         any_active => read_active or write_active,
         request_length => request_length,
         cs_request => cs_request,

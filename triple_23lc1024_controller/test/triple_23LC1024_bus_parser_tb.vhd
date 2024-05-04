@@ -21,7 +21,7 @@ architecture tb of triple_23LC1024_bus_parser_tb is
     signal rst : std_logic := '0';
 
     signal mst2slv : bus_pkg.bus_mst2slv_type := bus_pkg.BUS_MST2SLV_IDLE;
-    signal transaction_ready : boolean := false;
+    signal transaction_valid : boolean := false;
 
     signal request_length : positive range 1 to bus_pkg.bus_bytes_per_word;
 
@@ -57,7 +57,7 @@ begin
             elsif run("Deactivates read on transaction") then
                 mst2slv <= bus_pkg.bus_mst2slv_read(X"00021100");
                 wait until rising_edge(clk) and read_request;
-                transaction_ready <= true;
+                transaction_valid <= true;
                 wait until falling_edge(clk);
                 wait for clk_period;
                 check(not read_request);
@@ -73,7 +73,7 @@ begin
                 mst2slv <= bus_pkg.bus_mst2slv_write(X"00021100", X"0f0f0f0f");
                 wait for clk_period;
                 check(write_request);
-                transaction_ready <= true;
+                transaction_valid <= true;
                 wait for clk_period;
                 check(not write_request);
             elsif run("Faults on address out of range") then
@@ -179,7 +179,7 @@ begin
         clk => clk,
         rst => rst,
         mst2slv => mst2slv,
-        transaction_ready => transaction_ready,
+        transaction_valid => transaction_valid,
         any_active => any_active,
         request_length => request_length,
         cs_request => cs_request,

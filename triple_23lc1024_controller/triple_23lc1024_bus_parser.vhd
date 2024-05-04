@@ -12,7 +12,7 @@ entity triple_23lc1024_bus_parser is
         rst : in std_logic;
 
         mst2slv : in bus_pkg.bus_mst2slv_type;
-        transaction_ready : in boolean;
+        transaction_valid : in boolean;
         any_active : in boolean;
 
         request_length : out positive range 1 to bus_pkg.bus_bytes_per_word;
@@ -170,7 +170,7 @@ begin
                 wait_out_active := any_active;
             elsif bus_pkg.bus_requesting(mst2slv) then
                 detect_fault(mst2slv, has_fault_buf, fault_data_buf);
-                if transaction_ready or has_fault_buf then
+                if transaction_valid or has_fault_buf then
                     read_request <= false;
                     write_request <= false;
                 else
