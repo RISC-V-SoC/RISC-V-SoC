@@ -179,7 +179,7 @@ begin
         variable wait_out_active : boolean := false;
         variable effective_address : bus_pkg.bus_address_type;
 
-        variable previous_operation_was_write : boolean := true;
+        variable previous_operation_was_write : boolean := false;
         variable previous_effective_address : bus_pkg.bus_address_type;
         variable previous_request_length : request_length_type;
     begin

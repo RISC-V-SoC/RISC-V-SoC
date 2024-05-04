@@ -38,6 +38,7 @@ architecture tb of triple_23LC1024_writer_tb is
     signal address : std_logic_vector(16 downto 0) := (others => '0');
     signal write_data : bus_data_type := (others => '0');
     signal burst : std_logic := '0';
+    signal virtual_burst : boolean := false;
     signal fault : boolean;
     signal faultData : std_logic_vector(bus_fault_type'range);
     signal request_length : positive range 1 to bus_bytes_per_word;
@@ -295,6 +296,27 @@ begin
                 read_bus_word(net, actor, std_logic_vector(to_unsigned(0, 17)), read_data);
                 exp_data := X"000000ff";
                 check_equal(read_data, exp_data);
+            elsif run("A virtual burst behaves just like a real burst") then
+                set_all_mode(SeqMode, SqiMode, actor, net);
+                rst <= '0';
+                request_length <= 4;
+                address <= std_logic_vector(to_unsigned(0, address'length));
+                write_data <= std_logic_vector(to_unsigned(0, write_data'length));
+                ready <= true;
+                burst <= '0';
+                virtual_burst <= false;
+                wait until falling_edge(cs_n(0));
+                cs_allowed_all_high <= false;
+                wait until rising_edge(clk) and valid;
+                ready <= false;
+                wait until rising_edge(clk) and not valid;
+                ready <= true;
+                address <= std_logic_vector(to_unsigned(4, address'length));
+                write_data <= std_logic_vector(to_unsigned(4, write_data'length));
+                ready <= true;
+                burst <= '0';
+                virtual_burst <= true;
+                wait until rising_edge(clk) and valid;
             end if;
         end loop;
         wait for 2*clk_period;
@@ -355,6 +377,7 @@ begin
         cs_request_in => cs_request_in,
         cs_request_out => cs_request_out,
         write_data => write_data,
-        burst => burst
+        burst => burst,
+        virtual_burst => virtual_burst
     );
 end tb;

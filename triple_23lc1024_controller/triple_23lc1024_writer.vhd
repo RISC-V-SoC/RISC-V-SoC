@@ -30,7 +30,8 @@ entity triple_23lc1024_writer is
         cs_request_in : in cs_request_type;
         cs_request_out : out cs_request_type;
         write_data : in bus_data_type;
-        burst : in std_logic
+        burst : in std_logic;
+        virtual_burst : in boolean
     );
 end triple_23lc1024_writer;
 
@@ -124,7 +125,7 @@ begin
                 end if;
 
                 if count = count_goal - 1 then
-                    if burst_internal = '1' and not fault_latched then
+                    if (burst_internal = '1' or virtual_burst) and not fault_latched then
                         if ready then
                             transmitData := write_data;
                             burst_internal := burst;

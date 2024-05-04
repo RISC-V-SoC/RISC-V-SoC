@@ -73,6 +73,7 @@ architecture behavioral of triple_23lc1024_controller is
     signal cs_request : cs_request_type;
     signal write_data : bus_data_type;
     signal address : bus_address_type;
+    signal virtual_write_burst : boolean;
 begin
 
     slv2mst.fault <= '1' when has_fault else '0';
@@ -199,7 +200,8 @@ begin
         cs_request_out => cs_request_writer,
         request_length => request_length,
         write_data => write_data,
-        burst => mst2slv.burst
+        burst => mst2slv.burst,
+        virtual_burst => virtual_write_burst
     );
 
     parser : entity work.triple_23lc1024_bus_parser
@@ -216,7 +218,8 @@ begin
         write_data => write_data,
         address => address,
         read_request => read_request,
-        write_request => write_request
+        write_request => write_request,
+        virtual_write_burst => virtual_write_burst
     );
 
     cs_control : entity work.triple_23lc1024_cs_control
