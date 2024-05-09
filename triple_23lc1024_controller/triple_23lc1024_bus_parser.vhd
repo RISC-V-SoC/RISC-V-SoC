@@ -188,7 +188,9 @@ begin
             if rst = '1' then
                 read_request <= false;
                 write_request <= false;
+                virtual_write_burst <= false;
                 has_fault_buf := false;
+                previous_operation_was_write := false;
             elsif wait_out_active then
                 wait_out_active := any_active;
             elsif has_fault_buf then
@@ -196,20 +198,24 @@ begin
                 has_fault_buf := false;
                 fault_data <= fault_data_buf;
                 wait_out_active := any_active;
+                read_request <= false;
+                write_request <= false;
+                virtual_write_burst <= false;
+            elsif bus_pkg.bus_requesting(mst2slv) and transaction_valid then
+                previous_operation_was_write := true when mst2slv.writeReady = '1' else false;
+                previous_effective_address := effective_address;
+                previous_request_length := request_length_buf;
+                read_request <= false;
+                write_request <= false;
+                virtual_write_burst <= false;
             elsif bus_pkg.bus_requesting(mst2slv) then
                 detect_fault(mst2slv, has_fault_buf, fault_data_buf);
-                if transaction_valid or has_fault_buf then
+                if has_fault_buf then
                     read_request <= false;
                     write_request <= false;
                 else
                     read_request <= true when mst2slv.readReady = '1' else false;
                     write_request <= true when mst2slv.writeReady = '1' else false;
-                end if;
-
-                if transaction_valid and not has_fault_buf then
-                    previous_operation_was_write := true when mst2slv.writeReady = '1' else false;
-                    previous_effective_address := effective_address;
-                    previous_request_length := request_length_buf;
                 end if;
 
                 cs_request <= encode_cs_request_type(mst2slv.address);
@@ -218,20 +224,21 @@ begin
                 else
                     request_length_buf := determine_write_request_length(mst2slv.byteMask);
                 end if;
-            end if;
-            write_data <= std_logic_vector(shift_right(unsigned(mst2slv.writeData), count_leading_zeros(mst2slv.byteMask)*bus_pkg.bus_byte_size));
-            effective_address := std_logic_vector(unsigned(mst2slv.address) + count_leading_zeros(mst2slv.byteMask));
 
-            if request_length_buf = 0 then
-                request_length <= 1;
-            else
-                request_length <= request_length_buf;
-            end if;
+                write_data <= std_logic_vector(shift_right(unsigned(mst2slv.writeData), count_leading_zeros(mst2slv.byteMask)*bus_pkg.bus_byte_size));
+                effective_address := std_logic_vector(unsigned(mst2slv.address) + count_leading_zeros(mst2slv.byteMask));
 
-            if mst2slv.writeReady = '1' and previous_operation_was_write then
-                virtual_write_burst <= is_virtual_write_burst(previous_effective_address, effective_address, previous_request_length, request_length_buf);
-            else
-                virtual_write_burst <= false;
+                if request_length_buf = 0 then
+                    request_length <= 1;
+                else
+                    request_length <= request_length_buf;
+                end if;
+
+                if mst2slv.writeReady = '1' and previous_operation_was_write then
+                    virtual_write_burst <= is_virtual_write_burst(previous_effective_address, effective_address, previous_request_length, request_length_buf);
+                else
+                    virtual_write_burst <= false;
+                end if;
             end if;
         end if;
         address <= effective_address;
