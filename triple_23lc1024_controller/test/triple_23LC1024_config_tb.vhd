@@ -28,6 +28,10 @@ architecture tb of triple_23LC1024_config_tb is
     signal rst : std_logic := '1';
     signal config_done : boolean;
 
+    signal cs_n_config : std_logic_vector(2 downto 0);
+    signal cs_n_override : std_logic_vector(2 downto 0) := std_logic_vector'("111");
+    signal do_cs_n_override : boolean := false;
+
     signal cs_n : std_logic_vector(2 downto 0);
     signal so_sio1 : std_logic;
     signal sio2 : std_logic;
@@ -47,8 +51,7 @@ begin
     clk <= not clk after (clk_period/2);
 
     test_runner : process
-        variable data                        : OperationMode;
-
+        variable data : OperationMode;
     begin
         test_runner_setup(runner, runner_cfg);
         while test_suite loop
@@ -87,11 +90,30 @@ begin
                 rst <= '0';
                 wait until config_done;
                 check_all_mode(SeqMode, SqiMode, actors, net);
+            elsif run("Config run starts with CS high") then
+                set_all_mode(ByteMode, SpiMode, actors, net);
+                check_all_mode(ByteMode, SpiMode, actors, net);
+                cs_n_override <= (others => '0');
+                do_cs_n_override <= true;
+                wait for 60 ns;
+                do_cs_n_override <= false;
+                rst <= '0';
+                wait for 20 ns;
+                check_equal(cs_n, std_logic_vector'("111"));
             end if;
         end loop;
         wait for 2*clk_period;
         test_runner_cleanup(runner);
         wait;
+    end process;
+
+    process(cs_n_override, do_cs_n_override, cs_n_config)
+    begin
+        if do_cs_n_override then
+            cs_n <= cs_n_override;
+        else
+            cs_n <= cs_n_config;
+        end if;
     end process;
 
     test_runner_watchdog(runner,  100 us);
@@ -120,7 +142,7 @@ begin
         spi_sio(1) => so_sio1,
         spi_sio(2) => sio2,
         spi_sio(3) => hold_n_sio3,
-        spi_cs => cs_n,
+        spi_cs => cs_n_config,
         config_done => config_done
     );
 end tb;

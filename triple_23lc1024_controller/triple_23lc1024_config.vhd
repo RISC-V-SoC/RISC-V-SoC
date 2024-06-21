@@ -21,7 +21,7 @@ entity triple_23lc1024_config is
 end triple_23lc1024_config;
 
 architecture behavioral of triple_23lc1024_config is
-    type state_type is (reset_state, drop_cs_state, rise_cs_state, transmission_state, configure_done_state);
+    type state_type is (reset_state, initial_wait_state, drop_cs_state, rise_cs_state, transmission_state, configure_done_state);
     type active_operation_type is (quad_reset_operation, dual_reset_operation, spi_configure_operation, spi_enter_quad_operation);
     type transmission_state_type is (transmission_waiting_state, transmission_high_state,
         transmission_low_state, transmission_done_state);
@@ -153,7 +153,15 @@ begin
                 transmission_request <= false;
                 cs_timer_rst <= '1';
                 spi_cs <= (others => '1');
-                next_state <= drop_cs_state;
+                next_state <= initial_wait_state;
+            when initial_wait_state =>
+                config_done <= false;
+                transmission_request <= false;
+                cs_timer_rst <= '0';
+                spi_cs <= (others => '1');
+                if cs_timer_done = '1' then
+                    next_state <= drop_cs_state;
+                end if;
             when drop_cs_state =>
                 config_done <= false;
                 transmission_request <= false;
