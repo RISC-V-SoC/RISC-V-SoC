@@ -10,7 +10,7 @@ entity triple_23lc1024_config is
     );
     port (
         clk : in std_logic;
-        rst : in std_logic;
+        rst : in boolean;
 
         spi_clk : out std_logic;
         spi_sio : out std_logic_vector(3 downto 0);
@@ -120,7 +120,7 @@ begin
     sequential: process(clk)
     begin
         if rising_edge(clk) then
-            if rst = '1' then
+            if rst then
                 cur_state <= reset_state;
                 cur_transmission_state <= transmission_waiting_state;
                 instruction_index <= 0;

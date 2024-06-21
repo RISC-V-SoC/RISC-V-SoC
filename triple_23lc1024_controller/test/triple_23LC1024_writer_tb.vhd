@@ -23,7 +23,7 @@ architecture tb of triple_23LC1024_writer_tb is
     constant clk_period : time := 20 ns;
     constant cs_wait_time : time := 50 ns;
     signal clk : std_logic := '0';
-    signal rst : std_logic := '1';
+    signal rst : boolean := true;
 
     signal cs_n : std_logic_vector(2 downto 0) := (others => '1');
     signal so_sio1 : std_logic;
@@ -70,7 +70,7 @@ begin
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(0, 17)), std_logic_vector(to_unsigned(0, bus_data_type'length)));
                 address <= std_logic_vector(to_unsigned(0, address'length));
                 write_data <= std_logic_vector(to_unsigned(255, write_data'length));
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '0';
                 request_length <= 4;
@@ -90,7 +90,7 @@ begin
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(0, 17)), (others => '0'));
                 address <= std_logic_vector(to_unsigned(0, address'length));
                 write_data <= exp_data;
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '0';
                 request_length <= 4;
@@ -107,7 +107,7 @@ begin
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(4, 17)), std_logic_vector(to_unsigned(0, bus_data_type'length)));
                 address <= std_logic_vector(to_unsigned(0, address'length));
                 write_data <= std_logic_vector(to_unsigned(255, write_data'length));
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '0';
                 check(not active);
@@ -131,7 +131,7 @@ begin
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(4, 17)), std_logic_vector(to_unsigned(0, bus_data_type'length)));
                 address <= std_logic_vector(to_unsigned(0, address'length));
                 write_data <= std_logic_vector(to_unsigned(255, write_data'length));
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '1';
                 check(not active);
@@ -152,7 +152,7 @@ begin
                 check_equal(read_data, std_logic_vector(to_unsigned(255, read_data'length)));
             elsif run("Burst of size 50 works as intended") then
                 set_all_mode(SeqMode, SqiMode, actor, net);
-                rst <= '0';
+                rst <= false;
                 request_length <= 4;
                 for i in 0 to 49 loop
                     write_bus_word(net, actor, std_logic_vector(to_unsigned(i*4, 17)), std_logic_vector(to_unsigned(0, bus_data_type'length)));
@@ -186,7 +186,7 @@ begin
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(4, 17)), std_logic_vector(to_unsigned(0, bus_data_type'length)));
                 address <= std_logic_vector(to_unsigned(0, address'length));
                 write_data <= std_logic_vector(to_unsigned(255, write_data'length));
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '1';
                 check(not active);
@@ -218,7 +218,7 @@ begin
                 address <= std_logic_vector(to_unsigned(0, address'length));
                 write_data <= std_logic_vector(to_unsigned(255, write_data'length));
                 request_length <= 4;
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '1';
                 wait until rising_edge(clk) and (valid);
@@ -237,7 +237,7 @@ begin
                 address <= std_logic_vector(to_unsigned(0, address'length));
                 write_data <= std_logic_vector(to_unsigned(255, write_data'length));
                 request_length <= 4;
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '1';
                 wait until rising_edge(clk) and valid;
@@ -254,7 +254,7 @@ begin
                 address <= std_logic_vector(to_unsigned(0, address'length));
                 write_data <= std_logic_vector(to_unsigned(255, write_data'length));
                 request_length <= 4;
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '0';
                 wait until rising_edge(clk) and valid;
@@ -274,7 +274,7 @@ begin
                 request_length <= 2;
                 ready <= true;
                 burst <= '0';
-                rst <= '0';
+                rst <= false;
                 wait until rising_edge(clk) and valid;
                 ready <= false;
                 wait until not active;
@@ -289,7 +289,7 @@ begin
                 request_length <= 1;
                 ready <= true;
                 burst <= '0';
-                rst <= '0';
+                rst <= false;
                 wait until rising_edge(clk) and valid;
                 ready <= false;
                 wait until not active;
@@ -298,7 +298,7 @@ begin
                 check_equal(read_data, exp_data);
             elsif run("A virtual burst behaves just like a real burst") then
                 set_all_mode(SeqMode, SqiMode, actor, net);
-                rst <= '0';
+                rst <= false;
                 request_length <= 4;
                 address <= std_logic_vector(to_unsigned(0, address'length));
                 write_data <= std_logic_vector(to_unsigned(0, write_data'length));

@@ -12,7 +12,7 @@ entity triple_23lc1024_reader is
     );
     port (
         clk : in std_logic;
-        rst : in std_logic;
+        rst : in boolean;
 
         spi_clk : out std_logic;
         spi_sio_in : in std_logic_vector(3 downto 0);
@@ -55,7 +55,7 @@ begin
         variable write_index : natural range 0 to bus_bytes_per_word * 2 := 0;
     begin
         if rising_edge(clk) then
-            if rst = '1' then
+            if rst then
                 spi_clk <= '0';
                 cs_set_internal := '1';
                 valid <= false;

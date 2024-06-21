@@ -12,7 +12,7 @@ entity triple_23lc1024_writer is
     );
     port (
         clk : in std_logic;
-        rst : in std_logic;
+        rst : in boolean;
 
         spi_clk : out std_logic;
         spi_sio : out std_logic_vector(3 downto 0);
@@ -55,7 +55,7 @@ begin
         variable fault_latched : boolean := false;
     begin
         if rising_edge(clk) then
-            if rst = '1' then
+            if rst then
                 spi_clk <= '0';
                 cs_set_internal := '1';
                 valid_internal := false;

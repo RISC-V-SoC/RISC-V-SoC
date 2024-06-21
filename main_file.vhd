@@ -121,11 +121,7 @@ architecture Behavioral of main_file is
     signal uart_bus_slave_reset : boolean;
 
     signal spi_mem_reset : boolean;
-    signal spi_mem_reset_stdlog : std_logic;
-
 begin
-
-    spi_mem_reset_stdlog <= '1' when spi_mem_reset else '0';
 
     mem_spi_sio_in <= JA_gpio;
     JA_gpio <= mem_spi_sio_out;
@@ -245,7 +241,7 @@ begin
         system_clock_period => clk_period
     ) port map (
         clk => clk,
-        rst => spi_mem_reset_stdlog,
+        rst => spi_mem_reset,
         spi_clk => mem_spi_clk,
         spi_sio_in => mem_spi_sio_in,
         spi_sio_out => mem_spi_sio_out,

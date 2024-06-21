@@ -9,7 +9,7 @@ use work.triple_23lc1024_pkg.all;
 entity triple_23lc1024_bus_parser is
     port (
         clk : in std_logic;
-        rst : in std_logic;
+        rst : in boolean;
 
         mst2slv : in bus_pkg.bus_mst2slv_type;
         transaction_valid : in boolean;
@@ -185,7 +185,7 @@ begin
     begin
         if rising_edge(clk) then
             has_fault <= false;
-            if rst = '1' then
+            if rst then
                 read_request <= false;
                 write_request <= false;
                 virtual_write_burst <= false;

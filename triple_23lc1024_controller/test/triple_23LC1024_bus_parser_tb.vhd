@@ -18,7 +18,7 @@ end entity;
 architecture tb of triple_23LC1024_bus_parser_tb is
     constant clk_period : time := 20 ns;
     signal clk : std_logic := '0';
-    signal rst : std_logic := '0';
+    signal rst : boolean := false;
 
     signal mst2slv : bus_pkg.bus_mst2slv_type := bus_pkg.BUS_MST2SLV_IDLE;
     signal transaction_valid : boolean := false;
@@ -132,7 +132,7 @@ begin
                 mst2slv <= bus_pkg.bus_mst2slv_read(X"00021100", byte_mask => "0011");
                 wait for clk_period;
                 check(read_request);
-                rst <= '1';
+                rst <= true;
                 wait for clk_period;
                 check(not read_request);
             elsif run("After a fault, the parser has to wait for all units to finish") then

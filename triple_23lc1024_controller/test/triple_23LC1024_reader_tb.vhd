@@ -23,7 +23,7 @@ architecture tb of triple_23LC1024_reader_tb is
     constant clk_period : time := 20 ns;
     constant cs_wait_time : time := 50 ns;
     signal clk : std_logic := '0';
-    signal rst : std_logic := '1';
+    signal rst : boolean := true;
 
     signal cs_n : std_logic_vector(2 downto 0) := (others => '1');
     signal so_sio1 : std_logic;
@@ -85,7 +85,7 @@ begin
                 set_all_mode(SeqMode, SqiMode, actor, net);
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(0, 17)), reorder_nibbles(std_logic_vector(to_unsigned(255, bus_data_type'length))));
                 address <= std_logic_vector(to_unsigned(0, address'length));
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '0';
                 request_length <= 4;
@@ -102,7 +102,7 @@ begin
                 exp_data := X"FFFEFDFC";
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(0, 17)), reorder_nibbles(exp_data));
                 address <= std_logic_vector(to_unsigned(0, address'length));
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '0';
                 request_length <= 4;
@@ -119,7 +119,7 @@ begin
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(0, 17)), reorder_nibbles(std_logic_vector(to_unsigned(254, bus_data_type'length))));
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(4, 17)), reorder_nibbles(std_logic_vector(to_unsigned(14, bus_data_type'length))));
                 address <= std_logic_vector(to_unsigned(0, address'length));
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '0';
                 request_length <= 4;
@@ -138,7 +138,7 @@ begin
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(0, 17)), reorder_nibbles(std_logic_vector(to_unsigned(254, bus_data_type'length))));
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(4, 17)), reorder_nibbles(std_logic_vector(to_unsigned(14, bus_data_type'length))));
                 address <= std_logic_vector(to_unsigned(0, address'length));
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '1';
                 request_length <= 4;
@@ -158,7 +158,7 @@ begin
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(0, 17)), reorder_nibbles(std_logic_vector(to_unsigned(254, bus_data_type'length))));
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(4, 17)), reorder_nibbles(std_logic_vector(to_unsigned(14, bus_data_type'length))));
                 address <= std_logic_vector(to_unsigned(0, address'length));
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '1';
                 request_length <= 4;
@@ -181,7 +181,7 @@ begin
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(0, 17)), std_logic_vector(to_unsigned(254, bus_data_type'length)));
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(4, 17)), std_logic_vector(to_unsigned(14, bus_data_type'length)));
                 address <= std_logic_vector(to_unsigned(0, address'length));
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '1';
                 request_length <= 4;
@@ -195,7 +195,7 @@ begin
             elsif run("Active remains asserted until CS = 1") then
                 set_all_mode(SeqMode, SqiMode, actor, net);
                 address <= std_logic_vector(to_unsigned(0, address'length));
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 request_length <= 4;
                 wait until rising_edge(clk) and valid;
@@ -211,7 +211,7 @@ begin
                 set_all_mode(SeqMode, SqiMode, actor, net);
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(0, 17)), reorder_nibbles(X"87654321"));
                 address <= std_logic_vector(to_unsigned(0, address'length));
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '0';
                 request_length <= 2;
@@ -222,7 +222,7 @@ begin
                 set_all_mode(SeqMode, SqiMode, actor, net);
                 write_bus_word(net, actor, std_logic_vector(to_unsigned(0, 17)), reorder_nibbles(X"87654321"));
                 address <= std_logic_vector(to_unsigned(0, address'length));
-                rst <= '0';
+                rst <= false;
                 ready <= true;
                 burst <= '0';
                 request_length <= 1;

@@ -25,7 +25,7 @@ architecture tb of triple_23LC1024_config_tb is
     constant spi_cs_hold_ticks : natural := 3;
 
     signal clk : std_logic := '0';
-    signal rst : std_logic := '1';
+    signal rst : boolean := true;
     signal config_done : boolean;
 
     signal cs_n_config : std_logic_vector(2 downto 0);
@@ -59,35 +59,35 @@ begin
                 set_all_mode(ByteMode, SpiMode, actors, net);
                 check_all_mode(ByteMode, SpiMode, actors, net);
                 check(not config_done);
-                rst <= '0';
+                rst <= false;
                 wait until config_done;
                 check_all_mode(SeqMode, SqiMode, actors, net);
             elsif run("Config run when mode is (PageMode, SdiMode) results in (SeqMode, SqiMode)") then
                 set_all_mode(PageMode, SdiMode, actors, net);
                 check_all_mode(PageMode, SdiMode, actors, net);
                 check(not config_done);
-                rst <= '0';
+                rst <= false;
                 wait until config_done;
                 check_all_mode(SeqMode, SqiMode, actors, net);
             elsif run("Config run when mode is (SeqMode, SqiMode) results in (SeqMode, SqiMode)") then
                 set_all_mode(SeqMode, SqiMode, actors, net);
                 check_all_mode(SeqMode, SqiMode, actors, net);
                 check(not config_done);
-                rst <= '0';
+                rst <= false;
                 wait until config_done;
                 check_all_mode(SeqMode, SqiMode, actors, net);
             elsif run("Config run repeats after rst cycle") then
                 set_all_mode(ByteMode, SpiMode, actors, net);
                 check_all_mode(ByteMode, SpiMode, actors, net);
                 check(not config_done);
-                rst <= '0';
+                rst <= false;
                 wait until config_done;
                 check_all_mode(SeqMode, SqiMode, actors, net);
                 set_all_mode(ByteMode, SpiMode, actors, net);
-                rst <= '1';
+                rst <= true;
                 wait for clk_period;
                 check_all_mode(ByteMode, SpiMode, actors, net);
-                rst <= '0';
+                rst <= false;
                 wait until config_done;
                 check_all_mode(SeqMode, SqiMode, actors, net);
             elsif run("Config run starts with CS high") then
@@ -97,7 +97,7 @@ begin
                 do_cs_n_override <= true;
                 wait for 60 ns;
                 do_cs_n_override <= false;
-                rst <= '0';
+                rst <= false;
                 wait for 20 ns;
                 check_equal(cs_n, std_logic_vector'("111"));
             end if;

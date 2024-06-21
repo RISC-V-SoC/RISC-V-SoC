@@ -15,7 +15,7 @@ entity triple_23lc1024_controller is
     );
     port (
         clk : in std_logic;
-        rst : in std_logic;
+        rst : in boolean;
 
         spi_clk : out std_logic;
         spi_sio_in : in std_logic_vector(3 downto 0);
