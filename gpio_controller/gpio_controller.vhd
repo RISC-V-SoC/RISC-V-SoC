@@ -104,27 +104,31 @@ begin
         end loop;
     end process;
 
-    set_output : process(inout_array, data_out_array)
+    set_output : process(clk)
     begin
-        for index in 0 to gpio_count - 1 loop
-            case inout_array(index) is
-                when INPUT =>
-                    gpio(index) <= 'Z';
-                when OUTPUT =>
-                    gpio(index) <= data_out_array(index);
-            end case;
-        end loop;
+        if rising_edge(clk) then
+            for index in 0 to gpio_count - 1 loop
+                case inout_array(index) is
+                    when INPUT =>
+                        gpio(index) <= 'Z';
+                    when OUTPUT =>
+                        gpio(index) <= data_out_array(index);
+                end case;
+            end loop;
+        end if;
     end process;
 
-    set_input : process(inout_array, gpio)
+    set_input : process(clk)
     begin
-        for index in 0 to gpio_count - 1 loop
-            case inout_array(index) is
-                when INPUT =>
-                    data_in_array(index) <= gpio(index);
-                when OUTPUT =>
-                    data_in_array(index) <= '0';
-            end case;
-        end loop;
+        if rising_edge(clk) then
+            for index in 0 to gpio_count - 1 loop
+                case inout_array(index) is
+                    when INPUT =>
+                        data_in_array(index) <= gpio(index);
+                    when OUTPUT =>
+                        data_in_array(index) <= '0';
+                end case;
+            end loop;
+        end if;
     end process;
 end architecture;
