@@ -121,6 +121,7 @@ architecture Behavioral of main_file is
     signal uart_bus_slave_reset : boolean;
     signal spi_mem_reset : boolean;
     signal spi_master_reset : boolean;
+    signal gpio_reset : boolean;
 begin
 
     mem_spi_sio_in <= JA_gpio;
@@ -231,6 +232,7 @@ begin
         gpio_count => general_gpio'length + 1
     ) port map (
         clk => clk,
+        reset => gpio_reset,
         gpio(general_gpio'high downto 0) => general_gpio,
         gpio(general_gpio'high + 1) => spi_ss,
         mst2slv => demux2gpio,
@@ -254,14 +256,15 @@ begin
     reset_controller : entity work.reset_controller
     generic map (
         master_count => 1,
-        slave_count => 3
+        slave_count => 4
     ) port map (
         clk => clk,
         do_reset => reset_request,
         master_reset(0) => processor_reset,
         slave_reset(0) => uart_bus_slave_reset,
         slave_reset(1) => spi_mem_reset,
-        slave_reset(2) => spi_master_reset
+        slave_reset(2) => spi_master_reset,
+        slave_reset(3) => gpio_reset
     );
 
 end Behavioral;

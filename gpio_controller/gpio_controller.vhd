@@ -12,6 +12,7 @@ entity gpio_controller is
     );
     port (
         clk : in std_logic;
+        reset : in boolean;
         gpio : inout std_logic_vector(gpio_count - 1 downto 0);
 
         mst2slv : in bus_pkg.bus_mst2slv_type;
@@ -49,7 +50,12 @@ begin
         variable byte_out : std_logic_vector(7 downto 0);
     begin
         if rising_edge(clk) then
-            if bus_pkg.any_transaction(mst2slv, slv2mst_buf) then
+            if reset then
+                slv2mst_buf <= bus_pkg.BUS_SLV2MST_IDLE;
+                slv2mst_tmp := bus_pkg.BUS_SLV2MST_IDLE;
+                inout_byte_array <= (others => (others => '0'));
+                data_out_array <= (others => '0');
+            elsif bus_pkg.any_transaction(mst2slv, slv2mst_buf) then
                 slv2mst_buf <= bus_pkg.BUS_SLV2MST_IDLE;
                 slv2mst_tmp := bus_pkg.BUS_SLV2MST_IDLE;
             elsif slv2mst_tmp.valid then
