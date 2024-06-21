@@ -126,6 +126,7 @@ begin
                 write(net, spimem0_start_address, X"01020304");
                 read(net, spimem0_start_address, X"01020304");
             elsif run("Riscv32: bubblesort") then
+                write(net, processor_controller_start_address, X"00000001");
                 write_file(net, spimem0_start_address, "./complete_system/test/programs/fullBubblesort.txt");
                 write(net, processor_controller_start_address, X"00000000");
                 wait for 300 us;

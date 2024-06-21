@@ -40,13 +40,13 @@ begin
     begin
         test_runner_setup(runner, runner_cfg);
         while test_suite loop
-            if run("cpu reset is true before first rising edge") then
+            if run("cpu stall is true before first rising edge") then
                 wait until rising_edge(clk);
-                check(cpu_reset);
-            elsif run("data_to_controller address 0 reads as 1 before first rising edge") then
+                check(cpu_stall);
+            elsif run("data_to_controller address 0 reads as 2 before first rising edge") then
                 address_from_controller <= 0;
                 wait until rising_edge(clk);
-                check(X"00000001" = data_to_controller);
+                check(X"00000002" = data_to_controller);
             elsif run("data_to_controller address 5 reads as 0 before first rising edge") then
                 address_from_controller <= 5;
                 wait until rising_edge(clk);
@@ -67,13 +67,13 @@ begin
                 write_from_controller <= false;
                 wait until rising_edge(clk);
                 check(X"00000000" = data_to_controller);
-            elsif run("Writing 0 to address 5 from data_from_controller keep cpu_reset high") then
+            elsif run("Writing 0 to address 5 from data_from_controller keeps cpu_stall high") then
                 wait until falling_edge(clk);
                 address_from_controller <= 5;
                 data_from_controller <= (others => '0');
                 write_from_controller <= true;
                 wait until falling_edge(clk);
-                check(cpu_reset);
+                check(cpu_stall);
             elsif run("Writing 2 to address 0 disables reset, enables stall") then
                 wait until falling_edge(clk);
                 address_from_controller <= 0;
@@ -100,8 +100,8 @@ begin
                 write_from_controller <= false;
                 rst <= '1';
                 wait until falling_edge(clk);
-                check(cpu_reset);
-                check(not cpu_stall);
+                check(not cpu_reset);
+                check(cpu_stall);
             elsif run("Address 1 from controller reads clock frequency") then
                 wait until falling_edge(clk);
                 address_from_controller <= 1;

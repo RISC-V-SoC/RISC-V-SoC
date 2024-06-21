@@ -29,7 +29,9 @@ entity riscv32_processor is
 
         -- Memory master
         memory2slv : out bus_mst2slv_type;
-        slv2memory : in bus_slv2mst_type
+        slv2memory : in bus_slv2mst_type;
+
+        reset_request : out boolean
     );
 end entity;
 
@@ -46,7 +48,6 @@ architecture behaviourial of riscv32_processor is
     signal dataToBus : riscv32_data_type;
     signal dataFromBus : riscv32_data_type;
 
-    signal controllerReset : boolean;
     signal controllerStall : boolean;
 
     signal instructionFetchHasFault : boolean;
@@ -77,11 +78,11 @@ architecture behaviourial of riscv32_processor is
 
 begin
     pipelineStall <= controllerStall or instructionStall or memoryStall;
-    forbidBusInteraction <= controllerReset or controllerStall;
+    forbidBusInteraction <= controllerStall;
 
-    process(rst, controllerReset)
+    process(rst)
     begin
-        if rst = '1' or controllerReset then
+        if rst = '1' then
             pipelineRst <= '1';
         else
             pipelineRst <= '0';
@@ -136,7 +137,7 @@ begin
         clk => clk,
         rst => rst,
         forbidBusInteraction => forbidBusInteraction,
-        flushCache => controllerReset,
+        flushCache => rst = '1',
         mst2slv => instructionFetch2slv,
         slv2mst => slv2instructionFetch,
         hasFault => instructionFetchHasFault,
@@ -154,7 +155,7 @@ begin
         clk => clk,
         rst => rst,
         forbidBusInteraction => forbidBusInteraction,
-        flushCache => controllerReset,
+        flushCache => rst = '1',
         mst2slv => memory2slv,
         slv2mst => slv2memory,
         hasFault => memoryHasFault,
@@ -183,7 +184,7 @@ begin
         if_faultData => instructionFetchFaultData,
         mem_fault => memoryHasFault,
         mem_faultData => memoryFaultData,
-        cpu_reset => controllerReset,
+        cpu_reset => reset_request,
         cpu_stall => controllerStall
     );
 
@@ -202,14 +203,14 @@ begin
         timer_period => 1 us
     ) port map (
         clk => clk,
-        reset => controllerReset,
+        reset => rst = '1',
         value => systemtimer_value
     );
 
     cycleCounter : entity work.riscv32_cycleCounter
     port map (
         clk => clk,
-        reset => controllerReset,
+        reset => rst = '1',
         value => cycleCounter_value 
     );
 end architecture;

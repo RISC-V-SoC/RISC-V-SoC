@@ -58,11 +58,11 @@ begin
     end process;
 
     regZeroControl: process(clk)
-        variable regZero_buf : riscv32_pkg.riscv32_data_type := (0 => '1', others => '0');
+        variable regZero_buf : riscv32_pkg.riscv32_data_type := (1 => '1', others => '0');
     begin
         if rising_edge(clk) then
             if rst = '1' then
-                regZero_buf := (0 => '1', others => '0');
+                regZero_buf := (1 => '1', others => '0');
             else
                 if  write_from_controller and address_from_controller = 0 then
                     regZero_buf := data_from_controller;

@@ -54,6 +54,8 @@ architecture tb of riscv32_processor_tb is
     signal test2slv : bus_mst2slv_type := BUS_MST2SLV_IDLE;
     signal slv2test : bus_slv2mst_type;
 
+    signal reset_request : boolean;
+
     constant address_map : addr_range_and_mapping_array := (
         address_range_and_map(
             low => std_logic_vector(to_unsigned(controllerAddress, bus_address_type'length)),
@@ -104,6 +106,9 @@ architecture tb of riscv32_processor_tb is
     end procedure;
 
 begin
+
+    rst <= '1' when reset_request else '0';
+
     clk <= not clk after (clk_period/2);
     main : process
         variable readAddr : bus_address_type;
@@ -181,7 +186,7 @@ begin
                 simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/rdcycle.txt");
                 start_cpu(test2slv, slv2test);
                 wait for 10 us;
-                expectedReadData := X"000000a1";
+                expectedReadData := X"000000a4";
                 readAddr := std_logic_vector(to_unsigned(16#88#, bus_address_type'length));
                 check_word_at_address(net, readAddr, expectedReadData);
             elsif run("Run, reset and then run again") then
@@ -219,7 +224,8 @@ begin
         instructionFetch2slv => instructionFetch2arbiter,
         slv2instructionFetch => arbiter2instructionFetch,
         memory2slv => memory2arbiter,
-        slv2memory => arbiter2memory
+        slv2memory => arbiter2memory,
+        reset_request => reset_request
     );
 
     arbiter : entity src.bus_arbiter

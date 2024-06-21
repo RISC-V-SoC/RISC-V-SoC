@@ -114,7 +114,20 @@ architecture Behavioral of main_file is
     signal mem_spi_cs_n : std_logic_vector(2 downto 0);
     signal mem_spi_clk : std_logic;
 
+    signal reset_request : boolean;
+
+    signal processor_reset : boolean;
+    signal processor_reset_stdlog : std_logic;
+
+    signal uart_bus_slave_reset : boolean;
+
+    signal spi_mem_reset : boolean;
+    signal spi_mem_reset_stdlog : std_logic;
+
 begin
+
+    processor_reset_stdlog <= '1' when processor_reset else '0';
+    spi_mem_reset_stdlog <= '1' when spi_mem_reset else '0';
 
     mem_spi_sio_in <= JA_gpio;
     JA_gpio <= mem_spi_sio_out;
@@ -143,13 +156,14 @@ begin
         dCache_word_count_log2b => 8
     ) port map (
         clk => clk,
-        rst => '0',
+        rst => processor_reset_stdlog,
         mst2control => demux2control,
         control2mst => control2demux,
         instructionFetch2slv => instructionFetch2arbiter,
         slv2instructionFetch => arbiter2instructionFetch,
         memory2slv => memory2arbiter,
-        slv2memory => arbiter2memory
+        slv2memory => arbiter2memory,
+        reset_request => reset_request
     );
 
     arbiter : entity work.bus_arbiter
@@ -191,7 +205,7 @@ begin
     uart_bus_slave : entity work.uart_bus_slave
     port map (
         clk => clk,
-        reset => false,
+        reset => uart_bus_slave_reset,
         rx => slave_rx,
         tx => slave_tx,
         mst2slv => demux2uartSlave,
@@ -217,8 +231,6 @@ begin
         slv2mst => spiDevice2demux
     );
 
-    -- Control goes to processor
-
     gpio_controller : entity work.gpio_controller
     generic map (
         gpio_count => general_gpio'length + 1
@@ -235,13 +247,25 @@ begin
         system_clock_period => clk_period
     ) port map (
         clk => clk,
-        rst => '0',
+        rst => spi_mem_reset_stdlog,
         spi_clk => mem_spi_clk,
         spi_sio_in => mem_spi_sio_in,
         spi_sio_out => mem_spi_sio_out,
         spi_cs => mem_spi_cs_n,
         mst2slv => demux2spimem,
         slv2mst => spimem2demux
+    );
+
+    reset_controller : entity work.reset_controller
+    generic map (
+        master_count => 1,
+        slave_count => 2
+    ) port map (
+        clk => clk,
+        do_reset => reset_request,
+        master_reset(0) => processor_reset,
+        slave_reset(0) => uart_bus_slave_reset,
+        slave_reset(1) => spi_mem_reset
     );
 
 end Behavioral;
