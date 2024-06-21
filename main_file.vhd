@@ -119,8 +119,8 @@ architecture Behavioral of main_file is
     signal processor_reset : boolean;
 
     signal uart_bus_slave_reset : boolean;
-
     signal spi_mem_reset : boolean;
+    signal spi_master_reset : boolean;
 begin
 
     mem_spi_sio_in <= JA_gpio;
@@ -218,6 +218,7 @@ begin
     spi_master_device : entity work.spi_master_device
     port map (
         clk => clk,
+        reset => spi_master_reset,
         mosi => spi_mosi,
         miso => spi_miso,
         spi_clk => spi_clk,
@@ -253,13 +254,14 @@ begin
     reset_controller : entity work.reset_controller
     generic map (
         master_count => 1,
-        slave_count => 2
+        slave_count => 3
     ) port map (
         clk => clk,
         do_reset => reset_request,
         master_reset(0) => processor_reset,
         slave_reset(0) => uart_bus_slave_reset,
-        slave_reset(1) => spi_mem_reset
+        slave_reset(1) => spi_mem_reset,
+        slave_reset(2) => spi_master_reset
     );
 
 end Behavioral;

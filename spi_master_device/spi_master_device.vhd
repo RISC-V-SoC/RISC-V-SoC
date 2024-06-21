@@ -9,6 +9,7 @@ use work.bus_pkg;
 entity spi_master_device is
     port (
         clk : in std_logic;
+        reset : in boolean;
         mosi : out std_logic;
         miso : in std_logic;
         spi_clk : out std_logic;
@@ -74,7 +75,13 @@ begin
         if rising_edge(clk) then
             tx_queue_push_data <= false;
             rx_queue_pop_data <= false;
-            if bus_pkg.any_transaction(mst2slv, slv2mst_buf) then
+            if reset then
+                enabled <= false;
+                spi_clk_high_on_idle <= false;
+                sample_on_falling_edge <= false;
+                slv2mst_tmp := bus_pkg.BUS_SLV2MST_IDLE;
+                slv2mst_buf <= bus_pkg.BUS_SLV2MST_IDLE;
+            elsif bus_pkg.any_transaction(mst2slv, slv2mst_buf) then
                 slv2mst_buf <= bus_pkg.BUS_SLV2MST_IDLE;
                 slv2mst_tmp := bus_pkg.BUS_SLV2MST_IDLE;
             elsif slv2mst_tmp.valid then

@@ -17,6 +17,7 @@ end entity;
 architecture tb of spi_master_device_tb is
     constant clk_period : time := 20 ns;
     signal clk : std_logic := '0';
+    signal reset : boolean := false;
     signal spi_mosi_miso : std_logic;
     signal spi_clk : std_logic;
     signal mst2slv : bus_pkg.bus_mst2slv_type := bus_pkg.BUS_MST2SLV_IDLE;
@@ -244,6 +245,19 @@ begin
                 mst2slv <= bus_pkg.bus_mst2slv_read(address, byte_mask);
                 wait until rising_edge(clk) and bus_pkg.read_transaction(mst2slv, slv2mst);
                 check_equal(slv2mst.readData(7 downto 0), data(7 downto 0));
+            elsif run("Reset resets") then
+                -- Set device enabled, CPOL to 1
+                address := std_logic_vector(to_unsigned(0, address'length));
+                data := std_logic_vector(to_unsigned(3, data'length));
+                byte_mask := "0001";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                reset <= true;
+                wait for clk_period;
+                reset <= false;
+                mst2slv <= bus_pkg.bus_mst2slv_read(X"00000000");
+                wait until rising_edge(clk) and bus_pkg.read_transaction(mst2slv, slv2mst);
+                check_equal(slv2mst.readData(2 downto 0), std_logic_vector'("000"));
             end if;
         end loop;
         wait until rising_edge(clk) or falling_edge(clk);
@@ -256,6 +270,7 @@ begin
     spi_master_device : entity src.spi_master_device
     port map (
         clk => clk,
+        reset => reset,
         mosi => spi_mosi_miso,
         miso => spi_mosi_miso,
         spi_clk => spi_clk,
