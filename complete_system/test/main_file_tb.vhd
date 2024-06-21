@@ -54,8 +54,6 @@ architecture tb of main_file_tb is
     signal spi_mosi : std_logic;
     signal spi_miso : std_logic;
 
-    signal rst : std_logic := '0';
-
     procedure write(
         signal net : inout network_t;
         constant addr : in bus_address_type;
@@ -200,7 +198,6 @@ begin
         JB_gpio(0) => sck,
         general_gpio => general_gpio,
         clk => clk,
-        global_reset => rst,
         master_rx => rx,
         master_tx => tx,
         slave_rx => slv_rx,

@@ -16,7 +16,6 @@ entity main_file is
         JB_gpio : out  STD_LOGIC_VECTOR (3 downto 0);
         general_gpio : inout std_logic_vector(7 downto 0);
         clk : in  STD_LOGIC;
-        global_reset : in std_logic;
 
         master_rx : in std_logic;
         master_tx : out std_logic;
@@ -79,8 +78,6 @@ architecture Behavioral of main_file is
         create_address_map_entry(spiMemStartAddress, spiMemMappingSize)
     );
 
-    signal rst          : STD_LOGIC;
-
     signal extMaster2arbiter : bus_mst2slv_type;
     signal arbiter2extMaster : bus_slv2mst_type;
 
@@ -119,8 +116,6 @@ architecture Behavioral of main_file is
 
 begin
 
-    rst <= global_reset;
-
     mem_spi_sio_in <= JA_gpio;
     JA_gpio <= mem_spi_sio_out;
     JB_gpio(3 downto 1) <= mem_spi_cs_n;
@@ -148,7 +143,7 @@ begin
         dCache_word_count_log2b => 8
     ) port map (
         clk => clk,
-        rst => rst,
+        rst => '0',
         mst2control => demux2control,
         control2mst => control2demux,
         instructionFetch2slv => instructionFetch2arbiter,
@@ -196,7 +191,7 @@ begin
     uart_bus_slave : entity work.uart_bus_slave
     port map (
         clk => clk,
-        reset => rst = '1',
+        reset => false,
         rx => slave_rx,
         tx => slave_tx,
         mst2slv => demux2uartSlave,
@@ -240,7 +235,7 @@ begin
         system_clock_period => clk_period
     ) port map (
         clk => clk,
-        rst => rst,
+        rst => '0',
         spi_clk => mem_spi_clk,
         spi_sio_in => mem_spi_sio_in,
         spi_sio_out => mem_spi_sio_out,
