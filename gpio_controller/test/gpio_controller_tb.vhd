@@ -80,6 +80,15 @@ begin
                     wait until rising_edge(clk) and bus_pkg.read_transaction(mst2slv, slv2mst);
                     check_equal(slv2mst.readData(7 downto 0), std_logic_vector'(X"00"));
                 end loop;
+            elsif run("Current output can be read back") then
+                write_data(1 downto 0) := "01";
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000000", write_data, "0001");
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                mst2slv <= bus_pkg.bus_mst2slv_write(X"00000005", write_data, "0001");
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                mst2slv <= bus_pkg.bus_mst2slv_read(X"00000005");
+                wait until rising_edge(clk) and bus_pkg.read_transaction(mst2slv, slv2mst);
+                check_equal(slv2mst.readData(0), '1');
             end if;
         end loop;
         wait until rising_edge(clk) or falling_edge(clk);

@@ -126,7 +126,7 @@ begin
                     when INPUT =>
                         data_in_array(index) <= gpio(index);
                     when OUTPUT =>
-                        data_in_array(index) <= '0';
+                        data_in_array(index) <= data_out_array(index);
                 end case;
             end loop;
         end if;
