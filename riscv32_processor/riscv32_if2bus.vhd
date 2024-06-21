@@ -14,7 +14,7 @@ entity riscv32_if2bus is
     );
     port (
         clk : in std_logic;
-        rst : in std_logic;
+        rst : in boolean;
 
         forbidBusInteraction : in boolean;
         flushCache : in boolean;
@@ -48,7 +48,7 @@ begin
 
     icache_fault <= not bus_addr_in_range(requestAddress, range_to_cache);
     stall <= icache_miss or icache_fault;
-    icache_reset <= '1' when flushCache or rst = '1' else '0';
+    icache_reset <= '1' when flushCache or rst else '0';
 
     handleBus : process(clk)
         variable mst2slv_buf : bus_mst2slv_type := BUS_MST2SLV_IDLE;
@@ -58,7 +58,7 @@ begin
     begin
         if rising_edge(clk) then
             transactionFinished_buf := false;
-            if rst = '1' then
+            if rst then
                 mst2slv_buf := BUS_MST2SLV_IDLE;
                 hasFault_buf := false;
                 faultData_buf := bus_fault_no_fault;

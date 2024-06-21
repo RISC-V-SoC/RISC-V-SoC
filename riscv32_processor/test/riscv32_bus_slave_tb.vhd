@@ -19,7 +19,7 @@ architecture tb of riscv32_bus_slave_tb is
     constant clk_period : time := 20 ns;
 
     signal clk : std_logic := '0';
-    signal rst : std_logic := '0';
+    signal rst : boolean := false;
 
     signal mst2slv : bus_mst2slv_type := BUS_MST2SLV_IDLE;
     signal slv2mst : bus_slv2mst_type := BUS_SLV2MST_IDLE;
@@ -94,7 +94,7 @@ begin
                 actualAddress := X"00000014";
                 mst2slv <= bus_mst2slv_read(address => actualAddress);
                 wait until rising_edge(clk);
-                rst <= '1';
+                rst <= true;
                 wait for 25*clk_period;
                 check(not valid_latch);
             elsif run("Read from address 0x84 reads from regFile address 1") then

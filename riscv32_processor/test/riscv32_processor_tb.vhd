@@ -35,7 +35,7 @@ architecture tb of riscv32_processor_tb is
     constant memActor : actor_t := new_actor("slave");
 
     signal clk : std_logic := '0';
-    signal rst : std_logic := '0';
+    signal rst : boolean;
     signal demux2control : bus_mst2slv_type;
     signal control2demux : bus_slv2mst_type;
 
@@ -107,7 +107,7 @@ architecture tb of riscv32_processor_tb is
 
 begin
 
-    rst <= '1' when reset_request else '0';
+    rst <= reset_request;
 
     clk <= not clk after (clk_period/2);
     main : process

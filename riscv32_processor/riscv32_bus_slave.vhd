@@ -9,7 +9,7 @@ use work.riscv32_pkg.all;
 entity riscv32_bus_slave is
     port (
         clk : in std_logic;
-        rst : in std_logic;
+        rst : in boolean;
 
         mst2slv : in bus_mst2slv_type;
         slv2mst : out bus_slv2mst_type;
@@ -63,7 +63,7 @@ begin
     begin
         if rising_edge(clk) then
             do_write_internal <= false;
-            if rst = '1' then
+            if rst then
                 slv2mst_buf := BUS_SLV2MST_IDLE;
                 has_fault := false;
                 internal_transaction := false;

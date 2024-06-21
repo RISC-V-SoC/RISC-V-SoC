@@ -17,7 +17,7 @@ end entity;
 architecture tb of riscv32_pipeline_instructionsRetiredCounter_tb is
     constant clk_period : time := 20 ns;
     signal clk : std_logic := '0';
-    signal rst : std_logic := '0';
+    signal rst : boolean := false;
     signal stall : boolean := false;
     signal isBubble : boolean := false;
     signal instructionsRetiredCount : unsigned(63 downto 0);
@@ -52,7 +52,7 @@ begin
                 isBubble <= false;
                 wait until rising_edge(clk);
                 wait until rising_edge(clk);
-                rst <= '1';
+                rst <= true;
                 wait until rising_edge(clk);
                 wait until rising_edge(clk);
                 check_equal(instructionsRetiredCount, 0);

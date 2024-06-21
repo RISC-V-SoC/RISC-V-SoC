@@ -117,7 +117,6 @@ architecture Behavioral of main_file is
     signal reset_request : boolean;
 
     signal processor_reset : boolean;
-    signal processor_reset_stdlog : std_logic;
 
     signal uart_bus_slave_reset : boolean;
 
@@ -126,7 +125,6 @@ architecture Behavioral of main_file is
 
 begin
 
-    processor_reset_stdlog <= '1' when processor_reset else '0';
     spi_mem_reset_stdlog <= '1' when spi_mem_reset else '0';
 
     mem_spi_sio_in <= JA_gpio;
@@ -156,7 +154,7 @@ begin
         dCache_word_count_log2b => 8
     ) port map (
         clk => clk,
-        rst => processor_reset_stdlog,
+        rst => processor_reset,
         mst2control => demux2control,
         control2mst => control2demux,
         instructionFetch2slv => instructionFetch2arbiter,

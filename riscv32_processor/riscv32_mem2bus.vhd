@@ -14,7 +14,7 @@ entity riscv32_mem2bus is
     );
     port (
         clk : in std_logic;
-        rst : in std_logic;
+        rst : in boolean;
 
         forbidBusInteraction : in boolean;
         flushCache : in boolean;
@@ -95,7 +95,7 @@ begin
     transaction_required <= read_stall or write_stall;
     stall <= transaction_required or unaligned_access;
 
-    dcache_reset <= '1' when flushCache or rst = '1' else '0';
+    dcache_reset <= '1' when flushCache or rst else '0';
 
     data_out_handling : process(address_in_dcache_range, dcache_data_out, volatile_read_cache_data)
     begin
@@ -188,7 +188,7 @@ begin
         variable bus_active : boolean := false;
     begin
         if rising_edge(clk) then
-            if rst = '1' then
+            if rst then
                 mst2slv_buf <= BUS_MST2SLV_IDLE;
                 hasFault_buf := false;
                 bus_active := false;

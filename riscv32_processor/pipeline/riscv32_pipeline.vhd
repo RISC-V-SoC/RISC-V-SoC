@@ -11,7 +11,7 @@ entity riscv32_pipeline is
     );
     port (
         clk : in std_logic;
-        rst : in std_logic;
+        rst : in boolean;
         stall : in boolean;
 
         instructionAddress : out riscv32_address_type;
@@ -190,7 +190,7 @@ begin
         clk => clk,
         -- Control in
         stall => stall or stallToResolveHazard,
-        nop => rst = '1',
+        nop => rst,
         -- Pipeline control in
         registerControlWordIn => regControlwordFromId,
         executeControlWordIn => exControlWordFromId,
@@ -261,7 +261,7 @@ begin
         clk => clk,
         -- Control in
         stall => stall,
-        nop => rst = '1' or nopOutputToResolveHazard,
+        nop => rst or nopOutputToResolveHazard,
         -- Pipeline control in
         executeControlWordIn => exControlWordFromIdReg,
         memoryControlWordIn => memControlWordFromIdReg,
@@ -309,7 +309,7 @@ begin
        clk => clk,
 
        stall => stall,
-       nop => rst = '1',
+       nop => rst,
 
        memoryControlWordIn => memControlWordFromRegEx,
        writeBackControlWordIn => wbControlWordFromRegEx,
@@ -360,7 +360,7 @@ begin
        clk => clk,
 
        stall => stall,
-       nop => rst = '1',
+       nop => rst,
 
        writeBackControlWordIn => wbControlWordFromExMem,
 

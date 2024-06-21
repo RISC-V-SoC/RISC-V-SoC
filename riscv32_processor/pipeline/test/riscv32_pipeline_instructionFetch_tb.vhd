@@ -22,7 +22,7 @@ architecture tb of riscv32_pipeline_instructionFetch_tb is
     constant clk_period : time := 20 ns;
 
     signal clk : std_logic := '0';
-    signal rst : std_logic := '0';
+    signal rst : boolean := false;
 
     constant startAddress : riscv32_address_type := X"00000014";
     signal requestFromBusAddress : riscv32_address_type;

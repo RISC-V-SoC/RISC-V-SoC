@@ -12,7 +12,7 @@ entity riscv32_control_interface is
     );
     port (
         clk : in std_logic;
-        rst : in std_logic;
+        rst : in boolean;
 
         address_from_controller : in natural range 0 to 31;
         write_from_controller : in boolean;
@@ -61,7 +61,7 @@ begin
         variable regZero_buf : riscv32_pkg.riscv32_data_type := (1 => '1', others => '0');
     begin
         if rising_edge(clk) then
-            if rst = '1' then
+            if rst then
                 regZero_buf := (1 => '1', others => '0');
             else
                 if  write_from_controller and address_from_controller = 0 then

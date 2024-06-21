@@ -19,7 +19,7 @@ architecture tb of riscv32_control_interface_tb is
     constant clk_frequency : natural := (1 sec)/clk_period;
 
     signal clk : std_logic := '0';
-    signal rst : std_logic := '0';
+    signal rst : boolean := false;
 
     signal address_from_controller : natural range 0 to 31 := 0;
 
@@ -98,7 +98,7 @@ begin
                 write_from_controller <= true;
                 wait until falling_edge(clk);
                 write_from_controller <= false;
-                rst <= '1';
+                rst <= true;
                 wait until falling_edge(clk);
                 check(not cpu_reset);
                 check(cpu_stall);

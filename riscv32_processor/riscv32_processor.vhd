@@ -17,7 +17,7 @@ entity riscv32_processor is
     );
     port (
         clk : in std_logic;
-        rst : in std_logic;
+        rst : in boolean;
 
         -- Control slave
         mst2control : in bus_mst2slv_type;
@@ -38,7 +38,6 @@ end entity;
 architecture behaviourial of riscv32_processor is
     signal pipelineStall : boolean;
 
-    signal pipelineRst : std_logic;
     signal instructionAddress : riscv32_address_type;
     signal instruction : riscv32_instruction_type;
     signal dataAddress : riscv32_address_type;
@@ -80,21 +79,12 @@ begin
     pipelineStall <= controllerStall or instructionStall or memoryStall;
     forbidBusInteraction <= controllerStall;
 
-    process(rst)
-    begin
-        if rst = '1' then
-            pipelineRst <= '1';
-        else
-            pipelineRst <= '0';
-        end if;
-    end process;
-
     pipeline : entity work.riscv32_pipeline
         generic map (
             startAddress => startAddress
         ) port map (
             clk => clk,
-            rst => pipelineRst,
+            rst => rst,
             stall => pipelineStall,
             instructionAddress => instructionAddress,
             instruction => instruction,
@@ -137,7 +127,7 @@ begin
         clk => clk,
         rst => rst,
         forbidBusInteraction => forbidBusInteraction,
-        flushCache => rst = '1',
+        flushCache => rst,
         mst2slv => instructionFetch2slv,
         slv2mst => slv2instructionFetch,
         hasFault => instructionFetchHasFault,
@@ -155,7 +145,7 @@ begin
         clk => clk,
         rst => rst,
         forbidBusInteraction => forbidBusInteraction,
-        flushCache => rst = '1',
+        flushCache => rst,
         mst2slv => memory2slv,
         slv2mst => slv2memory,
         hasFault => memoryHasFault,
@@ -203,14 +193,14 @@ begin
         timer_period => 1 us
     ) port map (
         clk => clk,
-        reset => rst = '1',
+        reset => rst,
         value => systemtimer_value
     );
 
     cycleCounter : entity work.riscv32_cycleCounter
     port map (
         clk => clk,
-        reset => rst = '1',
+        reset => rst,
         value => cycleCounter_value 
     );
 end architecture;

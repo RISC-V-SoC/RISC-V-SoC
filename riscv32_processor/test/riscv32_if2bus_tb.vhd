@@ -26,7 +26,7 @@ architecture tb of riscv32_if2bus_tb is
     constant word_count_log2b : natural := 8;
 
     signal clk : std_logic := '0';
-    signal rst : std_logic := '0';
+    signal rst : boolean := false;
 
     signal forbidBusInteraction : boolean := false;
     signal flushCache : boolean := false;

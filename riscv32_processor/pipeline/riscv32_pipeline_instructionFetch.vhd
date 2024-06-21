@@ -12,7 +12,7 @@ entity riscv32_pipeline_instructionFetch is
     );
     port (
         clk : in std_logic;
-        rst : in std_logic;
+        rst : in boolean;
 
         -- To bus controller
         requestFromBusAddress : out riscv32_address_type;
@@ -69,7 +69,7 @@ begin
     begin
         if rising_edge(clk) then
             outputNop <= false;
-            if rst = '1' then
+            if rst then
                 programCounter_buf <= startAddress;
             elsif stall then
                 -- pass
@@ -99,7 +99,7 @@ begin
         variable isBubble_out : boolean := true;
     begin
         if rising_edge(clk) then
-            if rst = '1' then
+            if rst then
                 instructionBuf := riscv32_instructionNop;
                 isBubble_out := true;
             elsif not stall then

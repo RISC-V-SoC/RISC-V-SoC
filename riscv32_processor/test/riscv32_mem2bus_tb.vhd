@@ -34,7 +34,7 @@ architecture tb of riscv32_mem2bus_tb is
     signal flushCache : boolean := false;
 
     signal clk : std_logic := '0';
-    signal rst : std_logic := '0';
+    signal rst : boolean := false;
 
     signal mst2slv : bus_mst2slv_type;
     signal slv2mst : bus_slv2mst_type;
@@ -125,7 +125,7 @@ begin
                 doWrite <= true;
                 wait until rising_edge(clk) and hasFault;
                 doWrite <= false;
-                rst <= '1';
+                rst <= true;
                 wait until rising_edge(clk);
                 wait until falling_edge(clk);
                 check(not stall);
