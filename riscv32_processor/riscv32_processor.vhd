@@ -75,6 +75,10 @@ architecture behaviourial of riscv32_processor is
     signal systemtimer_value : unsigned(63 downto 0);
     signal instructionsRetired_value : unsigned(63 downto 0);
 
+    signal address_to_unprivileged_counter_timers : natural range 0 to 31;
+    signal read_high_to_unprivileged_counter_timers : boolean;
+    signal read_data_from_unprivileged_counter_timers : riscv32_data_type := (others => '0');
+    signal error_from_unprivileged_counter_timers : boolean := false;
 begin
     pipelineStall <= controllerStall or instructionStall or memoryStall;
     forbidBusInteraction <= controllerStall;
@@ -181,10 +185,22 @@ begin
     csr : entity work.riscv32_csr
     port map (
         csr_in => pipeline_to_csr,
+        read_data => csr_to_pipeline,
+        address_to_unprivileged_counter_timers => address_to_unprivileged_counter_timers,
+        read_high_to_unprivileged_counter_timers => read_high_to_unprivileged_counter_timers,
+        read_data_from_unprivileged_counter_timers => read_data_from_unprivileged_counter_timers,
+        error_from_unprivileged_counter_timers => error_from_unprivileged_counter_timers
+    );
+
+    csr_unpriviledged_counter_timers : entity work.riscv32_csr_unprivileged_counter_timers
+    port map (
         cycleCounter_value => cycleCounter_value,
         systemtimer_value => systemtimer_value,
         instructionsRetired_value => instructionsRetired_value,
-        read_data => csr_to_pipeline
+        address => address_to_unprivileged_counter_timers,
+        read_high => read_high_to_unprivileged_counter_timers,
+        read_data => read_data_from_unprivileged_counter_timers,
+        error => error_from_unprivileged_counter_timers
     );
 
     systemtimer : entity work.riscv32_systemtimer
