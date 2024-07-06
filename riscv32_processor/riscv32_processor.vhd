@@ -78,6 +78,10 @@ architecture behaviourial of riscv32_processor is
     signal address_to_user_readonly : std_logic_vector(7 downto 0);
     signal read_data_from_user_readonly : riscv32_data_type := (others => '0');
     signal error_from_user_readonly : boolean := false;
+
+    signal address_to_machine_readonly : std_logic_vector(7 downto 0);
+    signal read_data_from_machine_readonly : riscv32_data_type := (others => '0');
+    signal error_from_machine_readonly : boolean := false;
 begin
     pipelineStall <= controllerStall or instructionStall or memoryStall;
     forbidBusInteraction <= controllerStall;
@@ -187,7 +191,10 @@ begin
         read_data => csr_to_pipeline,
         address_to_user_readonly => address_to_user_readonly,
         read_data_from_user_readonly => read_data_from_user_readonly,
-        error_from_user_readonly => error_from_user_readonly
+        error_from_user_readonly => error_from_user_readonly,
+        address_to_machine_readonly => address_to_machine_readonly,
+        read_data_from_machine_readonly => read_data_from_machine_readonly,
+        error_from_machine_readonly => error_from_machine_readonly
     );
 
     csr_user_readonly : entity work.riscv32_csr_user_readonly
@@ -198,6 +205,13 @@ begin
         address => address_to_user_readonly,
         read_data => read_data_from_user_readonly,
         error => error_from_user_readonly
+    );
+
+    csr_machine_readonly : entity work.riscv32_csr_machine_readonly
+    port map (
+        address => address_to_machine_readonly,
+        read_data => read_data_from_machine_readonly,
+        error => error_from_machine_readonly
     );
 
     systemtimer : entity work.riscv32_systemtimer
