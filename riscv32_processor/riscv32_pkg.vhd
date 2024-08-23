@@ -80,6 +80,29 @@ package riscv32_pkg is
 
     type riscv32_ExecuteControlWord_array is array (natural range <>) of riscv32_ExecuteControlWord_type;
 
+    type riscv32_csr_mapping_type is record
+        address_low : natural range 0 to 4095;
+        mapping_size : natural range 0 to 4095;
+    end record;
+
+    type riscv32_csr_mapping_array is array (natural range <>) of riscv32_csr_mapping_type;
+
+    type riscv32_csr_mst2slv_type is record
+        address : natural range 0 to 255;
+        write_data : riscv32_data_type;
+        do_write : boolean;
+        do_read : boolean;
+    end record;
+
+    type riscv32_csr_mst2slv_array is array (natural range <>) of riscv32_csr_mst2slv_type;
+
+    type riscv32_csr_slv2mst_type is record
+        read_data : riscv32_data_type;
+        has_error : boolean;
+    end record;
+
+    type riscv32_csr_slv2mst_array is array (natural range <>) of riscv32_csr_slv2mst_type;
+
     constant riscv32_registerControlWordAllFalse : riscv32_RegisterControlWord_type := (
         no_dependencies => false,
         ignore_rs2_dependencies => false
