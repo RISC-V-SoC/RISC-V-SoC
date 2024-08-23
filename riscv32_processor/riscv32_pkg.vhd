@@ -175,4 +175,8 @@ package riscv32_pkg is
     constant riscv32_funct3_csrrsi : riscv32_funct3_type := 16#6#;
     constant riscv32_funct3_csrrci : riscv32_funct3_type := 16#7#;
 
+    constant riscv32_privilege_level_user : std_logic_vector(1 downto 0) := "00";
+    constant riscv32_privilege_level_supervisor : std_logic_vector(1 downto 0) := "01";
+    constant riscv32_privilege_level_machine : std_logic_vector(1 downto 0) := "11";
+
 end package;
