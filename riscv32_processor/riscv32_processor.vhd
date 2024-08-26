@@ -36,6 +36,11 @@ entity riscv32_processor is
 end entity;
 
 architecture behaviourial of riscv32_processor is
+
+    constant csr_mapping_array : riscv32_csr_mapping_array := (
+        (address_low => 16#C00#, mapping_size => 16#C0#),
+        (address_low => 16#F00#, mapping_size => 16#80#)
+    );
     signal pipelineStall : boolean;
 
     signal instructionAddress : riscv32_address_type;
@@ -75,11 +80,14 @@ architecture behaviourial of riscv32_processor is
     signal systemtimer_value : unsigned(63 downto 0);
     signal instructionsRetired_value : unsigned(63 downto 0);
 
+    signal demux2user_readonly : riscv32_csr_mst2slv_type;
+    signal demux2machine_readonly : riscv32_csr_mst2slv_type;
+
+    signal user_readonly2demux : riscv32_csr_slv2mst_type;
+    signal machine_readonly2demux : riscv32_csr_slv2mst_type;
 begin
     pipelineStall <= controllerStall or instructionStall or memoryStall;
     forbidBusInteraction <= controllerStall;
-
-    csr_to_pipeline <= (others => '0');
 
     pipeline : entity work.riscv32_pipeline
         generic map (
@@ -195,5 +203,32 @@ begin
         clk => clk,
         reset => rst,
         value => cycleCounter_value
+    );
+
+    csr_demux : entity work.riscv32_csr_demux
+    generic map (
+        mapping_array => csr_mapping_array
+    ) port map (
+        csr_in => pipeline_to_csr,
+        read_data => csr_to_pipeline,
+        demux2slv(0) => demux2user_readonly,
+        demux2slv(1) => demux2machine_readonly,
+        slv2demux(0) => user_readonly2demux,
+        slv2demux(1) => machine_readonly2demux
+    );
+
+    csr_user_readonly : entity work.riscv32_csr_user_readonly
+    port map (
+        cycleCounter_value => cycleCounter_value,
+        systemtimer_value => systemtimer_value,
+        instructionsRetired_value => instructionsRetired_value,
+        mst2slv => demux2user_readonly,
+        slv2mst => user_readonly2demux
+    );
+
+    csr_machine_readonly : entity work.riscv32_csr_machine_readonly
+    port map (
+        mst2slv => demux2machine_readonly,
+        slv2mst => machine_readonly2demux
     );
 end architecture;

@@ -7,9 +7,8 @@ use work.riscv32_pkg.all;
 
 entity riscv32_csr_machine_readonly is
     port (
-        address : in std_logic_vector(7 downto 0);
-        read_data : out riscv32_data_type;
-        error : out boolean
+        mst2slv : in riscv32_csr_mst2slv_type;
+        slv2mst : out riscv32_csr_slv2mst_type
     );
 end entity;
 
@@ -21,24 +20,21 @@ architecture behaviourial of riscv32_csr_machine_readonly is
     constant mconfigptr : riscv32_data_type := X"00000000";
 
     constant ro_array : riscv32_data_array(4 downto 0) := (
-        mvendorid,
-        marchid,
-        mimpid,
-        mhartid,
-        mconfigptr
+        mvendorid, -- 0x11
+        marchid,   -- 0x12
+        mimpid,    -- 0x13
+        mhartid,   -- 0x14
+        mconfigptr -- 0x15
     );
 
-    signal act_address : unsigned(3 downto 0);
 begin
-    act_address <= unsigned(address(3 downto 0));
-
-    process(address, act_address)
+    process(mst2slv)
     begin
-        error <= act_address > ro_array'high or address(7 downto 4) /= "0001";
-        if act_address <= ro_array'high then
-            read_data <= ro_array(to_integer(act_address));
+        slv2mst.has_error <= mst2slv.address < 16#11# or mst2slv.address > 16#15#;
+        if mst2slv.address >= 16#11# and mst2slv.address <= 16#15# then
+            slv2mst.read_data <= ro_array(mst2slv.address - 16#11#);
         else
-            read_data <= (others => '-');
+            slv2mst.read_data <= (others => '-');
         end if;
     end process;
 end architecture;
