@@ -9,11 +9,8 @@ entity riscv32_csr_machine_trap_setup is
     port (
         clk : in std_logic;
         rst : in boolean;
-        address : in std_logic_vector(7 downto 0);
-        read_data : out riscv32_data_type;
-        write_data : in riscv32_data_type;
-        do_write : in boolean;
-        address_out_of_range : out boolean;
+        mst2slv : in riscv32_csr_mst2slv_type;
+        slv2mst : out riscv32_csr_slv2mst_type;
 
         interrupts_enabled : out boolean;
         interrupt_trigger : in boolean;
@@ -113,37 +110,35 @@ architecture behaviourial of riscv32_csr_machine_trap_setup is
     alias mstatush_mbe : std_logic is mstatush(5);
     alias mstatush_wpri_31_6 : std_logic_vector(25 downto 0) is mstatush(31 downto 6);
 
-    signal decoded_address : natural range 0 to 255;
 begin
-    decoded_address <= to_integer(unsigned(address));
     interrupts_enabled <= mstatus_mie = '1';
     m_timer_interrupt_enabled <= mie_mtie = '1';
     m_external_interrupt_enabled <= mie_meie = '1';
 
-    read_handling : process(decoded_address, mstatus, misa, mie, mtvec, mstatush)
+    read_handling : process(mst2slv, mstatus, misa, mie, mtvec, mstatush)
     begin
-        address_out_of_range <= false;
-        if decoded_address = mstatus_address then
-            read_data <= mstatus;
-        elsif decoded_address = misa_address then
-            read_data <= misa;
-        elsif decoded_address = mie_address then
-            read_data <= mie;
-        elsif decoded_address = mtvec_address then
-            read_data <= mtvec;
-        elsif decoded_address = mstatush_address then
-            read_data <= mstatush;
+        slv2mst.has_error <= false;
+        if mst2slv.address = mstatus_address then
+            slv2mst.read_data <= mstatus;
+        elsif mst2slv.address = misa_address then
+            slv2mst.read_data <= misa;
+        elsif mst2slv.address = mie_address then
+            slv2mst.read_data <= mie;
+        elsif mst2slv.address = mtvec_address then
+            slv2mst.read_data <= mtvec;
+        elsif mst2slv.address = mstatush_address then
+            slv2mst.read_data <= mstatush;
         else
-            read_data <= (others => '-');
-            address_out_of_range <= true;
+            slv2mst.read_data <= (others => '-');
+            slv2mst.has_error <= true;
         end if;
     end process;
 
     mstatus_handling : process(clk)
     begin
         if rising_edge(clk) then
-            if do_write and decoded_address = mstatus_address then
-                mstatus <= write_data;
+            if mst2slv.do_write and mst2slv.address = mstatus_address then
+                mstatus <= mst2slv.write_data;
             end if;
 
             if interrupt_trigger then
@@ -177,8 +172,8 @@ begin
     mie_handling : process(clk)
     begin
         if rising_edge(clk) then
-            if do_write and decoded_address = mie_address then
-                mie <= write_data;
+            if mst2slv.do_write and mst2slv.address = mie_address then
+                mie <= mst2slv.write_data;
             end if;
 
             mie_wpri_0 <= '0';
@@ -199,8 +194,8 @@ begin
     mtvec_handling : process(clk)
     begin
         if rising_edge(clk) then
-            if do_write and decoded_address = mtvec_address then
-                mtvec <= write_data;
+            if mst2slv.do_write and mst2slv.address = mtvec_address then
+                mtvec <= mst2slv.write_data;
             end if;
             mtvec_mode <= "01";
         end if;
