@@ -36,11 +36,12 @@ entity riscv32_processor is
 end entity;
 
 architecture behaviourial of riscv32_processor is
-
     constant csr_mapping_array : riscv32_csr_mapping_array := (
         (address_low => 16#C00#, mapping_size => 16#C0#),
-        (address_low => 16#F00#, mapping_size => 16#80#)
+        (address_low => 16#F00#, mapping_size => 16#80#),
+        (address_low => 16#300#, mapping_size => 16#11#)
     );
+
     signal pipelineStall : boolean;
 
     signal instructionAddress : riscv32_address_type;
@@ -82,9 +83,11 @@ architecture behaviourial of riscv32_processor is
 
     signal demux2user_readonly : riscv32_csr_mst2slv_type;
     signal demux2machine_readonly : riscv32_csr_mst2slv_type;
+    signal demux2machine_trap_handling : riscv32_csr_mst2slv_type;
 
     signal user_readonly2demux : riscv32_csr_slv2mst_type;
     signal machine_readonly2demux : riscv32_csr_slv2mst_type;
+    signal machine_trap_handling2demux : riscv32_csr_slv2mst_type;
 begin
     pipelineStall <= controllerStall or instructionStall or memoryStall;
     forbidBusInteraction <= controllerStall;
@@ -213,8 +216,10 @@ begin
         read_data => csr_to_pipeline,
         demux2slv(0) => demux2user_readonly,
         demux2slv(1) => demux2machine_readonly,
+        demux2slv(2) => demux2machine_trap_handling,
         slv2demux(0) => user_readonly2demux,
-        slv2demux(1) => machine_readonly2demux
+        slv2demux(1) => machine_readonly2demux,
+        slv2demux(2) => machine_trap_handling2demux
     );
 
     csr_user_readonly : entity work.riscv32_csr_user_readonly
@@ -230,5 +235,14 @@ begin
     port map (
         mst2slv => demux2machine_readonly,
         slv2mst => machine_readonly2demux
+    );
+
+    csr_machine_trap_setup : entity work.riscv32_csr_machine_trap_setup
+    port map (
+        clk => clk,
+        rst => rst,
+        mst2slv => demux2machine_trap_handling,
+        slv2mst => machine_trap_handling2demux,
+        interrupt_trigger => false
     );
 end architecture;
