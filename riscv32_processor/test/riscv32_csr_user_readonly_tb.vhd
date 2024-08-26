@@ -15,6 +15,8 @@ entity riscv32_csr_user_readonly_tb is
 end entity;
 
 architecture tb of riscv32_csr_user_readonly_tb is
+    signal mst2slv : riscv32_csr_mst2slv_type;
+    signal slv2mst : riscv32_csr_slv2mst_type;
     signal address : std_logic_vector(7 downto 0);
     signal read_data : riscv32_data_type;
     signal systemtimer_value : unsigned(63 downto 0);
@@ -28,32 +30,38 @@ begin
         while test_suite loop
             if run("Address 0 contains cyclecounter") then
                 cycleCounter_value <= X"c1a1a1a1b2b2b2c2";
-                address <= X"00";
+                mst2slv.address <= 0;
+                mst2slv.do_read <= true;
                 wait for 1 ns;
-                check_equal(read_data, std_logic_vector(cycleCounter_value(read_data'range)));
+                check_equal(slv2mst.read_data, std_logic_vector(cycleCounter_value(read_data'range)));
             elsif run("Address 0x80 contains cyclecounter high") then
                 cycleCounter_value <= X"c1a1a1a1b2b2b2c2";
-                address <= X"80";
+                mst2slv.address <= 16#80#;
+                mst2slv.do_read <= true;
                 wait for 1 ns;
-                check_equal(read_data, std_logic_vector(cycleCounter_value(63 downto 32)));
+                check_equal(slv2mst.read_data, std_logic_vector(cycleCounter_value(63 downto 32)));
             elsif run("Address 1 contains systemtimer") then
                 systemtimer_value <= X"123456789abcdef0";
-                address <= X"01";
+                mst2slv.address <= 16#1#;
+                mst2slv.do_read <= true;
                 wait for 1 ns;
-                check_equal(read_data, std_logic_vector(systemtimer_value(read_data'range)));
+                check_equal(slv2mst.read_data, std_logic_vector(systemtimer_value(read_data'range)));
             elsif run("Address 0x82 contains instructionsRetired high") then
                 instructionsRetired_value <= X"123456789abcdef0";
-                address <= X"82";
+                mst2slv.address <= 16#82#;
+                mst2slv.do_read <= true;
                 wait for 1 ns;
-                check_equal(read_data, std_logic_vector(instructionsRetired_value(63 downto 32)));
+                check_equal(slv2mst.read_data, std_logic_vector(instructionsRetired_value(63 downto 32)));
             elsif run("Address 0x1f gives error") then
-                address <= X"1f";
+                mst2slv.address <= 16#1f#;
+                mst2slv.do_read <= true;
                 wait for 1 ns;
-                check_true(error);
+                check_true(slv2mst.has_error);
             elsif run("Address 0 gives no error") then
-                address <= X"00";
+                mst2slv.address <= 16#0#;
+                mst2slv.do_read <= true;
                 wait for 1 ns;
-                check_false(error);
+                check_false(slv2mst.has_error);
             end if;
         end loop;
         test_runner_cleanup(runner);
@@ -65,8 +73,7 @@ begin
         cycleCounter_value => cycleCounter_value,
         systemtimer_value => systemtimer_value,
         instructionsRetired_value => instructionsRetired_value,
-        address => address,
-        read_data => read_data,
-        error => error
+        mst2slv => mst2slv,
+        slv2mst => slv2mst
     );
 end architecture;
