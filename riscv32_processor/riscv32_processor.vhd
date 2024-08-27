@@ -243,6 +243,7 @@ begin
         rst => rst,
         mst2slv => demux2machine_trap_handling,
         slv2mst => machine_trap_handling2demux,
-        interrupt_trigger => false
+        interrupt_trigger => false,
+        interrupt_resolved => false
     );
 end architecture;

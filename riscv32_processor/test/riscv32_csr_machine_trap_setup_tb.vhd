@@ -25,9 +25,12 @@ architecture tb of riscv32_csr_machine_trap_setup_tb is
 
         signal interrupts_enabled : boolean;
         signal interrupt_trigger : boolean := false;
+        signal interrupt_resolved : boolean := false;
 
         signal m_timer_interrupt_enabled : boolean;
         signal m_external_interrupt_enabled : boolean;
+
+        signal interrupt_base_address : riscv32_address_type;
 begin
     clk <= not clk after (clk_period/2);
     main : process
@@ -102,7 +105,7 @@ begin
                 mst2slv.address <= 16#0#;
                 mst2slv.do_read <= true;
                 mst2slv.do_write <= true;
-                mst2slv.write_data <= x"00000000";
+                mst2slv.write_data <= (others => '0');
                 wait for clk_period;
                 mst2slv.do_write <= false;
                 interrupt_trigger <= true;
@@ -114,6 +117,30 @@ begin
                 -- mstatus.MPP should be equal to machine mode
                 check_equal(slv2mst.read_data(12 downto 11), riscv32_privilege_level_machine);
                 -- mstatus.MPIE should be set to 0, since mstatus.MIE was zero
+                check_equal(slv2mst.read_data(7), '0');
+            elsif run("On interrupt resolved with mstatus.MPIE = 1, mstatus.MIE turns to 1") then
+                mst2slv.address <= 16#0#;
+                mst2slv.do_read <= true;
+                mst2slv.do_write <= true;
+                mst2slv.write_data <= (7 => '1', others => '0');
+                wait for clk_period;
+                interrupt_resolved <= true;
+                mst2slv.do_write <= false;
+                wait for clk_period;
+                check_true(interrupts_enabled);
+                check_equal(slv2mst.read_data(3), '1');
+                check_equal(slv2mst.read_data(7), '1');
+            elsif run("On interrupt resolved with mstatus.MPIE = 0, mstatus.MIE turns to 0") then
+                mst2slv.address <= 16#0#;
+                mst2slv.do_read <= true;
+                mst2slv.do_write <= true;
+                mst2slv.write_data <= (3 => '1', others => '0');
+                wait for clk_period;
+                interrupt_resolved <= true;
+                mst2slv.do_write <= false;
+                wait for clk_period;
+                check_false(interrupts_enabled);
+                check_equal(slv2mst.read_data(3), '0');
                 check_equal(slv2mst.read_data(7), '0');
             elsif run("reset resets mstatus") then
                 mst2slv.address <= 16#0#;
@@ -164,14 +191,14 @@ begin
                 mst2slv.address <= 16#4#;
                 mst2slv.do_read <= true;
                 mst2slv.do_write <= true;
-                mst2slv.write_data <= x"00000080";
+                mst2slv.write_data <= (7 => '1', others => '0');
                 wait for clk_period;
                 check_true(m_timer_interrupt_enabled);
             elsif run("Setting mie.MEIE enables machine external interrupt") then
                 mst2slv.address <= 16#4#;
                 mst2slv.do_read <= true;
                 mst2slv.do_write <= true;
-                mst2slv.write_data <= x"00000800";
+                mst2slv.write_data <= (11 => '1', others => '0');
                 wait for clk_period;
                 check_true(m_external_interrupt_enabled);
             elsif run("All other bits are readonly zero in mie") then
@@ -180,7 +207,22 @@ begin
                 mst2slv.do_write <= true;
                 mst2slv.write_data <= (others => '1');
                 wait for clk_period;
-                check_equal(slv2mst.read_data, std_logic_vector'(x"00000880"));
+                check_equal(or_reduce(slv2mst.read_data(slv2mst.read_data'high downto 12)), '0');
+                check_equal(slv2mst.read_data(11), '1');
+                check_equal(or_reduce(slv2mst.read_data(10 downto 8)), '0');
+                check_equal(slv2mst.read_data(7), '1');
+                check_equal(or_reduce(slv2mst.read_data(6 downto slv2mst.read_data'low)), '0');
+            elsif run("mie responds to reset") then
+                mst2slv.address <= 16#4#;
+                mst2slv.do_read <= true;
+                mst2slv.do_write <= true;
+                mst2slv.write_data <= (others => '1');
+                wait for clk_period;
+                mst2slv.do_write <= false;
+                rst <= true;
+                wait for clk_period;
+                rst <= false;
+                check_equal(or_reduce(slv2mst.read_data), '0');
             elsif run("Reading from mtvec does not result in error") then
                 mst2slv.address <= 16#5#;
                 mst2slv.do_read <= true;
@@ -198,12 +240,32 @@ begin
                 mst2slv.do_write <= true;
                 wait for clk_period;
                 check_equal(and_reduce(slv2mst.read_data(slv2mst.read_data'high downto 2)), '1');
+            elsif run("mtvec.BASE updates interrupt_base_address") then
+                mst2slv.address <= 16#5#;
+                mst2slv.do_read <= true;
+                mst2slv.write_data <= std_logic_vector(to_unsigned(16#ffff#, mst2slv.write_data'length));
+                mst2slv.do_write <= true;
+                wait for clk_period;
+                check_equal(interrupt_base_address(interrupt_base_address'high downto 2), mst2slv.write_data(interrupt_base_address'high downto 2));
+                check_equal(or_reduce(interrupt_base_address(1 downto 0)), '0');
             elsif run("mtvec.MODE cannot be overwritten") then
                 mst2slv.address <= 16#5#;
                 mst2slv.do_read <= true;
                 mst2slv.write_data <= (others => '1');
                 mst2slv.do_write <= true;
                 wait for clk_period;
+                check_equal(slv2mst.read_data(1 downto 0), std_logic_vector'("01"));
+            elsif run("mtvec responds to reset") then
+                mst2slv.address <= 16#5#;
+                mst2slv.do_read <= true;
+                mst2slv.write_data <= (others => '1');
+                mst2slv.do_write <= true;
+                wait for clk_period;
+                mst2slv.do_write <= false;
+                rst <= true;
+                wait for clk_period;
+                check_equal(or_reduce(interrupt_base_address), '0');
+                check_equal(or_reduce(slv2mst.read_data(slv2mst.read_data'high downto 2)), '0');
                 check_equal(slv2mst.read_data(1 downto 0), std_logic_vector'("01"));
             elsif run("Reading from mstatush does not result in error") then
                 mst2slv.address <= 16#10#;
@@ -224,7 +286,9 @@ begin
         slv2mst => slv2mst,
         interrupts_enabled => interrupts_enabled,
         interrupt_trigger => interrupt_trigger,
+        interrupt_resolved => interrupt_resolved,
         m_timer_interrupt_enabled => m_timer_interrupt_enabled,
-        m_external_interrupt_enabled => m_external_interrupt_enabled
+        m_external_interrupt_enabled => m_external_interrupt_enabled,
+        interrupt_base_address => interrupt_base_address
     );
 end architecture;

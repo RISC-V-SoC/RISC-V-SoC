@@ -14,9 +14,12 @@ entity riscv32_csr_machine_trap_setup is
 
         interrupts_enabled : out boolean;
         interrupt_trigger : in boolean;
+        interrupt_resolved : in boolean;
 
         m_timer_interrupt_enabled : out boolean;
-        m_external_interrupt_enabled : out boolean
+        m_external_interrupt_enabled : out boolean;
+
+        interrupt_base_address : out riscv32_address_type
     );
 end entity;
 
@@ -102,7 +105,7 @@ architecture behaviourial of riscv32_csr_machine_trap_setup is
 
     constant mstatush_address : natural range 0 to 255 := 16#10#;
     constant mstatush_default : riscv32_data_type := (others => '0');
-    signal mstatush : riscv32_data_type;
+    signal mstatush : riscv32_data_type := mstatush_default;
     alias mstatush_wpri_3_0 : std_logic_vector(3 downto 0) is mstatush(3 downto 0);
     -- No supervisor mode, therefore readonly zero
     alias mstatush_sbe : std_logic is mstatush(4);
@@ -114,6 +117,7 @@ begin
     interrupts_enabled <= mstatus_mie = '1';
     m_timer_interrupt_enabled <= mie_mtie = '1';
     m_external_interrupt_enabled <= mie_meie = '1';
+    interrupt_base_address <= (interrupt_base_address'high downto 2 => mtvec_base, others => '0');
 
     read_handling : process(mst2slv, mstatus, misa, mie, mtvec, mstatush)
     begin
@@ -147,6 +151,10 @@ begin
                 mstatus_mpp <= riscv32_privilege_level_machine;
             end if;
 
+            if interrupt_resolved then
+                mstatus_mie <= mstatus_mpie;
+            end if;
+
             if rst then
                 mstatus <= mstatus_default;
             end if;
@@ -176,6 +184,10 @@ begin
                 mie <= mst2slv.write_data;
             end if;
 
+            if rst then
+                mie <= mie_default;
+            end if;
+
             mie_wpri_0 <= '0';
             mie_ssie <= '0';
             mie_wpri_2 <= '0';
@@ -196,6 +208,10 @@ begin
         if rising_edge(clk) then
             if mst2slv.do_write and mst2slv.address = mtvec_address then
                 mtvec <= mst2slv.write_data;
+            end if;
+
+            if rst then
+                mtvec <= mtvec_default;
             end if;
             mtvec_mode <= "01";
         end if;
