@@ -16,7 +16,7 @@ entity riscv32_csr_machine_trap_handling is
         m_external_interrupt_pending : in boolean;
 
         interrupt_is_async : in boolean;
-        exception_code : in natural range 0 to 63;
+        exception_code : in riscv32_exception_code_type;
 
         interrupted_pc : in riscv32_address_type;
         pc_on_return : out riscv32_address_type;

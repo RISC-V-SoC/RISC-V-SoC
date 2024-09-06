@@ -23,6 +23,7 @@ package riscv32_pkg is
     subtype riscv32_registerFileAddress_type is natural range 0 to 31;
     subtype riscv32_shamt_type is natural range 0 to 31;
     subtype riscv32_byte_mask_type is std_logic_vector(riscv32_bytes_per_data_word - 1 downto 0);
+    subtype riscv32_exception_code_type is natural range 0 to 64;
 
     type riscv32_data_array is array (natural range <>) of riscv32_data_type;
     type riscv32_instruction_array is array (natural range <>) of riscv32_instruction_type;
@@ -202,4 +203,25 @@ package riscv32_pkg is
     constant riscv32_privilege_level_supervisor : std_logic_vector(1 downto 0) := "01";
     constant riscv32_privilege_level_machine : std_logic_vector(1 downto 0) := "11";
 
+    constant riscv32_exception_code_instruction_address_misaligned : riscv32_exception_code_type := 0;
+    constant riscv32_exception_code_instruction_access_fault : riscv32_exception_code_type := 1;
+    constant riscv32_exception_code_illegal_instruction : riscv32_exception_code_type := 2;
+    constant riscv32_exception_code_breakpoint : riscv32_exception_code_type := 3;
+    constant riscv32_exception_code_load_address_misaligned : riscv32_exception_code_type := 4;
+    constant riscv32_exception_code_load_access_fault : riscv32_exception_code_type := 5;
+    constant riscv32_exception_code_store_address_misaligned : riscv32_exception_code_type := 6;
+    constant riscv32_exception_code_store_access_fault : riscv32_exception_code_type := 7;
+    constant riscv32_exception_code_ecall_from_u_mode : riscv32_exception_code_type := 8;
+    constant riscv32_exception_code_ecall_from_s_mode : riscv32_exception_code_type := 9;
+    constant riscv32_exception_code_ecall_from_m_mode : riscv32_exception_code_type := 11;
+    constant riscv32_exception_code_instruction_page_fault : riscv32_exception_code_type := 12;
+    constant riscv32_exception_code_load_page_fault : riscv32_exception_code_type := 13;
+    constant riscv32_exception_code_store_page_fault : riscv32_exception_code_type := 15;
+
+    constant riscv32_exception_code_supervisor_software_interrupt : riscv32_exception_code_type := 1;
+    constant riscv32_exception_code_machine_software_interrupt : riscv32_exception_code_type := 3;
+    constant riscv32_exception_code_supervisor_timer_interrupt : riscv32_exception_code_type := 5;
+    constant riscv32_exception_code_machine_timer_interrupt : riscv32_exception_code_type := 7;
+    constant riscv32_exception_code_supervisor_external_interrupt : riscv32_exception_code_type := 9;
+    constant riscv32_exception_code_machine_external_interrupt : riscv32_exception_code_type := 11;
 end package;

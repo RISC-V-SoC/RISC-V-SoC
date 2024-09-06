@@ -27,7 +27,7 @@ architecture tb of riscv32_csr_machine_trap_handling_tb is
         signal m_external_interrupt_pending : boolean := false;
 
         signal interrupt_is_async : boolean := false;
-        signal exception_code : natural range 0 to 63 := 0;
+        signal exception_code : riscv32_exception_code_type := 0;
 
         signal interrupted_pc : riscv32_address_type := (others => '0');
         signal pc_on_return : riscv32_address_type;
