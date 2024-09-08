@@ -23,6 +23,7 @@ entity riscv32_if2bus is
         slv2mst : in bus_slv2mst_type;
 
         hasFault : out boolean;
+        exception_code : out riscv32_exception_code_type;
         faultData : out bus_fault_type;
 
         requestAddress : in riscv32_address_type;
@@ -43,16 +44,18 @@ architecture behaviourial of riscv32_if2bus is
     signal icache_miss : boolean;
     signal icache_fault : boolean;
     signal icache_reset : std_logic;
-
+    signal faulty_address : riscv32_address_type := (others => '0');
+    signal hasFault_buf : boolean := false;
 begin
 
+    hasFault <= hasFault_buf and requestAddress = faulty_address;
     icache_fault <= not bus_addr_in_range(requestAddress, range_to_cache);
-    stall <= icache_miss or icache_fault;
+    stall <= (icache_miss or icache_fault) and not hasFault_buf;
     icache_reset <= '1' when flushCache or rst else '0';
+    exception_code <= riscv32_exception_code_instruction_access_fault;
 
     handleBus : process(clk)
         variable mst2slv_buf : bus_mst2slv_type := BUS_MST2SLV_IDLE;
-        variable hasFault_buf : boolean := false;
         variable faultData_buf : bus_fault_type := bus_fault_no_fault;
         variable transactionFinished_buf : boolean := false;
     begin
@@ -60,34 +63,40 @@ begin
             transactionFinished_buf := false;
             if rst then
                 mst2slv_buf := BUS_MST2SLV_IDLE;
-                hasFault_buf := false;
+                hasFault_buf <= false;
                 faultData_buf := bus_fault_no_fault;
             else
-                if icache_fault then
-                    hasFault_buf := true;
-                    faultData_buf := bus_fault_address_out_of_range;
-                end if;
-
                 if icache_write then
                     icache_write <= false;
                 elsif any_transaction(mst2slv_buf, slv2mst) then
                     if fault_transaction(mst2slv_buf, slv2mst) then
-                        hasFault_buf := true;
+                        faulty_address <= requestAddress;
+                        hasFault_buf <= true;
                         faultData_buf := slv2mst.faultData;
                     elsif read_transaction(mst2slv_buf, slv2mst) then
                         instruction_from_bus <= slv2mst.readData(instruction'range);
                         icache_write <= true;
                     end if;
                     mst2slv_buf := BUS_MST2SLV_IDLE;
-                elsif hasFault_buf or forbidBusInteraction then
+                elsif hasFault_buf then
+                    if faulty_address /= requestAddress then
+                        hasFault_buf <= false;
+                    end if;
+                elsif forbidBusInteraction then
                     -- Pass
-                elsif icache_miss then
+                elsif icache_miss and not icache_fault then
                     mst2slv_buf := bus_mst2slv_read(address => requestAddress);
                 end if;
+
+                if icache_fault then
+                    hasFault_buf <= true;
+                    faultData_buf := bus_fault_address_out_of_range;
+                    faulty_address <= requestAddress;
+                end if;
+
             end if;
         end if;
         mst2slv <= mst2slv_buf;
-        hasFault <= hasFault_buf;
         faultData <= faultData_buf;
     end process;
 

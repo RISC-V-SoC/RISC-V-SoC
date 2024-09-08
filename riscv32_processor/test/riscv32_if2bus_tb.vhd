@@ -36,6 +36,7 @@ architecture tb of riscv32_if2bus_tb is
 
     signal hasFault : boolean;
     signal faultData : bus_fault_type;
+    signal exception_code : riscv32_exception_code_type;
 
     signal requestAddress : riscv32_address_type := (others => '0');
     signal instruction : riscv32_instruction_type := (others => '0');
@@ -75,7 +76,7 @@ begin
                 check(not bus_requesting(mst2slv));
                 check(hasFault);
                 check_equal(bus_fault_address_out_of_range, faultData);
-                check(stall);
+                check_equal(exception_code, riscv32_exception_code_instruction_access_fault);
             elsif run("Requesting the same address twice does not cause two bus requests") then
                 requestAddress <= X"00100000";
                 wait until rising_edge(clk) and bus_requesting(mst2slv);
@@ -164,12 +165,24 @@ begin
                 requestAddress <= X"00000000";
                 wait until rising_edge(clk);
                 check(stall);
-            elsif run("Address out of range causes fault lockup") then
+            elsif run("Address out of cache range causes immidiate stall") then
                 requestAddress <= X"00000000";
-                wait until rising_edge(clk);
-                wait until rising_edge(clk);
-                check(hasFault);
+                wait for 1 fs;
+                check(stall);
+            elsif run("Address out of range causes fault") then
+                requestAddress <= X"00000000";
+                wait until rising_edge(clk) and hasFault;
                 check_equal(bus_fault_address_out_of_range, faultData);
+                check_equal(exception_code, riscv32_exception_code_instruction_access_fault);
+            elsif run("After exception we can continue normally") then
+                requestAddress <= X"00000000";
+                wait until rising_edge(clk) and hasFault;
+                wait until rising_edge(clk) and not stall;
+                wait for 5*clk_period;
+                requestAddress <= X"00100000";
+                wait until rising_edge(clk) and bus_requesting(mst2slv);
+                check_equal(requestAddress, mst2slv.address);
+                check(mst2slv.readReady = '1');
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -193,6 +206,7 @@ begin
         slv2mst => slv2mst,
         hasFault => hasFault,
         faultData => faultData,
+        exception_code => exception_code,
         requestAddress => requestAddress,
         instruction => instruction,
         stall => stall
