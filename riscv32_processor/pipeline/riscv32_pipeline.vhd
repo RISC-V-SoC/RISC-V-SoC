@@ -16,6 +16,8 @@ entity riscv32_pipeline is
 
         instructionAddress : out riscv32_address_type;
         instruction : in riscv32_instruction_type;
+        if_has_fault : in boolean;
+        if_exception_code : in riscv32_exception_code_type;
 
         dataAddress : out riscv32_address_type;
         dataByteMask : out riscv32_byte_mask_type;
@@ -138,6 +140,9 @@ begin
 
         requestFromBusAddress => instructionAddress,
         instructionFromBus => instruction,
+        has_fault => if_has_fault,
+        exception_code => if_exception_code,
+
         isBubble => isBubbleFromIF,
 
         instructionToInstructionDecode => instructionToID,
@@ -148,6 +153,8 @@ begin
 
         overrideProgramCounterFromEx => overrideProgramCounterFromEx,
         newProgramCounterFromEx => newProgramCounterFromEx,
+        overrideProgramCounterFromInterrupt => false,
+        newProgramCounterFromInterrupt => (others => '0'),
 
         injectBubble => injectBubbleFromBranchHelper,
         stall => stallToResolveHazard

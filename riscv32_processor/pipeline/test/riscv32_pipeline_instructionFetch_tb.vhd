@@ -25,6 +25,7 @@ architecture tb of riscv32_pipeline_instructionFetch_tb is
     signal rst : boolean := false;
 
     constant startAddress : riscv32_address_type := X"00000014";
+    constant interruptBaseAddress : riscv32_address_type := X"00000400";
     signal requestFromBusAddress : riscv32_address_type;
     signal instructionToInstructionDecode : riscv32_instruction_type;
     signal programCounter : riscv32_address_type;
@@ -36,6 +37,12 @@ architecture tb of riscv32_pipeline_instructionFetch_tb is
     signal newProgramCounterFromEx : riscv32_instruction_type := (others => '1');
     signal stall : boolean := false;
     signal injectBubble : boolean := false;
+    signal has_fault : boolean := false;
+    signal exception_code : riscv32_exception_code_type := 0;
+    signal exception_data : riscv32_exception_data_type;
+
+    signal overrideProgramCounterFromInterrupt : boolean := false;
+    signal newProgramCounterFromInterrupt : riscv32_instruction_type := (others => '1');
 begin
     clk <= not clk after (clk_period/2);
 
@@ -193,7 +200,99 @@ begin
                 check_equal(requestFromBusAddress, std_logic_vector(unsigned(startAddress) + 4));
                 check_equal(instructionToInstructionDecode, riscv32_instructionNop);
                 check(isBubble);
+            elsif run("On has_fault, the correct exception data pops out") then
+                has_fault <= true;
+                exception_code <= riscv32_exception_code_instruction_access_fault;
+                wait for clk_period;
+                check_true(exception_data.carries_exception);
+                check_equal(exception_data.exception_code, riscv32_exception_code_instruction_access_fault);
+                check_equal(exception_data.interrupted_pc, startAddress);
+                check_false(exception_data.async_interrupt);
+            elsif run("No has_fault, no exception") then
+                has_fault <= false;
+                exception_code <= riscv32_exception_code_instruction_access_fault;
+                wait for clk_period;
+                check_false(exception_data.carries_exception);
+            elsif run("While rst is true, there is no exception") then
+                rst <= true;
+                has_fault <= true;
+                wait for clk_period;
+                check_false(exception_data.carries_exception);
+            elsif run("PC does not update on fault") then
+                has_fault <= true;
+                exception_code <= riscv32_exception_code_instruction_access_fault;
+                wait for clk_period;
+                check_equal(requestFromBusAddress, startAddress);
+            elsif run("Exception data only pops out once") then
+                has_fault <= true;
+                exception_code <= riscv32_exception_code_instruction_access_fault;
+                wait for clk_period;
+                wait for clk_period;
+                check_false(exception_data.carries_exception);
+            elsif run("Interrupt remains if fault goes away") then
+                has_fault <= true;
+                exception_code <= riscv32_exception_code_instruction_access_fault;
+                wait for clk_period;
+                has_fault <= false;
+                wait for clk_period;
+                check_false(exception_data.carries_exception);
+                check_equal(requestFromBusAddress, startAddress);
+            elsif run("Check interrupt recovery sequence") then
+                has_fault <= true;
+                exception_code <= riscv32_exception_code_instruction_access_fault;
+                newProgramCounterFromInterrupt <= interruptBaseAddress;
+                wait for 10*clk_period;
+                overrideProgramCounterFromInterrupt <= true;
+                wait for clk_period;
+                overrideProgramCounterFromInterrupt <= false;
+                check_equal(requestFromBusAddress, interruptBaseAddress);
                 instructionFromBus <= construct_itype_instruction(opcode => riscv32_opcode_opimm, rs1 => 12, rd => 23, funct3 => riscv32_funct3_sll, imm12 => X"005");
+                has_fault <= false;
+                check_equal(instructionToInstructionDecode, riscv32_instructionNop);
+                check(isBubble);
+                wait for clk_period;
+                check_equal(instructionToInstructionDecode, instructionFromBus);
+            elsif run("If interrupted, reset clears the interrupt") then
+                has_fault <= true;
+                exception_code <= riscv32_exception_code_instruction_access_fault;
+                newProgramCounterFromInterrupt <= interruptBaseAddress;
+                wait for 10*clk_period;
+                rst <= true;
+                has_fault <= false;
+                wait for clk_period;
+                rst <= false;
+                wait for clk_period;
+                check_equal(requestFromBusAddress, std_logic_vector(unsigned(startAddress) + 4));
+            elsif run("On first rising_edge, exception_data.carries_interrup is false") then
+                wait until rising_edge(clk);
+                check_false(exception_data.carries_exception);
+            elsif run("Stall holds the fault back") then
+                has_fault <= true;
+                exception_code <= riscv32_exception_code_instruction_access_fault;
+                stall <= true;
+                wait for clk_period;
+                check_false(exception_data.carries_exception);
+                wait for clk_period;
+                stall <= false;
+                wait for clk_period;
+                check_true(exception_data.carries_exception);
+                check_equal(exception_data.exception_code, riscv32_exception_code_instruction_access_fault);
+                check_equal(exception_data.interrupted_pc, startAddress);
+                check_false(exception_data.async_interrupt);
+            elsif run("Stall prevents exceptiondata clock out") then
+                has_fault <= true;
+                exception_code <= riscv32_exception_code_instruction_access_fault;
+                wait for clk_period;
+                stall <= true;
+                check_true(exception_data.carries_exception);
+                check_equal(exception_data.exception_code, riscv32_exception_code_instruction_access_fault);
+                check_equal(exception_data.interrupted_pc, startAddress);
+                check_false(exception_data.async_interrupt);
+                wait for clk_period;
+                check_true(exception_data.carries_exception);
+                check_equal(exception_data.exception_code, riscv32_exception_code_instruction_access_fault);
+                check_equal(exception_data.interrupted_pc, startAddress);
+                check_false(exception_data.async_interrupt);
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -212,13 +311,18 @@ begin
         rst => rst,
         requestFromBusAddress => requestFromBusAddress,
         instructionFromBus => instructionFromBus,
+        has_fault => has_fault,
+        exception_code => exception_code,
         instructionToInstructionDecode => instructionToInstructionDecode,
         programCounter => programCounter,
+        exception_data => exception_data,
         overrideProgramCounterFromID => overrideProgramCounterFromID,
         newProgramCounterFromID => newProgramCounterFromID,
         isBubble => isBubble,
         overrideProgramCounterFromEx => overrideProgramCounterFromEx,
         newProgramCounterFromEx => newProgramCounterFromEx,
+        overrideProgramCounterFromInterrupt => overrideProgramCounterFromInterrupt,
+        newProgramCounterFromInterrupt => newProgramCounterFromInterrupt,
         injectBubble => injectBubble,
         stall => stall
     );

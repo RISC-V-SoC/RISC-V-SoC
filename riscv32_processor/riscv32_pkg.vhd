@@ -104,6 +104,13 @@ package riscv32_pkg is
 
     type riscv32_csr_slv2mst_array is array (natural range <>) of riscv32_csr_slv2mst_type;
 
+    type riscv32_exception_data_type is record
+        exception_code : riscv32_exception_code_type;
+        interrupted_pc : riscv32_address_type;
+        async_interrupt : boolean;
+        carries_exception : boolean;
+    end record;
+
     constant riscv32_registerControlWordAllFalse : riscv32_RegisterControlWord_type := (
         no_dependencies => false,
         ignore_rs2_dependencies => false
@@ -137,6 +144,13 @@ package riscv32_pkg is
     constant riscv32_writeBackControlWordAllFalse : riscv32_WriteBackControlWord_type := (
         regWrite => false,
         MemtoReg => false
+    );
+
+    constant riscv32_exception_data_idle : riscv32_exception_data_type := (
+        exception_code => 0,
+        interrupted_pc => (others => '0'),
+        async_interrupt => false,
+        carries_exception => false
     );
 
     -- The nop is addi x0,x0,0

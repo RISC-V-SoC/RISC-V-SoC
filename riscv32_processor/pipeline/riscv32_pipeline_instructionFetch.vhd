@@ -14,14 +14,17 @@ entity riscv32_pipeline_instructionFetch is
         clk : in std_logic;
         rst : in boolean;
 
-        -- To bus controller
+        -- To/from bus controller
         requestFromBusAddress : out riscv32_address_type;
         instructionFromBus : in riscv32_instruction_type;
+        has_fault : in boolean;
+        exception_code : in riscv32_exception_code_type;
 
         -- To instructionDecode
         isBubble : out boolean;
         instructionToInstructionDecode : out riscv32_instruction_type;
         programCounter : out riscv32_address_type;
+        exception_data : out riscv32_exception_data_type;
 
         -- From instructionDecode (unconditional jump)
         overrideProgramCounterFromID : in boolean;
@@ -30,6 +33,10 @@ entity riscv32_pipeline_instructionFetch is
         -- From execute (unconditional jump or branch)
         overrideProgramCounterFromEx : in boolean;
         newProgramCounterFromEx : in riscv32_address_type;
+
+        -- From interrupt control
+        overrideProgramCounterFromInterrupt : in boolean;
+        newProgramCounterFromInterrupt : in riscv32_address_type;
 
         injectBubble : in boolean;
         stall : in boolean
@@ -44,34 +51,48 @@ architecture behaviourial of riscv32_pipeline_instructionFetch is
     signal instructionToInstructionDecode_buf : riscv32_instruction_type;
     signal currentInstructionTransfersControl : boolean := false;
     signal isBubble_buf : boolean := true;
+    signal is_interrupted : boolean := false;
 begin
 
     requestFromBusAddress <= programCounter_buf;
+    programCounterPlusFour <= std_logic_vector(unsigned(programCounter_buf) + 4);
 
-    determineProgramCounterPlusFour : process(programCounter_buf)
+    interrupt_flipflop : process(clk)
     begin
-        programCounterPlusFour <= std_logic_vector(unsigned(programCounter_buf) + 4);
+        if rising_edge(clk) then
+            if overrideProgramCounterFromInterrupt or rst then
+                is_interrupted <= false;
+            elsif has_fault and not stall then
+                is_interrupted <= true;
+            end if;
+        end if;
     end process;
 
-    determineNextProgramCounter : process(overrideProgramCounterFromID, newProgramCounterFromID, overrideProgramCounterFromEx,
-                                          newProgramCounterFromEx, programCounterPlusFour)
+    determineNextProgramCounter : process(overrideProgramCounterFromID, newProgramCounterFromID,
+                                          overrideProgramCounterFromEx, newProgramCounterFromEx,
+                                          overrideProgramCounterFromInterrupt, newProgramCounterFromInterrupt,
+                                          programCounterPlusFour)
     begin
         if overrideProgramCounterFromEx then
             nextProgramCounter <= newProgramCounterFromEx;
         elsif overrideProgramCounterFromID then
             nextProgramCounter <= newProgramCounterFromID;
+        elsif overrideProgramCounterFromInterrupt then
+            nextProgramCounter <= newProgramCounterFromInterrupt;
         else
             nextProgramCounter <= programCounterPlusFour;
         end if;
     end process;
 
     programCounterControl : process(clk)
+        variable active_interrupt : boolean := false;
     begin
         if rising_edge(clk) then
             outputNop <= false;
+            active_interrupt := (has_fault or is_interrupted) and not overrideProgramCounterFromInterrupt;
             if rst then
                 programCounter_buf <= startAddress;
-            elsif stall then
+            elsif stall or active_interrupt then
                 -- pass
             elsif injectBubble or currentInstructionTransfersControl then
                 outputNop <= true;
@@ -97,15 +118,35 @@ begin
     IFIDRegs : process(clk)
         variable instructionBuf : riscv32_instruction_type := riscv32_instructionNop;
         variable isBubble_out : boolean := true;
+        variable exception_data_clocked_out : boolean := false;
+        variable exception_data_set : boolean := false;
     begin
         if rising_edge(clk) then
+
+            if not is_interrupted then
+                exception_data_clocked_out := false;
+                exception_data_set := false;
+            elsif exception_data_set and not stall then
+                exception_data_clocked_out := true;
+            end if;
+
             if rst then
+                exception_data <= riscv32_exception_data_idle;
+                exception_data_clocked_out := false;
+                exception_data_set := false;
+            elsif rst or exception_data_clocked_out then
                 instructionBuf := riscv32_instructionNop;
                 isBubble_out := true;
+                exception_data <= riscv32_exception_data_idle;
             elsif not stall then
                 instructionBuf := instructionToInstructionDecode_buf;
                 programCounter <= programCounter_buf;
                 isBubble_out := isBubble_buf;
+                exception_data.carries_exception <= has_fault;
+                exception_data.exception_code <= exception_code;
+                exception_data.interrupted_pc <= programCounter_buf;
+                exception_data.async_interrupt <= false;
+                exception_data_set := has_fault;
             end if;
         end if;
         instructionToInstructionDecode <= instructionBuf;

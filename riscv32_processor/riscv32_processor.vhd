@@ -57,6 +57,7 @@ architecture behaviourial of riscv32_processor is
     signal controllerStall : boolean;
 
     signal instructionFetchHasFault : boolean;
+    signal instructionFetchExceptionCode : riscv32_exception_code_type;
     signal instructionFetchFaultData : bus_fault_type;
     signal instructionStall : boolean;
 
@@ -104,6 +105,8 @@ begin
             stall => pipelineStall,
             instructionAddress => instructionAddress,
             instruction => instruction,
+            if_has_fault => instructionFetchHasFault,
+            if_exception_code => instructionFetchExceptionCode,
             dataAddress => dataAddress,
             dataByteMask => dataByteMask,
             dataRead => dataRead,
