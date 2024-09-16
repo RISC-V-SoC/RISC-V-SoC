@@ -19,7 +19,9 @@ architecture tb of riscv32_pipeline_memwbRegister_tb is
     signal clk : std_logic := '0';
     -- Control in
     signal stall : boolean := false;
-    signal nop : boolean := false;
+    signal rst : boolean := false;
+    -- Exception data in
+    signal exception_data_in : riscv32_exception_data_type;
     -- Pipeline control in
     signal writeBackControlWordIn : riscv32_WriteBackControlWord_type := riscv32_writeBackControlWordAllFalse;
     -- Pipeline data in
@@ -27,6 +29,8 @@ architecture tb of riscv32_pipeline_memwbRegister_tb is
     signal execResultIn : riscv32_data_type := (others => '0');
     signal memDataReadIn : riscv32_data_type := (others => '0');
     signal rdAddressIn : riscv32_registerFileAddress_type := 0;
+    -- Exception data out
+    signal exception_data_out : riscv32_exception_data_type;
     -- Pipeline control out
     signal writeBackControlWordOut : riscv32_WriteBackControlWord_type;
     -- Pipeline data out
@@ -45,45 +49,45 @@ begin
                 wait until rising_edge(clk);
                 check(writeBackControlWordOut = riscv32_writeBackControlWordAllFalse);
                 check(isBubbleOut);
-            elsif run("Forwards input on rising edge if stall = nop = false") then
+            elsif run("Forwards input on rising edge if stall = rst = false") then
                 wait until falling_edge(clk);
                 stall <= false;
-                nop <= false;
+                rst <= false;
                 writeBackControlWordIn.regWrite <= true;
                 wait until falling_edge(clk);
                 check(writeBackControlWordOut.regWrite);
             elsif run("Holds input if stall = true") then
                 wait until falling_edge(clk);
                 stall <= false;
-                nop <= false;
+                rst <= false;
                 writeBackControlWordIn.regWrite <= true;
                 wait until falling_edge(clk);
                 stall <= true;
                 writeBackControlWordIn.regWrite <= false;
                 wait until falling_edge(clk);
                 check(writeBackControlWordOut.regWrite);
-            elsif run("Clears control words if nop = true") then
+            elsif run("Clears control words if rst = true") then
                 wait until falling_edge(clk);
                 stall <= false;
-                nop <= false;
+                rst <= false;
                 writeBackControlWordIn.regWrite <= true;
                 wait until falling_edge(clk);
-                nop <= true;
+                rst <= true;
                 wait until falling_edge(clk);
                 check(not writeBackControlWordOut.regWrite);
             elsif run("Nop during stall must not be ignored") then
                 wait until falling_edge(clk);
                 stall <= false;
-                nop <= false;
+                rst <= false;
                 writeBackControlWordIn.regWrite <= true;
                 wait until falling_edge(clk);
-                nop <= true;
+                rst <= true;
                 stall <= true;
                 wait until falling_edge(clk);
                 check(not writeBackControlWordOut.regWrite);
-            elsif run("isBubbleOut is false if no nop and no isBubbleIn") then
+            elsif run("isBubbleOut is false if no rst and no isBubbleIn") then
                 wait until falling_edge(clk);
-                nop <= false;
+                rst <= false;
                 isBubbleIn <= false;
                 wait until falling_edge(clk);
                 check(not isBubbleOut);
@@ -92,6 +96,59 @@ begin
                 isBubbleIn <= true;
                 wait until falling_edge(clk);
                 check(isBubbleOut);
+            elsif run("exception_data_out follows exception_data_in") then
+                wait until falling_edge(clk);
+                exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
+                exception_data_in.interrupted_pc <= (others => '1');
+                exception_data_in.async_interrupt <= false;
+                exception_data_in.carries_exception <= true;
+                wait until falling_edge(clk);
+                check(exception_data_out = exception_data_in);
+            elsif run("On incoming exception, nop control data") then
+                exception_data_in.carries_exception <= false;
+                writeBackControlWordIn.regWrite <= true;
+                wait until falling_edge(clk);
+                check(writeBackControlWordOut.regWrite);
+                exception_data_in.carries_exception <= true;
+                wait until falling_edge(clk);
+                check(writeBackControlWordOut = riscv32_writeBackControlWordAllFalse);
+            elsif run("Once excepted, keeps on forwarding nops") then
+                writeBackControlWordIn.regWrite <= true;
+                exception_data_in.carries_exception <= true;
+                exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
+                wait until falling_edge(clk);
+                exception_data_in.carries_exception <= false;
+                wait until falling_edge(clk);
+                check(writeBackControlWordOut = riscv32_writeBackControlWordAllFalse);
+                check(exception_data_out = riscv32_exception_data_idle);
+            elsif run("rst clears exception") then
+                writeBackControlWordIn.regWrite <= true;
+                exception_data_in.carries_exception <= true;
+                exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
+                wait until falling_edge(clk);
+                exception_data_in.carries_exception <= false;
+                wait until falling_edge(clk);
+                rst <= true;
+                wait until falling_edge(clk);
+                rst <= false;
+                wait until falling_edge(clk);
+                check(writeBackControlWordOut.regWrite);
+            elsif run("Stall delays exception") then
+                exception_data_in.carries_exception <= true;
+                exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
+                stall <= true;
+                wait until falling_edge(clk);
+                check_false(exception_data_out.carries_exception);
+            elsif run("Stall makes sure exception output is being held") then
+                exception_data_in.carries_exception <= true;
+                exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
+                wait until falling_edge(clk);
+                stall <= true;
+                wait until falling_edge(clk);
+                check_true(exception_data_out.carries_exception);
+                stall <= false;
+                wait until falling_edge(clk);
+                check_false(exception_data_out.carries_exception);
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -106,7 +163,9 @@ begin
         clk => clk,
         -- Control in
         stall => stall,
-        nop => nop,
+        rst => rst,
+        -- Exception data in
+        exception_data_in => exception_data_in,
         -- Pipeline control in
         writeBackControlWordIn => writeBackControlWordIn,
         -- Pipeline data in
@@ -114,6 +173,8 @@ begin
         execResultIn => execResultIn,
         memDataReadIn => memDataReadIn,
         rdAddressIn => rdAddressIn,
+        -- Exception data out
+        exception_data_out => exception_data_out,
         -- Pipeline control out
         writeBackControlWordOut => writeBackControlWordOut,
         -- Pipeline data out
