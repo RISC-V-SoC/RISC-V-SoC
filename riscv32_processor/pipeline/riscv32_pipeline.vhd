@@ -70,6 +70,7 @@ architecture behaviourial of riscv32_pipeline is
     signal memControlWordFromIdReg : riscv32_MemoryControlWord_type;
     signal wbControlWordFromIdReg : riscv32_WriteBackControlWord_type;
     signal isBubbleFromIdReg : boolean;
+    signal exception_data_from_idreg : riscv32_exception_data_type;
     signal programCounterFromIdReg : riscv32_address_type;
     signal rs1DataFromIdReg : riscv32_data_type;
     signal rs1AddressFromIdReg : riscv32_registerFileAddress_type;
@@ -213,6 +214,8 @@ begin
         immidiateIn => immidiateFromId,
         uimmidiateIn => uimmidiateFromId,
         rdAddressIn => rdAddressFromId,
+        -- Exception data out
+        exception_data_out => exception_data_from_idreg,
         -- Pipeline control out
         registerControlWordOut => regControlwordFromIdReg,
         executeControlWordOut => exControlWordFromIdReg,
@@ -269,7 +272,10 @@ begin
         clk => clk,
         -- Control in
         stall => stall,
-        nop => rst or nopOutputToResolveHazard,
+        rst => rst,
+        nop => nopOutputToResolveHazard,
+        -- Exception data in
+        exception_data_in => exception_data_from_idreg,
         -- Pipeline control in
         executeControlWordIn => exControlWordFromIdReg,
         memoryControlWordIn => memControlWordFromIdReg,
