@@ -10,7 +10,9 @@ entity riscv32_pipeline_exmemRegister is
         clk : in std_logic;
         -- Control in
         stall : in boolean;
-        nop : in boolean;
+        rst : in boolean;
+        -- Exception data in
+        exception_data_in : in riscv32_exception_data_type;
         -- Pipeline control in
         memoryControlWordIn : in riscv32_MemoryControlWord_type;
         writeBackControlWordIn : in riscv32_WriteBackControlWord_type;
@@ -21,6 +23,8 @@ entity riscv32_pipeline_exmemRegister is
         rs2DataIn : in riscv32_data_type;
         rdAddressIn : in riscv32_registerFileAddress_type;
         uimmidiateIn : in riscv32_data_type;
+        -- Exception data out
+        exception_data_out : out riscv32_exception_data_type;
         -- Pipeline control out
         memoryControlWordOut : out riscv32_MemoryControlWord_type;
         writeBackControlWordOut : out riscv32_WriteBackControlWord_type;
@@ -40,9 +44,25 @@ begin
         variable memoryControlWordOut_buf : riscv32_MemoryControlWord_type := riscv32_memoryControlWordAllFalse;
         variable writeBackControlWordOut_buf : riscv32_WriteBackControlWord_type := riscv32_writeBackControlWordAllFalse;
         variable isBubbleOut_buf : boolean := true;
+        variable is_in_exception : boolean := false;
+        variable push_nop : boolean := true;
     begin
         if rising_edge(clk) then
-            if nop then
+            if rst then
+                is_in_exception := false;
+                push_nop := true;
+            elsif stall then
+                -- pass
+            elsif not is_in_exception then
+                exception_data_out <= exception_data_in;
+                is_in_exception := exception_data_in.carries_exception;
+                push_nop := is_in_exception;
+            else
+                exception_data_out <= riscv32_exception_data_idle;
+                push_nop := true;
+            end if;
+
+            if push_nop then
                 isBubbleOut_buf := true;
                 memoryControlWordOut_buf := riscv32_memoryControlWordAllFalse;
                 writeBackControlWordOut_buf := riscv32_writeBackControlWordAllFalse;
