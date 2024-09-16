@@ -45,6 +45,7 @@ architecture behaviourial of riscv32_pipeline is
     signal instructionToID : riscv32_instruction_type;
     signal programCounterFromIf : riscv32_address_type;
     signal isBubbleFromIF : boolean;
+    signal exception_data_from_if : riscv32_exception_data_type;
     -- Instruction decode to instruction fetch
     signal overrideProgramCounterFromID : boolean;
     signal newProgramCounterFromID : riscv32_address_type;
@@ -130,7 +131,6 @@ begin
     nopOutputToResolveHazard <= not stall and repeatInstructionFromReg;
 
     -- IF stage
-
     instructionFetch : entity work.riscv32_pipeline_instructionFetch
     generic map (
         startAddress
@@ -147,6 +147,7 @@ begin
 
         instructionToInstructionDecode => instructionToID,
         programCounter => programCounterFromIf,
+        exception_data => exception_data_from_if,
 
         overrideProgramCounterFromID => overrideProgramCounterFromID,
         newProgramCounterFromID => newProgramCounterFromID,
@@ -171,7 +172,6 @@ begin
 
 
     -- ID stage
-
     instructionDecode : entity work.riscv32_pipeline_instructionDecode
     port map (
         overrideProgramCounter => overrideProgramCounterFromID,
@@ -197,7 +197,9 @@ begin
         clk => clk,
         -- Control in
         stall => stall or stallToResolveHazard,
-        nop => rst,
+        rst => rst,
+        -- Exception data in
+        exception_data_in => exception_data_from_if,
         -- Pipeline control in
         registerControlWordIn => regControlwordFromId,
         executeControlWordIn => exControlWordFromId,
@@ -246,7 +248,6 @@ begin
         rs2DataOut => rs2DataFromReg
     );
 
-    -- Lives in reg stage
     registerFile : entity work.riscv32_pipeline_registerFile
     port map (
         clk => clk,
@@ -295,7 +296,7 @@ begin
         rdAddressOut => rdAddrFromRegEx
     );
 
-
+    -- EX stage
     execute : entity work.riscv32_pipeline_execute
     port map (
         executeControlWord => exControlWordFromRegEx,
@@ -337,8 +338,9 @@ begin
        rs2DataOut => rs2DataFromExMem,
        rdAddressOut => rdAddrFromExMem,
        uimmidiateOut => uimmidiateFromExMem
-   );
+    );
 
+    -- MEM stage
     memory : entity work.riscv32_pipeline_memory
     port map (
         stall => stall,
@@ -384,6 +386,7 @@ begin
        rdAddressOut => rdAddressFromMemWb
    );
 
+    -- WB stage
     writeBack : entity work.riscv32_pipeline_writeBack
     port map (
         writeBackControlWord => wbControlWordFromMemWb,
