@@ -21,6 +21,7 @@ end entity;
 architecture tb of riscv32_processor_tb is
     constant clk_period : time := 20 ns;
     constant memoryAddress : natural := 16#100000#;
+    constant outputMemoryAddress : natural := 16#200000#;
     constant controllerAddress : natural := 16#2000#;
     constant resetAddress : riscv32_address_type := std_logic_vector(to_unsigned(memoryAddress, riscv32_address_type'length));
     constant iCache_rangeMap : addr_range_and_mapping_type :=
@@ -33,6 +34,7 @@ architecture tb of riscv32_processor_tb is
     constant dCache_word_count_log2b : natural := 8;
 
     constant memActor : actor_t := new_actor("slave");
+    constant outputMemActor : actor_t := new_actor("outputMemSlave");
 
     signal clk : std_logic := '0';
     signal rst : boolean;
@@ -51,6 +53,9 @@ architecture tb of riscv32_processor_tb is
     signal demux2mem : bus_mst2slv_type;
     signal mem2demux : bus_slv2mst_type;
 
+    signal demux2outputMem : bus_mst2slv_type;
+    signal outputMem2demux : bus_slv2mst_type;
+
     signal test2slv : bus_mst2slv_type := BUS_MST2SLV_IDLE;
     signal slv2test : bus_slv2mst_type;
 
@@ -65,6 +70,11 @@ architecture tb of riscv32_processor_tb is
         address_range_and_map(
             low => std_logic_vector(to_unsigned(memoryAddress, bus_address_type'length)),
             high => std_logic_vector(to_unsigned(16#160000# - 1, bus_address_type'length)),
+            mapping => bus_map_constant(bus_address_type'high - 18, '0') & bus_map_range(18, 0)
+        ),
+        address_range_and_map(
+            low => std_logic_vector(to_unsigned(outputMemoryAddress, bus_address_type'length)),
+            high => std_logic_vector(to_unsigned(16#260000# - 1, bus_address_type'length)),
             mapping => bus_map_constant(bus_address_type'high - 18, '0') & bus_map_range(18, 0)
         )
     );
@@ -105,6 +115,19 @@ architecture tb of riscv32_processor_tb is
         check_equal(readData, data);
     end procedure;
 
+    procedure check_word_at_address_in_outMem(
+        signal net : inout network_t;
+        constant address : in bus_address_type;
+        constant data : in bus_data_type) is
+        variable readData : bus_data_type;
+    begin
+        simulated_bus_memory_pkg.read_from_address(
+            net => net,
+            actor => outputMemActor,
+            addr => address,
+            data => readData);
+        check_equal(readData, data);
+    end procedure;
 begin
 
     rst <= reset_request;
@@ -200,6 +223,13 @@ begin
                 expectedReadData := X"00000007";
                 readAddr := std_logic_vector(to_unsigned(16#24#, bus_address_type'length));
                 check_word_at_address(net, readAddr, expectedReadData);
+            elsif run("Instruction address fault test") then
+                simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/instructionAddressFault.txt");
+                start_cpu(test2slv, slv2test);
+                wait for 20 us;
+                expectedReadData := X"00000001";
+                readAddr := std_logic_vector(to_unsigned(16#0#, bus_address_type'length));
+                check_word_at_address_in_outMem(net, readAddr, expectedReadData);
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -251,8 +281,10 @@ begin
         demux2mst => demux2arbiter,
         demux2slv(0) => demux2control,
         demux2slv(1) => demux2mem,
+        demux2slv(2) => demux2outputMem,
         slv2demux(0) => control2demux,
-        slv2demux(1) => mem2demux
+        slv2demux(1) => mem2demux,
+        slv2demux(2) => outputMem2demux
     );
 
    mem : entity work.simulated_bus_memory
@@ -266,6 +298,19 @@ begin
         clk => clk,
         mst2mem => demux2mem,
         mem2mst => mem2demux
+    );
+
+   outputMem : entity work.simulated_bus_memory
+   generic map (
+        depth_log2b => 4,
+        allow_unaligned_access => true,
+        actor => outputMemActor,
+        read_delay => 5,
+        write_delay => 5
+    ) port map (
+        clk => clk,
+        mst2mem => demux2outputMem,
+        mem2mst => outputMem2demux
     );
 
     test_runner_watchdog(runner, 10 ms);

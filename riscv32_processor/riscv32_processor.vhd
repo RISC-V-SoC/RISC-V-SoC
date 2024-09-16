@@ -92,6 +92,12 @@ architecture behaviourial of riscv32_processor is
     signal machine_readonly2demux : riscv32_csr_slv2mst_type;
     signal machine_trap_setup2demux : riscv32_csr_slv2mst_type;
     signal machine_trap_handling2demux : riscv32_csr_slv2mst_type;
+
+    signal interrupt_vector_base_address : riscv32_address_type;
+    signal interrupt_trigger : boolean;
+    signal interrupt_is_async : boolean;
+    signal exception_code : riscv32_exception_code_type;
+    signal interrupted_pc : riscv32_address_type;
 begin
     pipelineStall <= controllerStall or instructionStall or memoryStall;
     forbidBusInteraction <= controllerStall;
@@ -119,6 +125,11 @@ begin
             data_from_regFile => regFile_to_bus_slv_data,
             csr_out => pipeline_to_csr,
             csr_data => csr_to_pipeline,
+            interrupt_vector_base_address => interrupt_vector_base_address,
+            interrupt_trigger => interrupt_trigger,
+            interrupt_is_async => interrupt_is_async,
+            exception_code => exception_code,
+            interrupted_pc => interrupted_pc,
             instructionsRetiredCount => instructionsRetired_value
         );
 
@@ -150,6 +161,7 @@ begin
         mst2slv => instructionFetch2slv,
         slv2mst => slv2instructionFetch,
         hasFault => instructionFetchHasFault,
+        exception_code => instructionFetchExceptionCode,
         faultData => instructionFetchFaultData,
         requestAddress => instructionAddress,
         instruction => instruction,
@@ -251,8 +263,9 @@ begin
         rst => rst,
         mst2slv => demux2machine_trap_setup,
         slv2mst => machine_trap_setup2demux,
-        interrupt_trigger => false,
-        interrupt_resolved => false
+        interrupt_trigger => interrupt_trigger,
+        interrupt_resolved => false,
+        interrupt_base_address => interrupt_vector_base_address
     );
 
     csr_machine_trap_handling : entity work.riscv32_csr_machine_trap_handling
@@ -263,9 +276,9 @@ begin
         slv2mst => machine_trap_handling2demux,
         m_timer_interrupt_pending => false,
         m_external_interrupt_pending => false,
-        interrupt_is_async => false,
-        exception_code => 0,
-        interrupted_pc => (others => '0'),
-        interrupt_trigger => false
+        interrupt_is_async => interrupt_is_async,
+        exception_code => exception_code,
+        interrupted_pc => interrupted_pc,
+        interrupt_trigger => interrupt_trigger
     );
 end architecture;

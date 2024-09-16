@@ -1,7 +1,7 @@
-AS:=riscv32-none-elf-as
-GCC:=riscv32-none-elf-gcc
-LD:=riscv32-none-elf-ld
-OBJCOPY:=riscv32-none-elf-objcopy
+AS:=riscv-none-elf-as
+GCC:=riscv-none-elf-gcc
+LD:=riscv-none-elf-ld
+OBJCOPY:=riscv-none-elf-objcopy
 ASMDIR:=asm/
 SRCDIR:=src/
 ODIR=obj/

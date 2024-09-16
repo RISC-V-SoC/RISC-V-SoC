@@ -1,5 +1,6 @@
 .section .text.startup
 .global __start
+.option arch, +zicsr
 
 __start:
         # Load stackpointer
@@ -8,5 +9,8 @@ __start:
         # Load global pointer
         lui     gp,%hi(_global_pointer)
         addi    gp,gp,%lo(_global_pointer)
-        # Jump to the startup function, which is a noreturn
-        j startup
+        # Setup the trap vector
+        lui     a0,%hi(syncExceptionHandler)
+        addi    a0,a0,%lo(syncExceptionHandler)
+        csrw    mtvec,a0
+        jr zero

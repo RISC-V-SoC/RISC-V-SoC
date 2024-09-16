@@ -238,6 +238,7 @@ begin
                 check_false(exception_data.carries_exception);
                 check_equal(requestFromBusAddress, startAddress);
             elsif run("Check interrupt recovery sequence") then
+                instructionFromBus <= construct_itype_instruction(opcode => riscv32_opcode_opimm, rs1 => 12, rd => 23, funct3 => riscv32_funct3_sll, imm12 => X"005");
                 has_fault <= true;
                 exception_code <= riscv32_exception_code_instruction_access_fault;
                 newProgramCounterFromInterrupt <= interruptBaseAddress;
@@ -246,7 +247,6 @@ begin
                 wait for clk_period;
                 overrideProgramCounterFromInterrupt <= false;
                 check_equal(requestFromBusAddress, interruptBaseAddress);
-                instructionFromBus <= construct_itype_instruction(opcode => riscv32_opcode_opimm, rs1 => 12, rd => 23, funct3 => riscv32_funct3_sll, imm12 => X"005");
                 has_fault <= false;
                 check_equal(instructionToInstructionDecode, riscv32_instructionNop);
                 check(isBubble);

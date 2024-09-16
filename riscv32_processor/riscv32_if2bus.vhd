@@ -46,11 +46,12 @@ architecture behaviourial of riscv32_if2bus is
     signal icache_reset : std_logic;
     signal faulty_address : riscv32_address_type := (others => '0');
     signal hasFault_buf : boolean := false;
+    signal output_fault : boolean := false;
 begin
-
-    hasFault <= hasFault_buf and requestAddress = faulty_address;
+    hasFault <= output_fault;
+    output_fault <= hasFault_buf and requestAddress = faulty_address;
     icache_fault <= not bus_addr_in_range(requestAddress, range_to_cache);
-    stall <= (icache_miss or icache_fault) and not hasFault_buf;
+    stall <= (icache_miss or icache_fault) and not output_fault;
     icache_reset <= '1' when flushCache or rst else '0';
     exception_code <= riscv32_exception_code_instruction_access_fault;
 

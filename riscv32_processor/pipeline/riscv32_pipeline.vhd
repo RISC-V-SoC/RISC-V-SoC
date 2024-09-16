@@ -14,11 +14,13 @@ entity riscv32_pipeline is
         rst : in boolean;
         stall : in boolean;
 
+        -- To/from instruction fetch unit
         instructionAddress : out riscv32_address_type;
         instruction : in riscv32_instruction_type;
         if_has_fault : in boolean;
         if_exception_code : in riscv32_exception_code_type;
 
+        -- To/from data unit
         dataAddress : out riscv32_address_type;
         dataByteMask : out riscv32_byte_mask_type;
         dataRead : out boolean;
@@ -35,6 +37,13 @@ entity riscv32_pipeline is
         -- From/to control status register
         csr_out : out riscv32_to_csr_type;
         csr_data : in riscv32_data_type;
+
+        -- Exception data
+        interrupt_vector_base_address : in riscv32_address_type;
+        interrupt_trigger : out boolean;
+        interrupt_is_async : out boolean;
+        exception_code : out riscv32_exception_code_type;
+        interrupted_pc : out riscv32_address_type;
 
         instructionsRetiredCount : out unsigned(63 downto 0)
     );
@@ -118,6 +127,7 @@ architecture behaviourial of riscv32_pipeline is
     -- From mem/wb
     signal wbControlWordFromMemWb : riscv32_WriteBackControlWord_type;
     signal isBubbleFromMemWb : boolean;
+    signal exception_data_from_memwb : riscv32_exception_data_type;
     signal execResFromMemWb : riscv32_data_type;
     signal memDataFromMemWb : riscv32_data_type;
     signal rdAddressFromMemWb : riscv32_registerFileAddress_type;
@@ -129,7 +139,11 @@ architecture behaviourial of riscv32_pipeline is
     signal stallToResolveHazard : boolean;
     signal nopOutputToResolveHazard : boolean;
 
+    signal handle_exception : boolean;
+
 begin
+    interrupt_trigger <= handle_exception;
+
     stallToResolveHazard <= stall or repeatInstructionFromReg;
     nopOutputToResolveHazard <= not stall and repeatInstructionFromReg;
 
@@ -157,8 +171,8 @@ begin
 
         overrideProgramCounterFromEx => overrideProgramCounterFromEx,
         newProgramCounterFromEx => newProgramCounterFromEx,
-        overrideProgramCounterFromInterrupt => false,
-        newProgramCounterFromInterrupt => (others => '0'),
+        overrideProgramCounterFromInterrupt => handle_exception,
+        newProgramCounterFromInterrupt => interrupt_vector_base_address,
 
         injectBubble => injectBubbleFromBranchHelper,
         stall => stallToResolveHazard
@@ -200,7 +214,7 @@ begin
         clk => clk,
         -- Control in
         stall => stall or stallToResolveHazard,
-        rst => rst,
+        rst => rst or handle_exception,
         -- Exception data in
         exception_data_in => exception_data_from_if,
         -- Pipeline control in
@@ -274,7 +288,7 @@ begin
         clk => clk,
         -- Control in
         stall => stall,
-        rst => rst,
+        rst => rst or handle_exception,
         nop => nopOutputToResolveHazard,
         -- Exception data in
         exception_data_in => exception_data_from_idreg,
@@ -327,7 +341,7 @@ begin
        clk => clk,
 
        stall => stall,
-       rst => rst,
+       rst => rst or handle_exception,
 
        exception_data_in => exception_data_from_regex,
 
@@ -383,7 +397,7 @@ begin
        clk => clk,
 
        stall => stall,
-       rst => rst,
+       rst => rst or handle_exception,
 
        exception_data_in => exception_data_from_exmem,
 
@@ -393,6 +407,8 @@ begin
        execResultIn => execResFromExMem,
        memDataReadIn => memDataFromMem,
        rdAddressIn => rdAddrFromExMem,
+
+       exception_data_out => exception_data_from_memwb,
 
        writeBackControlWordOut => wbControlWordFromMemWb,
 
@@ -423,6 +439,16 @@ begin
         stall => stall,
         isBubble => isBubbleFromMemWb,
         instructionsRetiredCount => instructionsRetiredCount
+    );
+
+    exception_handler : entity work.riscv32_pipeline_exception_handler
+    port map (
+        clk => clk,
+        exception_data_in => exception_data_from_memwb,
+        exception_trigger => handle_exception,
+        exception_code => exception_code,
+        interrupted_pc => interrupted_pc,
+        interrupt_is_async => interrupt_is_async
     );
 
 end architecture;
