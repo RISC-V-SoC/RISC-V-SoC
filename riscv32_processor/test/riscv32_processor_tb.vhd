@@ -240,7 +240,7 @@ begin
                 expectedReadData := X"00000000";
                 readAddr := std_logic_vector(to_unsigned(16#0#, bus_address_type'length));
                 check_word_at_address_in_outMem(net, readAddr, expectedReadData);
-                expectedReadData := X"05040300";
+                expectedReadData := X"00100000";
                 readAddr := std_logic_vector(to_unsigned(16#4#, bus_address_type'length));
                 check_word_at_address_in_outMem(net, readAddr, expectedReadData);
             end if;

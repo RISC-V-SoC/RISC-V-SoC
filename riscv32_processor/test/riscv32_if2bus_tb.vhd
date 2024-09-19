@@ -197,6 +197,11 @@ begin
                 requestAddress <= X"00100001";
                 wait for 1 fs;
                 check_true(stall);
+            elsif run("Access fault has a higher priority than misaligned") then
+                requestAddress <= X"00000001";
+                wait until rising_edge(clk) and hasFault;
+                check_equal(bus_fault_address_out_of_range, faultData);
+                check_equal(exception_code, riscv32_exception_code_instruction_access_fault);
             end if;
         end loop;
         wait until rising_edge(clk);

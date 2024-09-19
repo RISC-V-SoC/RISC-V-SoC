@@ -3,15 +3,15 @@
 .option arch, +zicsr
 
 __start:
-        # Load stackpointer
-        lui     sp,%hi(_stack_start)
-        addi    sp,sp,%lo(_stack_start)
-        # Load global pointer
-        lui     gp,%hi(_global_pointer)
-        addi    gp,gp,%lo(_global_pointer)
-        # Setup the trap vector
-        lui     a0,%hi(syncExceptionHandler)
-        addi    a0,a0,%lo(syncExceptionHandler)
-        csrw    mtvec,a0
-        li      s0, 0x05040302
-        jr s0
+.option push
+.option norelax
+    # Load stackpointer
+    la      sp, _stack_start
+    # Load global pointer
+    la      gp, __global_pointer$
+.option pop
+    # Setup the trap vector
+    la      a0, syncExceptionHandler
+    csrw    mtvec,a0
+    li      s0, 0x100001
+    jr s0

@@ -91,17 +91,17 @@ begin
                     mst2slv_buf := bus_mst2slv_read(address => requestAddress);
                 end if;
 
-                if icache_fault then
-                    exception_code <= riscv32_exception_code_instruction_access_fault;
-                    hasFault_buf <= true;
-                    faultData_buf := bus_fault_address_out_of_range;
-                    faulty_address <= requestAddress;
-                end if;
-
                 if unaligned_address then
                     exception_code <= riscv32_exception_code_instruction_address_misaligned;
                     hasFault_buf <= true;
                     faultData_buf := bus_fault_unaligned_access;
+                    faulty_address <= requestAddress;
+                end if;
+
+                if icache_fault then
+                    exception_code <= riscv32_exception_code_instruction_access_fault;
+                    hasFault_buf <= true;
+                    faultData_buf := bus_fault_address_out_of_range;
                     faulty_address <= requestAddress;
                 end if;
 
