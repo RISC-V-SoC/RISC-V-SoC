@@ -21,6 +21,7 @@ end entity;
 architecture tb of main_file_tb is
     constant clk_period : time := 10 ns;
     constant baud_rate : positive := 2000000;
+    constant logger : logger_t := get_logger("Complete system test");
 
     constant command_uart_slave_bfm : uart_slave_t := new_uart_slave(initial_baud_rate => baud_rate);
     constant command_uart_slave_stream : stream_slave_t := as_stream(command_uart_slave_bfm);
@@ -166,7 +167,18 @@ begin
                 write(net, processor_controller_start_address, X"00000000");
                 general_gpio(0) <= '1';
                 check_stream(net, slave_uart_slave_stream, X"31");
-                --wait for 200 us;
+            elsif run("Run same uart program multiple times") then
+                write_file(net, spimem0_start_address, "./complete_system/test/programs/uart_hw.txt");
+                for i in 0 to 5 loop
+                    info(logger, "Iteration " & integer'image(i + 1) & " of 5");
+                    write(net, processor_controller_start_address, X"00000001");
+                    write(net, processor_controller_start_address, X"00000000");
+                    check_stream(net, slave_uart_slave_stream, X"68");
+                    check_stream(net, slave_uart_slave_stream, X"77");
+                    check_stream(net, slave_uart_slave_stream, X"21");
+                    check_stream(net, slave_uart_slave_stream, X"0D");
+                    check_stream(net, slave_uart_slave_stream, X"0A");
+                end loop;
             end if;
         end loop;
         wait until rising_edge(clk) or falling_edge(clk);
