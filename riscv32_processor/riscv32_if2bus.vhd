@@ -111,7 +111,7 @@ begin
         requestAddress => requestAddress,
         instructionOut => instruction,
         instructionIn => instruction_from_bus,
-        doWrite => iCache_write,
+        doWrite => icache_write,
         miss => icache_miss
     );
 
