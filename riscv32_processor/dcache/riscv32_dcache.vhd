@@ -17,15 +17,12 @@ entity riscv32_dcache is
         rst : in std_logic;
 
         addressIn : in riscv32_address_type;
-        addressOut : out riscv32_address_type;
         dataIn : in riscv32_data_type;
         dataOut : out riscv32_instruction_type;
         byteMask : in riscv32_byte_mask_type;
 
         doWrite : in boolean;
-        miss : out boolean;
-        resetDirty : in boolean;
-        dirty : out boolean
+        miss : out boolean
     );
 end entity;
 
@@ -41,21 +38,12 @@ architecture behaviourial of riscv32_dcache is
     signal tagIn : std_logic_vector(tag_size - 1 downto 0);
     signal requestAddress : std_logic_vector(word_count_log2b - 1 downto 0);
     signal valid : boolean;
-    signal dirtyOut : boolean;
 begin
 
     tagIn <= addressIn(tag_part_msb downto tag_part_lsb);
     requestAddress <= addressIn(address_part_msb downto address_part_lsb);
 
     miss <= not valid or (tagIn /= tagOut);
-    dirty <= dirtyOut and valid;
-
-    determineAddressOut : process(tagOut, requestAddress)
-    begin
-        addressOut <= (others => '0');
-        addressOut(tag_part_msb downto tag_part_lsb) <= tagOut;
-        addressOut(address_part_msb downto address_part_lsb) <= requestAddress;
-    end process;
 
     dcache_bank : entity work.riscv32_dcache_bank
     generic map (
@@ -71,8 +59,6 @@ begin
         tagIn => tagIn,
         byteMask => byteMask,
         valid => valid,
-        dirty => dirtyOut,
-        resetDirty => resetDirty,
         doWrite => doWrite
     );
 end architecture;

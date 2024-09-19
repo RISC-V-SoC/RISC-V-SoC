@@ -31,7 +31,6 @@ architecture tb of riscv32_dcache_bank_tb is
     signal byteMask : riscv32_byte_mask_type := (others => '0');
     signal valid : boolean;
     signal dirty : boolean;
-    signal resetDirty : boolean;
     signal doWrite : boolean := false;
 begin
 
@@ -98,38 +97,6 @@ begin
                 byteMask <= (others => '1');
                 wait until falling_edge(clk);
                 check(not valid);
-            elsif run("On a non-dirty-resetting write, dirty becomes true") then
-                wait until falling_edge(clk);
-                doWrite <= true;
-                requestAddress <= X"04";
-                dataIn <= X"01020304";
-                tagIn <= X"6";
-                byteMask <= (others => '1');
-                wait until falling_edge(clk);
-                check(dirty);
-            elsif run("On a dirty-resetting write, dirty ends up false") then
-                wait until falling_edge(clk);
-                doWrite <= true;
-                requestAddress <= X"04";
-                dataIn <= X"01020304";
-                tagIn <= X"6";
-                byteMask <= (others => '1');
-                resetDirty <= true;
-                wait until falling_edge(clk);
-                check(not dirty);
-            elsif run("On a non-write, dirty remains unchanged") then
-                wait until falling_edge(clk);
-                doWrite <= true;
-                requestAddress <= X"04";
-                dataIn <= X"01020304";
-                tagIn <= X"6";
-                byteMask <= (others => '1');
-                resetDirty <= true;
-                wait until falling_edge(clk);
-                doWrite <= false;
-                resetDirty <= false;
-                wait until falling_edge(clk);
-                check(not dirty);
             elsif run("Can store two words") then
                 wait until falling_edge(clk);
                 doWrite <= true;
@@ -156,7 +123,6 @@ begin
                 dataIn <= X"01020304";
                 tagIn <= X"6";
                 byteMask <= (others => '1');
-                resetDirty <= true;
                 wait until falling_edge(clk);
                 doWrite <= false;
                 rst <= '1';
@@ -185,8 +151,6 @@ begin
         tagIn => tagIn,
         byteMask => byteMask,
         valid => valid,
-        dirty => dirty,
-        resetDirty => resetDirty,
         doWrite => doWrite
     );
 

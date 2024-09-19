@@ -22,8 +22,6 @@ entity riscv32_dcache_bank is
         byteMask : in riscv32_byte_mask_type;
 
         valid : out boolean;
-        dirty : out boolean;
-        resetDirty : in boolean;
         doWrite : in boolean
     );
 end entity;
@@ -39,7 +37,6 @@ begin
         variable dataBank : riscv32_data_array(0 to word_count - 1);
         variable tagBank : tag_array(0 to word_count - 1);
         variable validBank : valid_array(0 to word_count - 1);
-        variable dirtyBank : dirty_array(0 to word_count - 1);
         variable actualAddress : natural range 0 to word_count - 1;
     begin
         actualAddress := to_integer(unsigned(requestAddress));
@@ -55,17 +52,11 @@ begin
                                 dataIn(((i+1)*riscv32_byte_width) - 1 downto i*riscv32_byte_width);
                     end if;
                 end loop;
-                if resetDirty then
-                    dirtyBank(actualAddress) := false;
-                else
-                    dirtyBank(actualAddress) := true;
-                end if;
             end if;
         end if;
         valid <= validBank(actualAddress);
         tagOut <= tagBank(actualAddress);
         dataOut <= dataBank(actualAddress);
-        dirty <= dirtyBank(actualAddress);
     end process;
 
 end architecture;

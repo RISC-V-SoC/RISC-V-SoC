@@ -229,8 +229,7 @@ begin
         dataOut => dcache_data_out,
         byteMask => dcache_byte_mask,
         doWrite => dcache_do_write,
-        miss => dcache_miss,
-        resetDirty => true
+        miss => dcache_miss
     );
 
 end architecture;
