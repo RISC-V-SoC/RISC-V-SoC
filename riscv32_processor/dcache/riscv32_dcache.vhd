@@ -34,16 +34,15 @@ architecture behaviourial of riscv32_dcache is
     constant tag_part_lsb : natural := address_part_msb + 1;
     constant tag_part_msb : natural := tag_part_lsb + tag_size - 1;
 
-    signal tagOut : std_logic_vector(tag_size - 1 downto 0);
     signal tagIn : std_logic_vector(tag_size - 1 downto 0);
     signal requestAddress : std_logic_vector(word_count_log2b - 1 downto 0);
-    signal valid : boolean;
+    signal hit : boolean;
 begin
 
     tagIn <= addressIn(tag_part_msb downto tag_part_lsb);
     requestAddress <= addressIn(address_part_msb downto address_part_lsb);
 
-    miss <= not valid or (tagIn /= tagOut);
+    miss <= not hit;
 
     dcache_bank : entity work.riscv32_dcache_bank
     generic map (
@@ -55,10 +54,9 @@ begin
         requestAddress => requestAddress,
         dataOut => dataOut,
         dataIn => dataIn,
-        tagOut => tagOut,
         tagIn => tagIn,
         byteMask => byteMask,
-        valid => valid,
+        hit => hit,
         doWrite => doWrite
     );
 end architecture;

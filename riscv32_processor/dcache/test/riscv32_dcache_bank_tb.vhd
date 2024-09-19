@@ -26,11 +26,10 @@ architecture tb of riscv32_dcache_bank_tb is
     signal requestAddress : std_logic_vector(word_count_log2b - 1 downto 0) := (others => '0');
     signal dataOut : riscv32_data_type;
     signal dataIn : riscv32_data_type := (others => '0');
-    signal tagOut : std_logic_vector(tag_size - 1 downto 0);
     signal tagIn : std_logic_vector(tag_size - 1 downto 0) := (others => '0');
     signal byteMask : riscv32_byte_mask_type := (others => '0');
-    signal valid : boolean;
     signal dirty : boolean;
+    signal hit : boolean;
     signal doWrite : boolean := false;
 begin
 
@@ -51,8 +50,8 @@ begin
                 byteMask <= (others => '1');
                 wait until falling_edge(clk);
                 check_equal(dataOut, dataIn);
-                check_equal(tagOut, tagIn);
-            elsif run("After a write, valid becomes high") then
+                check_true(hit);
+            elsif run("After a write, hit becomes high") then
                 wait until falling_edge(clk);
                 doWrite <= true;
                 requestAddress <= X"04";
@@ -60,9 +59,9 @@ begin
                 tagIn <= X"6";
                 byteMask <= (others => '1');
                 wait until falling_edge(clk);
-                check(valid);
-            elsif run("Before the first write, valid is false") then
-                check(not valid);
+                check_true(hit);
+            elsif run("Before the first write, hit is false") then
+                check(not hit);
             elsif run("Bytemask can create partial write") then
                 wait until falling_edge(clk);
                 doWrite <= true;
@@ -88,15 +87,15 @@ begin
                 tagIn <= X"5";
                 wait until falling_edge(clk);
                 check_equal(dataOut, std_logic_vector'(X"01020304"));
-                check_equal(tagOut, std_logic_vector'(X"6"));
-            elsif run("Without doWrite, valid remains false") then
+                check_false(hit);
+            elsif run("Without doWrite, hit remains false") then
                 wait until falling_edge(clk);
                 requestAddress <= X"04";
                 dataIn <= X"01020304";
                 tagIn <= X"6";
                 byteMask <= (others => '1');
                 wait until falling_edge(clk);
-                check(not valid);
+                check(not hit);
             elsif run("Can store two words") then
                 wait until falling_edge(clk);
                 doWrite <= true;
@@ -112,11 +111,12 @@ begin
                 byteMask <= (others => '1');
                 wait until falling_edge(clk);
                 requestAddress <= X"04";
+                tagIn <= X"6";
                 doWrite <= false;
                 wait for 1 fs;
                 check_equal(dataOut, std_logic_vector'(X"01020304"));
-                check_equal(tagOut, std_logic_vector'(X"6"));
-            elsif run("reset resets valid") then
+                check_true(hit);
+            elsif run("reset resets a cacheline") then
                 wait until falling_edge(clk);
                 doWrite <= true;
                 requestAddress <= X"04";
@@ -127,7 +127,7 @@ begin
                 doWrite <= false;
                 rst <= '1';
                 wait until falling_edge(clk);
-                check(not valid);
+                check(not hit);
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -147,10 +147,9 @@ begin
         requestAddress => requestAddress,
         dataOut => dataOut,
         dataIn => dataIn,
-        tagOut => tagOut,
         tagIn => tagIn,
         byteMask => byteMask,
-        valid => valid,
+        hit => hit,
         doWrite => doWrite
     );
 
