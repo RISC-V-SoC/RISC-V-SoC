@@ -23,7 +23,6 @@ entity spi_master_device_tx is
 end entity;
 
 architecture behavioral of spi_master_device_tx is
-    signal data_buf : std_logic_vector(7 downto 0);
 begin
     process(clk)
         variable started : boolean := false;
@@ -89,7 +88,6 @@ begin
                     started := false;
                 end if;
             end if;
-            data_buf <= data;
         end if;
     end process;
 end architecture;
