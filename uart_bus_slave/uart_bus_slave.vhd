@@ -65,6 +65,7 @@ begin
                 rx_reset_internal <= true;
                 baud_clk_ticks <= (others => '0');
             elsif handle_bus_request then
+                slv2mst_internal.readData <= (others => '0');
                 slv2mst_internal.valid <= true;
                 address := to_integer(unsigned(mst2slv.address(3 downto 0)));
                 for i in 0 to bus_pkg.bus_bytes_per_word - 1 loop
