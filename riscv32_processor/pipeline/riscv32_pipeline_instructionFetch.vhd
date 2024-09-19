@@ -134,7 +134,9 @@ begin
                 exception_data <= riscv32_exception_data_idle;
                 exception_data_clocked_out := false;
                 exception_data_set := false;
-            elsif rst or exception_data_clocked_out then
+            end if;
+
+            if rst or exception_data_clocked_out then
                 instructionBuf := riscv32_instructionNop;
                 isBubble_out := true;
                 exception_data <= riscv32_exception_data_idle;

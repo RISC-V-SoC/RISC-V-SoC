@@ -293,6 +293,12 @@ begin
                 check_equal(exception_data.exception_code, riscv32_exception_code_instruction_access_fault);
                 check_equal(exception_data.interrupted_pc, startAddress);
                 check_false(exception_data.async_interrupt);
+            elsif run("When rst is true, the instructionToInstructionDecode is nopped out") then
+                instructionFromBus <= construct_itype_instruction(opcode => riscv32_opcode_opimm, rs1 =>4, rd => 6, funct3 => riscv32_funct3_add_sub, imm12 => X"fe9");
+                wait for 3*clk_period;
+                rst <= true;
+                wait for clk_period;
+                check_equal(instructionToInstructionDecode, riscv32_instructionNop);
             end if;
         end loop;
         wait until rising_edge(clk);
