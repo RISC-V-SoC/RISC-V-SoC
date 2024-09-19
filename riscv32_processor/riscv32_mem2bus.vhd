@@ -192,6 +192,7 @@ begin
                 mst2slv_buf <= BUS_MST2SLV_IDLE;
                 hasFault_buf := false;
                 bus_active := false;
+                faultData <= bus_fault_no_fault;
             elsif any_transaction(mst2slv_buf, slv2mst) then
                 if fault_transaction(mst2slv_buf, slv2mst) then
                     hasFault_buf := true;
