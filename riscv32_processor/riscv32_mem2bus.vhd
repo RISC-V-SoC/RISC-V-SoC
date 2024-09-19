@@ -27,6 +27,7 @@ entity riscv32_mem2bus is
 
         address : in riscv32_address_type;
         byteMask : in riscv32_byte_mask_type;
+
         dataIn : in riscv32_data_type;
         dataOut : out riscv32_data_type;
         doWrite : in boolean;
@@ -62,11 +63,16 @@ architecture behaviourial of riscv32_mem2bus is
     -- Data cache
     signal dcache_address_in : riscv32_address_type;
     signal dcache_data_out : riscv32_data_type;
-    signal dcache_data_in : riscv32_data_type;
-    signal dcache_byte_mask : riscv32_byte_mask_type;
-    signal dcache_do_write : boolean;
+
+    signal dcache_data_in_from_pipeline : riscv32_data_type;
+    signal dcache_byte_mask_from_pipeline : riscv32_byte_mask_type;
+    signal dcache_do_write_from_pipeline : boolean;
+
+    signal dcache_data_in_from_bus : riscv32_data_type;
+    signal dcache_byte_mask_from_bus : riscv32_byte_mask_type := (others => '1');
+    signal dcache_do_write_from_bus : boolean := false;
+
     signal dcache_miss : boolean;
-    signal dcache_significant_hit : boolean;
     signal address_in_dcache_range : boolean;
     signal dcache_reset : std_logic;
 
@@ -74,7 +80,12 @@ architecture behaviourial of riscv32_mem2bus is
     signal unaligned_access : boolean := false;
 begin
     address_in_dcache_range <= bus_addr_in_range(address, range_to_cache);
-    dcache_significant_hit <= address_in_dcache_range and not dcache_miss;
+
+    dcache_address_in <= address;
+
+    dcache_data_in_from_pipeline <= dataIn;
+    dcache_byte_mask_from_pipeline <= byteMask;
+    dcache_do_write_from_pipeline <= address_in_dcache_range and doWrite;
 
     handle_read_stall : process(address_in_dcache_range, dcache_miss, volatile_read_cache_miss, doRead)
     begin
@@ -156,30 +167,17 @@ begin
         volatile_write_cache_miss <= not cache_valid or cache_address /= address or cache_byteMask /= byteMask or cache_data /= dataIn;
     end process;
 
-    dcache_controller : process(clk, address, byteMask, dcache_significant_hit, doWrite, dataIn)
-        variable override_inputs : boolean := false;
-        variable overriding_data_in : riscv32_data_type;
-        variable overriding_write : boolean;
+    dcache_controller : process(clk)
     begin
         if rising_edge(clk) then
             if read_transaction(mst2slv_buf, slv2mst) then
-                override_inputs := true;
-                overriding_data_in := slv2mst.readData;
-                overriding_write := address_in_dcache_range;
+                dcache_updating_from_bus <= address_in_dcache_range;
+                dcache_do_write_from_bus <= address_in_dcache_range;
+                dcache_data_in_from_bus <= slv2mst.readData;
             else
-                override_inputs := false;
+                dcache_updating_from_bus <= false;
+                dcache_do_write_from_bus <= false;
             end if;
-        end if;
-        dcache_updating_from_bus <= override_inputs;
-        dcache_address_in <= address;
-        if override_inputs then
-            dcache_byte_mask <= (others => '1');
-            dcache_do_write <= overriding_write;
-            dcache_data_in <= overriding_data_in;
-        else
-            dcache_byte_mask <= byteMask;
-            dcache_do_write <= dcache_significant_hit and doWrite;
-            dcache_data_in <= dataIn;
         end if;
     end process;
 
@@ -217,7 +215,7 @@ begin
         hasFault <= hasFault_buf;
     end process;
 
-    dache : entity work.riscv32_dcache
+    dcache : entity work.riscv32_dcache
     generic map (
         word_count_log2b => cache_word_count_log2b,
         tag_size => tag_size
@@ -225,10 +223,16 @@ begin
         clk => clk,
         rst => dcache_reset,
         addressIn => dcache_address_in,
-        dataIn => dcache_data_in,
+
+        dataIn_forced => dcache_data_in_from_bus,
+        byteMask_forced => dcache_byte_mask_from_bus,
+        doWrite_forced => dcache_do_write_from_bus,
+
+        dataIn_onHit => dcache_data_in_from_pipeline,
+        byteMask_onHit => dcache_byte_mask_from_pipeline,
+        doWrite_onHit => dcache_do_write_from_pipeline,
+
         dataOut => dcache_data_out,
-        byteMask => dcache_byte_mask,
-        doWrite => dcache_do_write,
         miss => dcache_miss
     );
 

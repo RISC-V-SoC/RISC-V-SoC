@@ -17,11 +17,16 @@ entity riscv32_dcache is
         rst : in std_logic;
 
         addressIn : in riscv32_address_type;
-        dataIn : in riscv32_data_type;
-        dataOut : out riscv32_instruction_type;
-        byteMask : in riscv32_byte_mask_type;
 
-        doWrite : in boolean;
+        dataIn_forced : in riscv32_data_type;
+        byteMask_forced : in riscv32_byte_mask_type;
+        doWrite_forced : in boolean;
+
+        dataIn_onHit : in riscv32_data_type;
+        byteMask_onHit : in riscv32_byte_mask_type;
+        doWrite_onHit : in boolean;
+
+        dataOut : out riscv32_instruction_type;
         miss : out boolean
     );
 end entity;
@@ -52,11 +57,14 @@ begin
         clk => clk,
         rst => rst,
         requestAddress => requestAddress,
-        dataOut => dataOut,
-        dataIn => dataIn,
         tagIn => tagIn,
-        byteMask => byteMask,
-        hit => hit,
-        doWrite => doWrite
+        dataIn_forced => dataIn_forced,
+        byteMask_forced => byteMask_forced,
+        doWrite_forced => doWrite_forced,
+        dataIn_onHit => dataIn_onHit,
+        byteMask_onHit => byteMask_onHit,
+        doWrite_onHit => doWrite_onHit,
+        dataOut => dataOut,
+        hit => hit
     );
 end architecture;

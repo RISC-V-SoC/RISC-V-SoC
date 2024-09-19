@@ -24,10 +24,13 @@ architecture tb of riscv32_dcache_tb is
     signal rst : std_logic := '0';
 
     signal addressIn : riscv32_address_type := (others => '0');
-    signal dataIn : riscv32_data_type := (others => '0');
     signal dataOut : riscv32_data_type;
-    signal byteMask : riscv32_byte_mask_type := (others => '0');
-    signal doWrite : boolean := false;
+    signal dataIn_forced : riscv32_data_type := (others => '0');
+    signal byteMask_forced : riscv32_byte_mask_type := (others => '0');
+    signal doWrite_forced : boolean := false;
+    signal dataIn_onHit : riscv32_data_type := (others => '0');
+    signal byteMask_onHit : riscv32_byte_mask_type := (others => '0');
+    signal doWrite_onHit : boolean := false;
     signal miss : boolean;
 begin
 
@@ -42,11 +45,11 @@ begin
             if run("Store some data and read it back") then
                 wait until falling_edge(clk);
                 addressIn <= X"01020304";
-                dataIn <= X"FEDCBA98";
-                byteMask <= (others => '1');
-                doWrite <= true;
+                dataIn_forced <= X"FEDCBA98";
+                byteMask_forced <= (others => '1');
+                doWrite_forced <= true;
                 wait until falling_edge(clk);
-                check_equal(dataOut, dataIn);
+                check_equal(dataOut, dataIn_forced);
                 check(not miss);
             elsif run("Can miss") then
                 addressIn <= X"01020304";
@@ -55,12 +58,12 @@ begin
             elsif run("Update single byte") then
                 wait until falling_edge(clk);
                 addressIn <= X"01020304";
-                dataIn <= X"FEDCBA98";
-                byteMask <= (others => '1');
-                doWrite <= true;
+                dataIn_forced <= X"FEDCBA98";
+                byteMask_forced <= (others => '1');
+                doWrite_forced <= true;
                 wait until falling_edge(clk);
-                dataIn <= X"000000FF";
-                byteMask <= X"1";
+                dataIn_forced <= X"000000FF";
+                byteMask_forced <= X"1";
                 wait until falling_edge(clk);
                 check_equal(dataOut, std_logic_vector'(X"FEDCBAFF"));
             end if;
@@ -80,10 +83,13 @@ begin
         clk => clk,
         rst => rst,
         addressIn => addressIn,
-        dataIn => dataIn,
         dataOut => dataOut,
-        byteMask => byteMask,
-        doWrite => doWrite,
+        dataIn_forced => dataIn_forced,
+        byteMask_forced => byteMask_forced,
+        doWrite_forced => doWrite_forced,
+        dataIn_onHit => dataIn_onHit,
+        byteMask_onHit => byteMask_onHit,
+        doWrite_onHit => doWrite_onHit,
         miss => miss
     );
 

@@ -15,13 +15,18 @@ entity riscv32_dcache_bank is
         rst : in std_logic;
 
         requestAddress : in std_logic_vector(word_count_log2b - 1 downto 0);
-        dataOut : out riscv32_data_type;
-        dataIn : in riscv32_data_type;
         tagIn : in std_logic_vector(tag_size - 1 downto 0);
-        byteMask : in riscv32_byte_mask_type;
 
-        hit : out boolean;
-        doWrite : in boolean
+        dataIn_forced : in riscv32_data_type;
+        doWrite_forced : in boolean;
+        byteMask_forced : in riscv32_byte_mask_type;
+
+        dataIn_onHit : in riscv32_data_type;
+        doWrite_onHit : in boolean;
+        byteMask_onHit : in riscv32_byte_mask_type;
+
+        dataOut : out riscv32_data_type;
+        hit : out boolean
     );
 end entity;
 
@@ -36,18 +41,26 @@ begin
         variable tagBank : tag_array(0 to word_count - 1);
         variable validBank : valid_array(0 to word_count - 1);
         variable actualAddress : natural range 0 to word_count - 1;
+        variable hit_buf : boolean;
     begin
         actualAddress := to_integer(unsigned(requestAddress));
         if rising_edge(clk) then
             if rst = '1' then
                 validBank := (others => false);
-            elsif doWrite then
+            elsif doWrite_forced then
                 validBank(actualAddress) := true;
                 tagBank(actualAddress) := tagIn;
-                for i in 0 to byteMask'high loop
-                    if byteMask(i) = '1' then
+                for i in 0 to byteMask_forced'high loop
+                    if byteMask_forced(i) = '1' then
                         dataBank(actualAddress)(((i+1)*riscv32_byte_width) - 1 downto i*riscv32_byte_width) :=
-                                dataIn(((i+1)*riscv32_byte_width) - 1 downto i*riscv32_byte_width);
+                                dataIn_forced(((i+1)*riscv32_byte_width) - 1 downto i*riscv32_byte_width);
+                    end if;
+                end loop;
+            elsif doWrite_onHit and tagBank(actualAddress) = tagIn and validBank(actualAddress) then
+                for i in 0 to byteMask_onHit'high loop
+                    if byteMask_onHit(i) = '1' then
+                        dataBank(actualAddress)(((i+1)*riscv32_byte_width) - 1 downto i*riscv32_byte_width) :=
+                                dataIn_onHit(((i+1)*riscv32_byte_width) - 1 downto i*riscv32_byte_width);
                     end if;
                 end loop;
             end if;
