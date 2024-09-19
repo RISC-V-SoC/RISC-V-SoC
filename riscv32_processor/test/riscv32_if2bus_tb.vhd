@@ -183,6 +183,20 @@ begin
                 wait until rising_edge(clk) and bus_requesting(mst2slv);
                 check_equal(requestAddress, mst2slv.address);
                 check(mst2slv.readReady = '1');
+            elsif run("Check unaligned address") then
+                requestAddress <= X"00100001";
+                wait until rising_edge(clk) and hasFault;
+                check_equal(bus_fault_unaligned_access, faultData);
+                check_equal(exception_code, riscv32_exception_code_instruction_address_misaligned);
+            elsif run("Unaligned address causes stall") then
+                requestAddress <= X"00100000";
+                wait until rising_edge(clk) and bus_requesting(mst2slv);
+                slv2mst.valid <= true;
+                slv2mst.readData <= X"33221100";
+                wait until rising_edge(clk) and not stall;
+                requestAddress <= X"00100001";
+                wait for 1 fs;
+                check_true(stall);
             end if;
         end loop;
         wait until rising_edge(clk);

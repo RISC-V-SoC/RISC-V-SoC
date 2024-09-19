@@ -47,13 +47,14 @@ architecture behaviourial of riscv32_if2bus is
     signal faulty_address : riscv32_address_type := (others => '0');
     signal hasFault_buf : boolean := false;
     signal output_fault : boolean := false;
+    signal unaligned_address : boolean := false;
 begin
     hasFault <= output_fault;
     output_fault <= hasFault_buf and requestAddress = faulty_address;
     icache_fault <= not bus_addr_in_range(requestAddress, range_to_cache);
-    stall <= (icache_miss or icache_fault) and not output_fault;
+    stall <= (icache_miss or icache_fault or unaligned_address) and not output_fault;
     icache_reset <= '1' when flushCache or rst else '0';
-    exception_code <= riscv32_exception_code_instruction_access_fault;
+    unaligned_address <= requestAddress(1 downto 0) /= "00";
 
     handleBus : process(clk)
         variable mst2slv_buf : bus_mst2slv_type := BUS_MST2SLV_IDLE;
@@ -74,6 +75,7 @@ begin
                         faulty_address <= requestAddress;
                         hasFault_buf <= true;
                         faultData_buf := slv2mst.faultData;
+                        exception_code <= riscv32_exception_code_instruction_access_fault;
                     elsif read_transaction(mst2slv_buf, slv2mst) then
                         instruction_from_bus <= slv2mst.readData(instruction'range);
                         icache_write <= true;
@@ -85,13 +87,21 @@ begin
                     end if;
                 elsif forbidBusInteraction then
                     -- Pass
-                elsif icache_miss and not icache_fault then
+                elsif icache_miss and not icache_fault and not unaligned_address then
                     mst2slv_buf := bus_mst2slv_read(address => requestAddress);
                 end if;
 
                 if icache_fault then
+                    exception_code <= riscv32_exception_code_instruction_access_fault;
                     hasFault_buf <= true;
                     faultData_buf := bus_fault_address_out_of_range;
+                    faulty_address <= requestAddress;
+                end if;
+
+                if unaligned_address then
+                    exception_code <= riscv32_exception_code_instruction_address_misaligned;
+                    hasFault_buf <= true;
+                    faultData_buf := bus_fault_unaligned_access;
                     faulty_address <= requestAddress;
                 end if;
 
