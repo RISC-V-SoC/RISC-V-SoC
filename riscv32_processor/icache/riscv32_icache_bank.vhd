@@ -17,10 +17,9 @@ entity riscv32_icache_bank is
         requestAddress : in std_logic_vector(word_count_log2b - 1 downto 0);
         instructionOut : out riscv32_instruction_type;
         instructionIn : in riscv32_instruction_type;
-        tagOut : out std_logic_vector(tag_size - 1 downto 0);
         tagIn : in std_logic_vector(tag_size - 1 downto 0);
 
-        valid : out boolean;
+        hit : out boolean;
         doWrite : in boolean
     );
 end entity;
@@ -31,7 +30,7 @@ architecture behaviourial of riscv32_icache_bank is
 
     constant word_count : natural := 2**word_count_log2b;
 begin
-    process(clk, requestAddress)
+    process(clk, requestAddress, tagIn)
         variable instructionBank : riscv32_instruction_array(0 to word_count - 1);
         variable tagBank : tag_array(0 to word_count - 1);
         variable validBank : valid_array(0 to word_count - 1);
@@ -49,7 +48,6 @@ begin
         end if;
 
         instructionOut <= instructionBank(actualAddress);
-        tagOut <= tagBank(actualAddress);
-        valid <= validBank(actualAddress);
+        hit <= validBank(actualAddress) and tagBank(actualAddress) = tagIn;
     end process;
 end architecture;

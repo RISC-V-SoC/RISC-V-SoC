@@ -34,12 +34,11 @@ architecture behaviourial of riscv32_icache is
     constant tag_part_lsb : natural := address_part_msb + 1;
     constant tag_part_msb : natural := tag_part_lsb + tag_size - 1;
 
-    signal tagFromBank : std_logic_vector(tag_size - 1 downto 0);
     signal tagToBank : std_logic_vector(tag_size - 1 downto 0);
-    signal valid : boolean;
+    signal hit : boolean;
 begin
     tagToBank <= requestAddress(tag_part_msb downto tag_part_lsb);
-    miss <= not (valid and tagFromBank = tagToBank);
+    miss <= not hit;
 
     icache_bank : entity work.riscv32_icache_bank
     generic map (
@@ -51,9 +50,8 @@ begin
         requestAddress => requestAddress(address_part_msb downto address_part_lsb),
         instructionOut => instructionOut,
         instructionIn => instructionIn,
-        tagOut => tagFromBank,
         tagIn => tagToBank,
-        valid => valid,
+        hit => hit,
         doWrite => doWrite
     );
 end architecture;

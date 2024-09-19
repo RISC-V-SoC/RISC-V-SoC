@@ -25,9 +25,8 @@ architecture tb of riscv32_icache_bank_tb is
     signal requestAddress : std_logic_vector(word_count_log2b - 1 downto 0) := (others => '0');
     signal instructionOut : riscv32_instruction_type;
     signal instructionIn : riscv32_instruction_type := riscv32_instructionNop;
-    signal tagOut : std_logic_vector(tag_size - 1 downto 0);
     signal tagIn : std_logic_vector(tag_size - 1 downto 0) := (others => '0');
-    signal valid : boolean;
+    signal hit : boolean;
     signal doWrite : boolean := false;
 begin
 
@@ -45,22 +44,15 @@ begin
                 doWrite <= true;
                 wait until falling_edge(clk);
                 check_equal(instructionOut, instructionIn);
-            elsif run("Tag: write then read works") then
-                wait until falling_edge(clk);
-                requestAddress <= X"0f";
-                tagIn <= X"5";
-                doWrite <= true;
-                wait until falling_edge(clk);
-                check_equal(tagOut, tagIn);
-            elsif run("Valid is true after write") then
+            elsif run("hit is true after write") then
                 wait until falling_edge(clk);
                 requestAddress <= X"05";
                 instructionIn <= X"01020304";
                 tagIn <= X"5";
                 doWrite <= true;
                 wait until falling_edge(clk);
-                check(valid);
-            elsif run("rst resets valid") then
+                check_true(hit);
+            elsif run("rst resets line") then
                 wait until falling_edge(clk);
                 requestAddress <= X"05";
                 instructionIn <= X"01020304";
@@ -69,7 +61,7 @@ begin
                 wait until falling_edge(clk);
                 rst <= '1';
                 wait until falling_edge(clk);
-                check(not valid);
+                check_false(hit);
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -89,11 +81,9 @@ begin
         requestAddress => requestAddress,
         instructionOut => instructionOut,
         instructionIn => instructionIn,
-        tagOut => tagOut,
         tagIn => tagIn,
-        valid => valid,
+        hit => hit,
         doWrite => doWrite
     );
-
 
 end architecture;
