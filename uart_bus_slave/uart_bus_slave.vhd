@@ -63,6 +63,7 @@ begin
             if reset then
                 tx_reset_internal <= true;
                 rx_reset_internal <= true;
+                baud_clk_ticks <= (others => '0');
             elsif handle_bus_request then
                 slv2mst_internal.valid <= true;
                 address := to_integer(unsigned(mst2slv.address(3 downto 0)));
