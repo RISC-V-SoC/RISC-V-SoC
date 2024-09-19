@@ -224,11 +224,24 @@ begin
                 readAddr := std_logic_vector(to_unsigned(16#24#, bus_address_type'length));
                 check_word_at_address(net, readAddr, expectedReadData);
             elsif run("Instruction address fault test") then
+                simulated_bus_memory_pkg.write_to_address(net, outputMemActor, X"00000000", X"FFFFFFFF", X"f");
                 simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/instructionAddressFault.txt");
                 start_cpu(test2slv, slv2test);
                 wait for 20 us;
                 expectedReadData := X"00000001";
                 readAddr := std_logic_vector(to_unsigned(16#0#, bus_address_type'length));
+                check_word_at_address_in_outMem(net, readAddr, expectedReadData);
+            elsif run("Instruction address unaligned fault test") then
+                simulated_bus_memory_pkg.write_to_address(net, outputMemActor, X"00000000", X"FFFFFFFF", X"f");
+                simulated_bus_memory_pkg.write_to_address(net, outputMemActor, X"00000004", X"FFFFFFFF", X"f");
+                simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/instructionAlignmentFault.txt");
+                start_cpu(test2slv, slv2test);
+                wait for 20 us;
+                expectedReadData := X"00000000";
+                readAddr := std_logic_vector(to_unsigned(16#0#, bus_address_type'length));
+                check_word_at_address_in_outMem(net, readAddr, expectedReadData);
+                expectedReadData := X"05040300";
+                readAddr := std_logic_vector(to_unsigned(16#4#, bus_address_type'length));
                 check_word_at_address_in_outMem(net, readAddr, expectedReadData);
             end if;
         end loop;

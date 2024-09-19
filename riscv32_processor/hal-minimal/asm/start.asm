@@ -13,4 +13,5 @@ __start:
         lui     a0,%hi(syncExceptionHandler)
         addi    a0,a0,%lo(syncExceptionHandler)
         csrw    mtvec,a0
-        jr zero
+        li      s0, 0x05040302
+        jr s0
