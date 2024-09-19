@@ -209,7 +209,7 @@ begin
         rdAddress => rdAddressFromId
     );
 
-    idregReg : entity work.riscv32_pipeline_idregRegister
+    idregReg : entity work.riscv32_pipeline_stageRegister
     port map (
         clk => clk,
         -- Control in
@@ -283,13 +283,12 @@ begin
         writePortExtData => data_to_regFile
     );
 
-    regexReg : entity work.riscv32_pipeline_regexRegister
+    regexReg : entity work.riscv32_pipeline_stageRegister
     port map (
         clk => clk,
         -- Control in
         stall => stall,
-        rst => rst or handle_exception,
-        nop => nopOutputToResolveHazard,
+        rst => rst or handle_exception or nopOutputToResolveHazard,
         -- Exception data in
         exception_data_in => exception_data_from_idreg,
         -- Pipeline control in
@@ -336,7 +335,7 @@ begin
         newProgramCounter => newProgramCounterFromEx
     );
 
-    exMemReg : entity work.riscv32_pipeline_exmemRegister
+    exMemReg : entity work.riscv32_pipeline_stageRegister
     port map (
        clk => clk,
 
@@ -392,7 +391,7 @@ begin
         csrReadData => csr_data
     );
 
-    memWbReg : entity work.riscv32_pipeline_memwbRegister
+    memWbReg : entity work.riscv32_pipeline_stageRegister
     port map (
        clk => clk,
 

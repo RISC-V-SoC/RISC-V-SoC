@@ -5,7 +5,7 @@ use IEEE.numeric_std.all;
 library work;
 use work.riscv32_pkg.all;
 
-entity riscv32_pipeline_idregRegister is
+entity riscv32_pipeline_stageRegister is
     port (
         clk : in std_logic;
         -- Control in
@@ -14,17 +14,21 @@ entity riscv32_pipeline_idregRegister is
         -- Exception data in
         exception_data_in : in riscv32_exception_data_type;
         -- Pipeline control in
-        registerControlWordIn : in riscv32_RegisterControlWord_type;
-        executeControlWordIn : in riscv32_ExecuteControlWord_type;
-        memoryControlWordIn : in riscv32_MemoryControlWord_type;
+        registerControlWordIn : in riscv32_RegisterControlWord_type := riscv32_registerControlWordAllFalse;
+        executeControlWordIn : in riscv32_ExecuteControlWord_type := riscv32_executeControlWordAllFalse;
+        memoryControlWordIn : in riscv32_MemoryControlWord_type := riscv32_memoryControlWordAllFalse;
         writeBackControlWordIn : in riscv32_WriteBackControlWord_type;
         -- Pipeline data in
         isBubbleIn : in boolean;
-        programCounterIn : in riscv32_address_type;
-        rs1AddressIn : in riscv32_registerFileAddress_type;
-        rs2AddressIn : in riscv32_registerFileAddress_type;
-        immidiateIn : in riscv32_data_type;
-        uimmidiateIn : in riscv32_data_type;
+        programCounterIn : in riscv32_address_type := (others => '0');
+        rs1AddressIn : in riscv32_registerFileAddress_type := 0;
+        rs2AddressIn : in riscv32_registerFileAddress_type := 0;
+        execResultIn : in riscv32_data_type := (others => '0');
+        rs1DataIn : in riscv32_data_type := (others => '0');
+        rs2DataIn : in riscv32_data_type := (others => '0');
+        immidiateIn : in riscv32_data_type := (others => '0');
+        uimmidiateIn : in riscv32_data_type := (others => '0');
+        memDataReadIn : in riscv32_data_type := (others => '0');
         rdAddressIn : in riscv32_registerFileAddress_type;
         -- Exception data out
         exception_data_out : out riscv32_exception_data_type;
@@ -38,13 +42,17 @@ entity riscv32_pipeline_idregRegister is
         programCounterOut : out riscv32_address_type;
         rs1AddressOut : out riscv32_registerFileAddress_type;
         rs2AddressOut : out riscv32_registerFileAddress_type;
+        execResultOut : out riscv32_data_type;
+        rs1DataOut : out riscv32_data_type;
+        rs2DataOut : out riscv32_data_type;
         immidiateOut : out riscv32_data_type;
         uimmidiateOut : out riscv32_data_type;
+        memDataReadOut : out riscv32_data_type;
         rdAddressOut : out riscv32_registerFileAddress_type
     );
 end entity;
 
-architecture behaviourial of riscv32_pipeline_idregRegister is
+architecture behaviourial of riscv32_pipeline_stageRegister is
 begin
     process(clk)
         variable registerControlWord_var : riscv32_RegisterControlWord_type := riscv32_registerControlWordAllFalse;
@@ -84,8 +92,12 @@ begin
                 programCounterOut <= programCounterIn;
                 rs1AddressOut <= rs1AddressIn;
                 rs2AddressOut <= rs2AddressIn;
+                execResultOut <= execResultIn;
+                rs1DataOut <= rs1DataIn;
+                rs2DataOut <= rs2DataIn;
                 immidiateOut <= immidiateIn;
                 uimmidiateOut <= uimmidiateIn;
+                memDataReadOut <= memDataReadIn;
                 rdAddressOut <= rdAddressIn;
                 isBubbleOut_buf := isBubbleIn;
             end if;
