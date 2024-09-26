@@ -13,6 +13,8 @@ entity riscv32_pipeline_stageRegister is
         rst : in boolean;
         -- Exception data in
         exception_data_in : in riscv32_exception_data_type;
+        exception_from_stage : in boolean := false;
+        exception_from_stage_code : in riscv32_exception_code_type := 0;
         -- Pipeline control in
         registerControlWordIn : in riscv32_RegisterControlWord_type := riscv32_registerControlWordAllFalse;
         executeControlWordIn : in riscv32_ExecuteControlWord_type := riscv32_executeControlWordAllFalse;
@@ -62,16 +64,27 @@ begin
         variable isBubbleOut_buf : boolean := true;
         variable is_in_exception : boolean := false;
         variable push_nop : boolean := true;
+        variable exception_data_buf : riscv32_exception_data_type := riscv32_exception_data_idle;
     begin
         if rising_edge(clk) then
+
+            if exception_from_stage then
+                exception_data_buf.carries_exception := true;
+                exception_data_buf.exception_code := exception_from_stage_code;
+                exception_data_buf.interrupted_pc := exception_data_in.interrupted_pc;
+                exception_data_buf.async_interrupt := false;
+            else
+                exception_data_buf := exception_data_in;
+            end if;
+
             if rst then
                 is_in_exception := false;
                 push_nop := true;
             elsif stall then
                 -- pass
             elsif not is_in_exception then
-                exception_data_out <= exception_data_in;
-                is_in_exception := exception_data_in.carries_exception;
+                exception_data_out <= exception_data_buf;
+                is_in_exception := exception_data_buf.carries_exception;
                 push_nop := is_in_exception;
             else
                 exception_data_out <= riscv32_exception_data_idle;
