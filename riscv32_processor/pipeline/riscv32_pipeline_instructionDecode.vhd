@@ -27,7 +27,11 @@ entity riscv32_pipeline_instructionDecode is
         rs2Address : out riscv32_registerFileAddress_type;
         immidiate : out riscv32_data_type;
         uimmidiate : out riscv32_data_type;
-        rdAddress : out riscv32_registerFileAddress_type
+        rdAddress : out riscv32_registerFileAddress_type;
+
+        -- Error output
+        has_exception : out boolean;
+        exception_code : out riscv32_exception_code_type
     );
 end entity;
 
@@ -54,6 +58,8 @@ begin
     writeBackControlWord <= decodedWriteBackControlWord;
     memoryControlWord <= decodedMemoryControlWord;
     executeControlWord <= decodedExecuteControlWord;
+
+    exception_code <= riscv32_exception_code_illegal_instruction;
 
     determineImmidiate : process(decodedInstructionDecodeControlWord, instructionFromInstructionFetch)
         variable immidiate_buf : riscv32_data_type := (others => '0');
@@ -104,7 +110,8 @@ begin
         executeControlWord => decodedExecuteControlWord,
         memoryControlWord => decodedMemoryControlWord,
         writeBackControlWord => decodedWriteBackControlWord,
-        registerControlWord => registerControlWord
+        registerControlWord => registerControlWord,
+        illegal_instruction => has_exception
     );
 
 end architecture;

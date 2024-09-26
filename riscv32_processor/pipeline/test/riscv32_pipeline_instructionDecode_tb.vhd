@@ -34,6 +34,8 @@ architecture tb of riscv32_pipeline_instructionDecode_tb is
     signal rs2Address : riscv32_registerFileAddress_type;
     signal immidiate : riscv32_data_type;
     signal rdAddress : riscv32_registerFileAddress_type;
+    signal has_exception : boolean;
+    signal exception_code : riscv32_exception_code_type;
 begin
     main : process
         variable instructionIn : riscv32_instruction_type;
@@ -105,6 +107,15 @@ begin
                 check_equal(rs2Address, 7);
                 check_equal(rs1Address, 5);
                 check_equal(immidiate, std_logic_vector'(X"fffffffc"));
+            elsif run("Check illegal instruction") then
+                instructionFromInstructionFetch <= construct_utype_instruction(opcode => 0);
+                wait for 1 ns;
+                check_true(has_exception);
+                check_equal(exception_code, riscv32_exception_code_illegal_instruction);
+            elsif run("Check not illegal instruction") then
+                instructionFromInstructionFetch <= construct_utype_instruction(opcode => riscv32_opcode_lui);
+                wait for 1 ns;
+                check_false(has_exception);
             end if;
         end loop;
         test_runner_cleanup(runner);
@@ -125,6 +136,8 @@ begin
         rs1Address => rs1Address,
         rs2Address => rs2Address,
         immidiate => immidiate,
-        rdAddress => rdAddress
+        rdAddress => rdAddress,
+        has_exception => has_exception,
+        exception_code => exception_code
     );
 end architecture;
