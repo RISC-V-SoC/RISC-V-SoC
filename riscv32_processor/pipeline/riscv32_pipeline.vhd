@@ -70,10 +70,13 @@ architecture behaviourial of riscv32_pipeline is
     signal immidiateFromId : riscv32_data_type;
     signal uimmidiateFromId : riscv32_data_type;
     signal rdAddressFromId : riscv32_registerFileAddress_type;
+    signal hasExceptionFromId : boolean;
+    signal exceptionCodeFromId : riscv32_exception_code_type;
     -- Registerfile to register stage
     signal rs1DataFromRegFile : riscv32_data_type;
     signal rs2DataFromRegFile : riscv32_data_type;
     -- From id/reg
+    signal requiresServiceFromIdReg : boolean;
     signal regControlwordFromIdReg : riscv32_RegisterControlWord_type;
     signal exControlWordFromIdReg : riscv32_ExecuteControlWord_type;
     signal memControlWordFromIdReg : riscv32_MemoryControlWord_type;
@@ -157,7 +160,7 @@ begin
 
         requestFromBusAddress => instructionAddress,
         instructionFromBus => instruction,
-        has_fault => if_has_fault,
+        has_fault => if_has_fault or requiresServiceFromIdReg,
         exception_code => if_exception_code,
 
         isBubble => isBubbleFromIF,
@@ -206,7 +209,10 @@ begin
         rs2Address => rs2AddressFromId,
         immidiate => immidiateFromId,
         uimmidiate => uimmidiateFromId,
-        rdAddress => rdAddressFromId
+        rdAddress => rdAddressFromId,
+
+        has_exception => hasExceptionFromId,
+        exception_code => exceptionCodeFromId
     );
 
     idregReg : entity work.riscv32_pipeline_stageRegister
@@ -215,8 +221,12 @@ begin
         -- Control in
         stall => stall or stallToResolveHazard,
         rst => rst or handle_exception,
+        -- Control out
+        requires_service => requiresServiceFromIdReg,
         -- Exception data in
         exception_data_in => exception_data_from_if,
+        exception_from_stage => hasExceptionFromId,
+        exception_from_stage_code => exceptionCodeFromId,
         -- Pipeline control in
         registerControlWordIn => regControlwordFromId,
         executeControlWordIn => exControlWordFromId,
