@@ -11,6 +11,8 @@ entity riscv32_pipeline_stageRegister is
         -- Control in
         stall : in boolean;
         rst : in boolean;
+        -- Control out
+        requires_service : out boolean;
         -- Exception data in
         exception_data_in : in riscv32_exception_data_type;
         exception_from_stage : in boolean := false;
@@ -120,6 +122,7 @@ begin
         memoryControlWordOut <= memoryControlWord_var;
         writeBackControlWordOut <= writeBackControlWord_var;
         isBubbleOut <= isBubbleOut_buf;
+        requires_service <= is_in_exception;
     end process;
 
 end architecture;

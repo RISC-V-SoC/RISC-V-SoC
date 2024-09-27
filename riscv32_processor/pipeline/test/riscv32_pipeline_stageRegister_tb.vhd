@@ -20,6 +20,8 @@ architecture tb of riscv32_pipeline_stageRegister_tb is
     -- Control in
     signal stall : boolean := false;
     signal rst : boolean := false;
+    -- Control out
+    signal requires_service : boolean;
     -- Exception data in
     signal exception_data_in : riscv32_exception_data_type;
     signal exception_from_stage : boolean := false;
@@ -187,6 +189,21 @@ begin
                 check_equal(exception_data_out.interrupted_pc, exception_data_in.interrupted_pc);
                 check_true(exception_data_out.carries_exception);
                 check_false(exception_data_out.async_interrupt);
+            elsif run("Requires service follows incoming exception") then
+                wait until falling_edge(clk);
+                exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
+                exception_data_in.interrupted_pc <= (others => '1');
+                exception_data_in.async_interrupt <= false;
+                exception_data_in.carries_exception <= true;
+                wait until falling_edge(clk);
+                check_true(requires_service);
+            elsif run("Requires service is false if there is no exception") then
+                exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
+                exception_data_in.interrupted_pc <= (others => '1');
+                exception_data_in.async_interrupt <= false;
+                exception_data_in.carries_exception <= false;
+                wait until falling_edge(clk);
+                check_false(requires_service);
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -202,6 +219,8 @@ begin
         -- Control in
         stall => stall,
         rst => rst,
+        -- Control out
+        requires_service => requires_service,
         -- Exception data in
         exception_data_in => exception_data_in,
         exception_from_stage => exception_from_stage,
