@@ -56,7 +56,7 @@ begin
         end if;
     end process;
 
-    error_output_handling : process(csr_in, out_of_range_error, error_from_slave)
+    error_output_handling : process(csr_in, out_of_range_error, error_from_slave, readonly_error)
     begin
         if not (csr_in.do_read or csr_in.do_write) then
             error_buf <= false;
