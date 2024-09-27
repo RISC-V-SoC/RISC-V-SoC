@@ -36,7 +36,7 @@ architecture behaviourial of riscv32_dcache_bank is
 
     constant word_count : natural := 2**word_count_log2b;
 begin
-    process(clk, requestAddress)
+    process(clk, requestAddress, tagIn)
         variable dataBank : riscv32_data_array(0 to word_count - 1);
         variable tagBank : tag_array(0 to word_count - 1);
         variable validBank : valid_array(0 to word_count - 1);
