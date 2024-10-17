@@ -22,10 +22,10 @@ begin
     process(clk)
     begin
         if rising_edge(clk) then
-            exception_trigger <= exception_data_in.carries_exception;
+            exception_trigger <= exception_data_in.exception_type /= exception_none;
             exception_code <= exception_data_in.exception_code;
             interrupted_pc <= exception_data_in.interrupted_pc;
-            interrupt_is_async <= exception_data_in.async_interrupt;
+            interrupt_is_async <= false;
         end if;
     end process;
 end architecture;

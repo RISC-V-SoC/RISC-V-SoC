@@ -35,6 +35,7 @@ package riscv32_pkg is
     type riscv32_alu_cmd is (cmd_alu_add, cmd_alu_slt, cmd_alu_sltu, cmd_alu_and, cmd_alu_or, cmd_alu_xor, cmd_alu_sub, cmd_alu_sll, cmd_alu_srl, cmd_alu_sra);
     type riscv32_branch_cmd is (cmd_branch_eq, cmd_branch_ne, cmd_branch_lt, cmd_branch_ltu, cmd_branch_ge, cmd_branch_geu, cmd_branch_jalr);
     type riscv32_csr_cmd is (csr_rw, csr_rs, csr_rc);
+    type riscv32_pipeline_exception_type is (exception_none, exception_sync, exception_async, exception_return);
 
     type riscv32_to_csr_type is record
         command : riscv32_csr_cmd;
@@ -105,10 +106,9 @@ package riscv32_pkg is
     type riscv32_csr_slv2mst_array is array (natural range <>) of riscv32_csr_slv2mst_type;
 
     type riscv32_exception_data_type is record
+        exception_type : riscv32_pipeline_exception_type;
         exception_code : riscv32_exception_code_type;
         interrupted_pc : riscv32_address_type;
-        async_interrupt : boolean;
-        carries_exception : boolean;
     end record;
 
     constant riscv32_registerControlWordAllFalse : riscv32_RegisterControlWord_type := (
@@ -147,10 +147,9 @@ package riscv32_pkg is
     );
 
     constant riscv32_exception_data_idle : riscv32_exception_data_type := (
+        exception_type => exception_none,
         exception_code => 0,
-        interrupted_pc => (others => '0'),
-        async_interrupt => false,
-        carries_exception => false
+        interrupted_pc => (others => '0')
     );
 
     -- The nop is addi x0,x0,0

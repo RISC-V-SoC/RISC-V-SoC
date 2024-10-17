@@ -32,9 +32,8 @@ begin
         test_runner_setup(runner, runner_cfg);
         while test_suite loop
             if run("Forwards input") then
-                exception_data_in.carries_exception <= true;
+                exception_data_in.exception_type <= exception_sync;
                 exception_data_in.exception_code <= riscv32_exception_code_illegal_instruction;
-                exception_data_in.async_interrupt <= false;
                 exception_data_in.interrupted_pc <= x"00000000";
                 wait until falling_edge(clk);
                 check_true(exception_trigger);

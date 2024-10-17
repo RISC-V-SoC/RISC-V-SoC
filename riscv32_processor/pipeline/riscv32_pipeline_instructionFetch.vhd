@@ -144,10 +144,13 @@ begin
                 instructionBuf := instructionToInstructionDecode_buf;
                 programCounter <= programCounter_buf;
                 isBubble_out := isBubble_buf;
-                exception_data.carries_exception <= has_fault;
+                if has_fault then
+                    exception_data.exception_type <= exception_sync;
+                else
+                    exception_data.exception_type <= exception_none;
+                end if;
                 exception_data.exception_code <= exception_code;
                 exception_data.interrupted_pc <= programCounter_buf;
-                exception_data.async_interrupt <= false;
                 exception_data_set := has_fault;
             end if;
         end if;

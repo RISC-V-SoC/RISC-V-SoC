@@ -71,10 +71,9 @@ begin
         if rising_edge(clk) then
 
             if exception_from_stage then
-                exception_data_buf.carries_exception := true;
+                exception_data_buf.exception_type := exception_sync;
                 exception_data_buf.exception_code := exception_from_stage_code;
                 exception_data_buf.interrupted_pc := exception_data_in.interrupted_pc;
-                exception_data_buf.async_interrupt := false;
             else
                 exception_data_buf := exception_data_in;
             end if;
@@ -86,7 +85,7 @@ begin
                 -- pass
             elsif not is_in_exception then
                 exception_data_out <= exception_data_buf;
-                is_in_exception := exception_data_buf.carries_exception;
+                is_in_exception := exception_data_buf.exception_type /= exception_none;
                 push_nop := is_in_exception;
             else
                 exception_data_out <= riscv32_exception_data_idle;

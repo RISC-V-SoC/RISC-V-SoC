@@ -127,33 +127,32 @@ begin
                 wait until falling_edge(clk);
                 exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
                 exception_data_in.interrupted_pc <= (others => '1');
-                exception_data_in.async_interrupt <= false;
-                exception_data_in.carries_exception <= true;
+                exception_data_in.exception_type <= exception_sync;
                 wait until falling_edge(clk);
                 check(exception_data_out = exception_data_in);
             elsif run("On incoming exception, nop control data") then
-                exception_data_in.carries_exception <= false;
+                exception_data_in.exception_type <= exception_none;
                 memoryControlWordIn.memOp <= true;
                 wait until falling_edge(clk);
                 check(memoryControlWordOut.memOp);
-                exception_data_in.carries_exception <= true;
+                exception_data_in.exception_type <= exception_sync;
                 wait until falling_edge(clk);
                 check(memoryControlWordOut = riscv32_memoryControlWordAllFalse);
             elsif run("Once excepted, keeps on forwarding nops") then
                 memoryControlWordIn.memOp <= true;
-                exception_data_in.carries_exception <= true;
+                exception_data_in.exception_type <= exception_sync;
                 exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
                 wait until falling_edge(clk);
-                exception_data_in.carries_exception <= false;
+                exception_data_in.exception_type <= exception_none;
                 wait until falling_edge(clk);
                 check(memoryControlWordOut = riscv32_memoryControlWordAllFalse);
                 check(exception_data_out = riscv32_exception_data_idle);
             elsif run("rst clears exception") then
                 memoryControlWordIn.memOp <= true;
-                exception_data_in.carries_exception <= true;
+                exception_data_in.exception_type <= exception_sync;
                 exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
                 wait until falling_edge(clk);
-                exception_data_in.carries_exception <= false;
+                exception_data_in.exception_type <= exception_none;
                 wait until falling_edge(clk);
                 rst <= true;
                 wait until falling_edge(clk);
@@ -161,47 +160,43 @@ begin
                 wait until falling_edge(clk);
                 check(memoryControlWordOut.memOp);
             elsif run("Stall delays exception") then
-                exception_data_in.carries_exception <= true;
+                exception_data_in.exception_type <= exception_sync;
                 exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
                 stall <= true;
                 wait until falling_edge(clk);
-                check_false(exception_data_out.carries_exception);
+                check_true(exception_data_out.exception_type = exception_none);
             elsif run("Stall makes sure exception output is being held") then
-                exception_data_in.carries_exception <= true;
+                exception_data_in.exception_type <= exception_sync;
                 exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
                 wait until falling_edge(clk);
                 stall <= true;
                 wait until falling_edge(clk);
-                check_true(exception_data_out.carries_exception);
+                check_true(exception_data_out.exception_type = exception_sync);
                 stall <= false;
                 wait until falling_edge(clk);
-                check_false(exception_data_out.carries_exception);
+                check_true(exception_data_out.exception_type = exception_none);
             elsif run("Exception from stage is also acknowledged") then
                 wait until falling_edge(clk);
                 exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
                 exception_data_in.interrupted_pc <= (others => '1');
-                exception_data_in.async_interrupt <= true;
-                exception_data_in.carries_exception <= false;
+                exception_data_in.exception_type <= exception_sync;
                 exception_from_stage <= true;
                 exception_from_stage_code <= riscv32_exception_code_illegal_instruction;
                 wait until falling_edge(clk);
                 check_equal(exception_data_out.exception_code, riscv32_exception_code_illegal_instruction);
                 check_equal(exception_data_out.interrupted_pc, exception_data_in.interrupted_pc);
-                check_true(exception_data_out.carries_exception);
-                check_false(exception_data_out.async_interrupt);
+                check_true(exception_data_out.exception_type = exception_sync);
             elsif run("Requires service follows incoming exception") then
                 wait until falling_edge(clk);
                 exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
                 exception_data_in.interrupted_pc <= (others => '1');
-                exception_data_in.async_interrupt <= false;
-                exception_data_in.carries_exception <= true;
+                exception_data_in.exception_type <= exception_sync;
                 wait until falling_edge(clk);
                 check_true(requires_service);
             elsif run("Requires service is false if there is no exception") then
                 exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
                 exception_data_in.interrupted_pc <= (others => '1');
-                exception_data_in.async_interrupt <= false;
-                exception_data_in.carries_exception <= false;
+                exception_data_in.exception_type <= exception_none;
                 wait until falling_edge(clk);
                 check_false(requires_service);
             end if;

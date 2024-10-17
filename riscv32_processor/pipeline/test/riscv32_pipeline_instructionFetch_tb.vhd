@@ -204,20 +204,19 @@ begin
                 has_fault <= true;
                 exception_code <= riscv32_exception_code_instruction_access_fault;
                 wait for clk_period;
-                check_true(exception_data.carries_exception);
+                check_true(exception_data.exception_type = exception_sync);
                 check_equal(exception_data.exception_code, riscv32_exception_code_instruction_access_fault);
                 check_equal(exception_data.interrupted_pc, startAddress);
-                check_false(exception_data.async_interrupt);
             elsif run("No has_fault, no exception") then
                 has_fault <= false;
                 exception_code <= riscv32_exception_code_instruction_access_fault;
                 wait for clk_period;
-                check_false(exception_data.carries_exception);
+                check_true(exception_data.exception_type = exception_none);
             elsif run("While rst is true, there is no exception") then
                 rst <= true;
                 has_fault <= true;
                 wait for clk_period;
-                check_false(exception_data.carries_exception);
+                check_true(exception_data.exception_type = exception_none);
             elsif run("PC does not update on fault") then
                 has_fault <= true;
                 exception_code <= riscv32_exception_code_instruction_access_fault;
@@ -228,14 +227,14 @@ begin
                 exception_code <= riscv32_exception_code_instruction_access_fault;
                 wait for clk_period;
                 wait for clk_period;
-                check_false(exception_data.carries_exception);
+                check_true(exception_data.exception_type = exception_none);
             elsif run("Interrupt remains if fault goes away") then
                 has_fault <= true;
                 exception_code <= riscv32_exception_code_instruction_access_fault;
                 wait for clk_period;
                 has_fault <= false;
                 wait for clk_period;
-                check_false(exception_data.carries_exception);
+                check_true(exception_data.exception_type = exception_none);
                 check_equal(requestFromBusAddress, startAddress);
             elsif run("Check interrupt recovery sequence") then
                 instructionFromBus <= construct_itype_instruction(opcode => riscv32_opcode_opimm, rs1 => 12, rd => 23, funct3 => riscv32_funct3_sll, imm12 => X"005");
@@ -265,34 +264,31 @@ begin
                 check_equal(requestFromBusAddress, std_logic_vector(unsigned(startAddress) + 4));
             elsif run("On first rising_edge, exception_data.carries_interrup is false") then
                 wait until rising_edge(clk);
-                check_false(exception_data.carries_exception);
+                check_true(exception_data.exception_type = exception_none);
             elsif run("Stall holds the fault back") then
                 has_fault <= true;
                 exception_code <= riscv32_exception_code_instruction_access_fault;
                 stall <= true;
                 wait for clk_period;
-                check_false(exception_data.carries_exception);
+                check_true(exception_data.exception_type = exception_none);
                 wait for clk_period;
                 stall <= false;
                 wait for clk_period;
-                check_true(exception_data.carries_exception);
+                check_true(exception_data.exception_type = exception_sync);
                 check_equal(exception_data.exception_code, riscv32_exception_code_instruction_access_fault);
                 check_equal(exception_data.interrupted_pc, startAddress);
-                check_false(exception_data.async_interrupt);
             elsif run("Stall prevents exceptiondata clock out") then
                 has_fault <= true;
                 exception_code <= riscv32_exception_code_instruction_access_fault;
                 wait for clk_period;
                 stall <= true;
-                check_true(exception_data.carries_exception);
+                check_true(exception_data.exception_type = exception_sync);
                 check_equal(exception_data.exception_code, riscv32_exception_code_instruction_access_fault);
                 check_equal(exception_data.interrupted_pc, startAddress);
-                check_false(exception_data.async_interrupt);
                 wait for clk_period;
-                check_true(exception_data.carries_exception);
+                check_true(exception_data.exception_type = exception_sync);
                 check_equal(exception_data.exception_code, riscv32_exception_code_instruction_access_fault);
                 check_equal(exception_data.interrupted_pc, startAddress);
-                check_false(exception_data.async_interrupt);
             elsif run("When rst is true, the instructionToInstructionDecode is nopped out") then
                 instructionFromBus <= construct_itype_instruction(opcode => riscv32_opcode_opimm, rs1 =>4, rd => 6, funct3 => riscv32_funct3_add_sub, imm12 => X"fe9");
                 wait for 3*clk_period;
