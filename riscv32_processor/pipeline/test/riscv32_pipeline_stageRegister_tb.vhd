@@ -24,7 +24,7 @@ architecture tb of riscv32_pipeline_stageRegister_tb is
     signal requires_service : boolean;
     -- Exception data in
     signal exception_data_in : riscv32_exception_data_type;
-    signal exception_from_stage : boolean := false;
+    signal exception_from_stage : riscv32_pipeline_exception_type := exception_none;
     signal exception_from_stage_code : riscv32_exception_code_type := 0;
     -- Pipeline control in
     signal registerControlWordIn : riscv32_RegisterControlWord_type := riscv32_registerControlWordAllFalse;
@@ -180,12 +180,23 @@ begin
                 exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
                 exception_data_in.interrupted_pc <= (others => '1');
                 exception_data_in.exception_type <= exception_sync;
-                exception_from_stage <= true;
+                exception_from_stage <= exception_sync;
                 exception_from_stage_code <= riscv32_exception_code_illegal_instruction;
                 wait until falling_edge(clk);
                 check_equal(exception_data_out.exception_code, riscv32_exception_code_illegal_instruction);
                 check_equal(exception_data_out.interrupted_pc, exception_data_in.interrupted_pc);
                 check_true(exception_data_out.exception_type = exception_sync);
+            elsif run("Exception return from stage is correctly forwarded") then
+                wait until falling_edge(clk);
+                exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;
+                exception_data_in.interrupted_pc <= (others => '1');
+                exception_data_in.exception_type <= exception_sync;
+                exception_from_stage <= exception_return;
+                exception_from_stage_code <= riscv32_exception_code_illegal_instruction;
+                wait until falling_edge(clk);
+                check_equal(exception_data_out.exception_code, riscv32_exception_code_illegal_instruction);
+                check_equal(exception_data_out.interrupted_pc, exception_data_in.interrupted_pc);
+                check_true(exception_data_out.exception_type = exception_return);
             elsif run("Requires service follows incoming exception") then
                 wait until falling_edge(clk);
                 exception_data_in.exception_code <= riscv32_exception_code_instruction_access_fault;

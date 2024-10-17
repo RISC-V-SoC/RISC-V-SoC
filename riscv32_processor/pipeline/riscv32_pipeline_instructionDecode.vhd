@@ -30,7 +30,7 @@ entity riscv32_pipeline_instructionDecode is
         rdAddress : out riscv32_registerFileAddress_type;
 
         -- Error output
-        has_exception : out boolean;
+        exception_type : out riscv32_pipeline_exception_type;
         exception_code : out riscv32_exception_code_type
     );
 end entity;
@@ -44,10 +44,12 @@ architecture behaviourial of riscv32_pipeline_instructionDecode is
 
     signal jumpTarget : riscv32_address_type;
     signal overrideProgramCounter_buf : boolean := false;
-
+    signal illegal_instruction : boolean := false;
 begin
     overrideProgramCounter <= decodedInstructionDecodeControlWord.jump;
     newProgramCounter <= jumpTarget;
+
+    exception_type <= exception_sync when illegal_instruction else exception_none;
 
     rs1Address <= to_integer(unsigned(instructionFromInstructionFetch(19 downto 15)));
     rs2Address <= to_integer(unsigned(instructionFromInstructionFetch(24 downto 20)));
@@ -111,7 +113,7 @@ begin
         memoryControlWord => decodedMemoryControlWord,
         writeBackControlWord => decodedWriteBackControlWord,
         registerControlWord => registerControlWord,
-        illegal_instruction => has_exception
+        illegal_instruction => illegal_instruction
     );
 
 end architecture;

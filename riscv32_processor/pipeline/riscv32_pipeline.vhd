@@ -70,7 +70,7 @@ architecture behaviourial of riscv32_pipeline is
     signal immidiateFromId : riscv32_data_type;
     signal uimmidiateFromId : riscv32_data_type;
     signal rdAddressFromId : riscv32_registerFileAddress_type;
-    signal hasExceptionFromId : boolean;
+    signal exceptionTypeFromId : riscv32_pipeline_exception_type;
     signal exceptionCodeFromId : riscv32_exception_code_type;
     -- Registerfile to register stage
     signal rs1DataFromRegFile : riscv32_data_type;
@@ -211,7 +211,7 @@ begin
         uimmidiate => uimmidiateFromId,
         rdAddress => rdAddressFromId,
 
-        has_exception => hasExceptionFromId,
+        exception_type => exceptionTypeFromId,
         exception_code => exceptionCodeFromId
     );
 
@@ -225,7 +225,7 @@ begin
         requires_service => requiresServiceFromIdReg,
         -- Exception data in
         exception_data_in => exception_data_from_if,
-        exception_from_stage => hasExceptionFromId,
+        exception_from_stage => exceptionTypeFromId,
         exception_from_stage_code => exceptionCodeFromId,
         -- Pipeline control in
         registerControlWordIn => regControlwordFromId,

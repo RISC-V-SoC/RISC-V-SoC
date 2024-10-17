@@ -15,7 +15,7 @@ entity riscv32_pipeline_stageRegister is
         requires_service : out boolean;
         -- Exception data in
         exception_data_in : in riscv32_exception_data_type;
-        exception_from_stage : in boolean := false;
+        exception_from_stage : in riscv32_pipeline_exception_type := exception_none;
         exception_from_stage_code : in riscv32_exception_code_type := 0;
         -- Pipeline control in
         registerControlWordIn : in riscv32_RegisterControlWord_type := riscv32_registerControlWordAllFalse;
@@ -70,8 +70,8 @@ begin
     begin
         if rising_edge(clk) then
 
-            if exception_from_stage then
-                exception_data_buf.exception_type := exception_sync;
+            if exception_from_stage /= exception_none then
+                exception_data_buf.exception_type := exception_from_stage;
                 exception_data_buf.exception_code := exception_from_stage_code;
                 exception_data_buf.interrupted_pc := exception_data_in.interrupted_pc;
             else
