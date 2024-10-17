@@ -454,6 +454,8 @@ begin
     port map (
         clk => clk,
         exception_data_in => exception_data_from_memwb,
+        exception_vector_base_address => (others => '0'),
+        exception_return_address => (others => '0'),
         exception_trigger => handle_exception,
         exception_code => exception_code,
         interrupted_pc => interrupted_pc,
