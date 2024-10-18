@@ -40,7 +40,9 @@ entity riscv32_pipeline is
 
         -- Exception data
         interrupt_vector_base_address : in riscv32_address_type;
+        interrupt_return_address : in riscv32_address_type;
         interrupt_trigger : out boolean;
+        interrupt_resolve : out boolean;
         interrupt_is_async : out boolean;
         exception_code : out riscv32_exception_code_type;
         interrupted_pc : out riscv32_address_type;
@@ -143,9 +145,14 @@ architecture behaviourial of riscv32_pipeline is
     signal nopOutputToResolveHazard : boolean;
 
     signal handle_exception : boolean;
+    signal exception_trigger_buf : boolean;
+    signal exception_resolve_buf : boolean;
+    signal programCounterFromExceptionHandler : riscv32_address_type;
 
 begin
-    interrupt_trigger <= handle_exception;
+    interrupt_trigger <= exception_trigger_buf;
+    interrupt_resolve <= exception_resolve_buf;
+    handle_exception <= exception_trigger_buf or exception_resolve_buf;
 
     stallToResolveHazard <= stall or repeatInstructionFromReg;
     nopOutputToResolveHazard <= not stall and repeatInstructionFromReg;
@@ -174,8 +181,9 @@ begin
 
         overrideProgramCounterFromEx => overrideProgramCounterFromEx,
         newProgramCounterFromEx => newProgramCounterFromEx,
+
         overrideProgramCounterFromInterrupt => handle_exception,
-        newProgramCounterFromInterrupt => interrupt_vector_base_address,
+        newProgramCounterFromInterrupt => programCounterFromExceptionHandler,
 
         injectBubble => injectBubbleFromBranchHelper,
         stall => stallToResolveHazard
@@ -454,9 +462,11 @@ begin
     port map (
         clk => clk,
         exception_data_in => exception_data_from_memwb,
-        exception_vector_base_address => (others => '0'),
-        exception_return_address => (others => '0'),
-        exception_trigger => handle_exception,
+        exception_vector_base_address => interrupt_vector_base_address,
+        exception_return_address => interrupt_return_address,
+        address_to_instruction_fetch => programCounterFromExceptionHandler,
+        exception_trigger => exception_trigger_buf,
+        exception_resolved => exception_resolve_buf,
         exception_code => exception_code,
         interrupted_pc => interrupted_pc,
         interrupt_is_async => interrupt_is_async

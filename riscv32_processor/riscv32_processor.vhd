@@ -95,9 +95,11 @@ architecture behaviourial of riscv32_processor is
 
     signal interrupt_vector_base_address : riscv32_address_type;
     signal interrupt_trigger : boolean;
+    signal interrupt_resolve : boolean;
     signal interrupt_is_async : boolean;
     signal exception_code : riscv32_exception_code_type;
     signal interrupted_pc : riscv32_address_type;
+    signal pc_on_interrupt_return : riscv32_address_type;
 begin
     pipelineStall <= controllerStall or instructionStall or memoryStall;
     forbidBusInteraction <= controllerStall;
@@ -126,7 +128,9 @@ begin
             csr_out => pipeline_to_csr,
             csr_data => csr_to_pipeline,
             interrupt_vector_base_address => interrupt_vector_base_address,
+            interrupt_return_address => pc_on_interrupt_return,
             interrupt_trigger => interrupt_trigger,
+            interrupt_resolve => interrupt_resolve,
             interrupt_is_async => interrupt_is_async,
             exception_code => exception_code,
             interrupted_pc => interrupted_pc,
@@ -264,7 +268,7 @@ begin
         mst2slv => demux2machine_trap_setup,
         slv2mst => machine_trap_setup2demux,
         interrupt_trigger => interrupt_trigger,
-        interrupt_resolved => false,
+        interrupt_resolved => interrupt_resolve,
         interrupt_base_address => interrupt_vector_base_address
     );
 
@@ -279,6 +283,7 @@ begin
         interrupt_is_async => interrupt_is_async,
         exception_code => exception_code,
         interrupted_pc => interrupted_pc,
+        pc_on_return => pc_on_interrupt_return,
         interrupt_trigger => interrupt_trigger
     );
 end architecture;
