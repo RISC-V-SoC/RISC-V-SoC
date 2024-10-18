@@ -33,12 +33,14 @@ begin
         variable opcode : riscv32_opcode_type;
         variable funct3 : riscv32_funct3_type;
         variable funct7 : riscv32_funct7_type;
+        variable funct12 : riscv32_funct12_type;
 
         variable invalid_func : boolean := false;
         variable invalid_branch : boolean := false;
         variable invalid_store : boolean := false;
         variable invalid_load : boolean := false;
         variable invalid_csr : boolean := false;
+        variable invalid_trap_return : boolean := false;
 
         variable rdIsZero : boolean := false;
         variable rs1IsZero : boolean := false;
@@ -52,12 +54,14 @@ begin
         opcode := to_integer(unsigned(instruction(6 downto 0)));
         funct3 := to_integer(unsigned(instruction(14 downto 12)));
         funct7 := to_integer(unsigned(instruction(31 downto 25)));
+        funct12 := to_integer(unsigned(instruction(31 downto 20)));
         illegal_instruction <= false;
         invalid_func := false;
         invalid_branch := false;
         invalid_store := false;
         invalid_load := false;
         invalid_csr := false;
+        invalid_trap_return := false;
 
         rdIsZero := instruction(11 downto 7) = "00000";
         rs1IsZero := instruction(19 downto 15) = "00000";
@@ -175,6 +179,12 @@ begin
                 invalid_csr := true;
         end case;
 
+        if funct3 = riscv32_funct3_mret and funct12 = riscv32_funct12_mret then
+            invalid_trap_return := false;
+        else
+            invalid_trap_return := true;
+        end if;
+
         case opcode is
             when riscv32_opcode_jalr =>
                 executeControlWord_buf.exec_directive := riscv32_exec_calcReturn;
@@ -238,10 +248,11 @@ begin
                 writeBackControlWord_buf.MemtoReg := false;
                 illegal_instruction <= invalid_store;
             when riscv32_opcode_system =>
+                instructionDecodeControlWord_buf.is_exception_return := not invalid_trap_return;
                 instructionDecodeControlWord_buf.immidiate_type := riscv32_i_immidiate;
-                illegal_instruction <= invalid_csr;
+                illegal_instruction <= invalid_csr and invalid_trap_return;
                 executeControlWord_buf.exec_directive := riscv32_exec_lui;
-                memoryControlWord_buf.csrOp := true;
+                memoryControlWord_buf.csrOp := not invalid_csr;
                 writeBackControlWord_buf.regWrite := memoryControlWord_buf.csrRead;
                 writeBackControlWord_buf.MemtoReg := memoryControlWord_buf.csrRead;
             when others =>

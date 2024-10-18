@@ -49,8 +49,6 @@ begin
     overrideProgramCounter <= decodedInstructionDecodeControlWord.jump;
     newProgramCounter <= jumpTarget;
 
-    exception_type <= exception_sync when illegal_instruction else exception_none;
-
     rs1Address <= to_integer(unsigned(instructionFromInstructionFetch(19 downto 15)));
     rs2Address <= to_integer(unsigned(instructionFromInstructionFetch(24 downto 20)));
     rdAddress <= to_integer(unsigned(instructionFromInstructionFetch(11 downto 7)));
@@ -62,6 +60,17 @@ begin
     executeControlWord <= decodedExecuteControlWord;
 
     exception_code <= riscv32_exception_code_illegal_instruction;
+
+    determineException : process(illegal_instruction, decodedInstructionDecodeControlWord)
+    begin
+        if illegal_instruction then
+            exception_type <= exception_sync;
+        elsif decodedInstructionDecodeControlWord.is_exception_return then
+            exception_type <= exception_return;
+        else
+            exception_type <= exception_none;
+        end if;
+    end process;
 
     determineImmidiate : process(decodedInstructionDecodeControlWord, instructionFromInstructionFetch)
         variable immidiate_buf : riscv32_data_type := (others => '0');

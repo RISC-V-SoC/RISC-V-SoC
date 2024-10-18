@@ -18,6 +18,7 @@ package riscv32_pkg is
     subtype riscv32_instruction_type is std_logic_vector(2**riscv32_instruction_width_log2b - 1 downto 0);
     subtype riscv32_byte_type is std_logic_vector(2**riscv32_byte_width_log2b - 1 downto 0);
     subtype riscv32_opcode_type is natural range 0 to 127;
+    subtype riscv32_funct12_type is natural range 0 to 4095;
     subtype riscv32_funct7_type is natural range 0 to 127;
     subtype riscv32_funct3_type is natural range 0 to 7;
     subtype riscv32_registerFileAddress_type is natural range 0 to 31;
@@ -49,6 +50,7 @@ package riscv32_pkg is
         jump : boolean;
         PCSrc : boolean;
         immidiate_type : riscv32_immidiate_type;
+        is_exception_return : boolean;
     end record;
 
     type riscv32_RegisterControlWord_type is record
@@ -119,7 +121,8 @@ package riscv32_pkg is
     constant riscv32_instructionDecodeControlWordAllFalse : riscv32_InstructionDecodeControlWord_type := (
         jump => false,
         PCSrc => false,
-        immidiate_type => riscv32_i_immidiate
+        immidiate_type => riscv32_i_immidiate,
+        is_exception_return => false
     );
 
     constant riscv32_executeControlWordAllFalse : riscv32_ExecuteControlWord_type := (
@@ -203,6 +206,11 @@ package riscv32_pkg is
 
     constant riscv32_funct7_ecall : riscv32_funct7_type := 16#0#;
     constant riscv32_funct7_ebreak : riscv32_funct7_type := 16#1#;
+
+    constant riscv32_funct12_sret : riscv32_funct12_type := 16#102#;
+    constant riscv32_funct3_sret : riscv32_funct3_type := 16#0#;
+    constant riscv32_funct12_mret : riscv32_funct12_type := 16#302#;
+    constant riscv32_funct3_mret : riscv32_funct3_type := 16#0#;
 
     -- Zicsr extension
     constant riscv32_funct3_csrrw : riscv32_funct3_type := 16#1#;

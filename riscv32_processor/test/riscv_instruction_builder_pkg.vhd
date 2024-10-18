@@ -48,6 +48,12 @@ package riscv32_instruction_builder_pkg is
         imm20 : std_logic_vector(19 downto 0) := (others => '0')
     ) return riscv32_instruction_type;
 
+    pure function construct_system_instruction (
+        opcode : riscv32_opcode_type := riscv32_opcode_op;
+        funct3 : riscv32_funct3_type := 0;
+        funct12 : riscv32_funct12_type := 0
+    ) return riscv32_instruction_type;
+
 end package;
 
 package body riscv32_instruction_builder_pkg is
@@ -135,6 +141,21 @@ package body riscv32_instruction_builder_pkg is
     begin
         instruction(31 downto 12) := imm20;
         instruction(11 downto 7) := std_logic_vector(to_unsigned(rd, 5));
+        instruction(6 downto 0) := std_logic_vector(to_unsigned(opcode, 7));
+        return instruction;
+    end function;
+
+    pure function construct_system_instruction (
+        opcode : riscv32_opcode_type := riscv32_opcode_op;
+        funct3 : riscv32_funct3_type := 0;
+        funct12 : riscv32_funct12_type := 0
+    ) return riscv32_instruction_type is
+        variable instruction : riscv32_instruction_type;
+    begin
+        instruction(31 downto 20) := std_logic_vector(to_unsigned(funct12, 12));
+        instruction(19 downto 15) := (others => '0');
+        instruction(14 downto 12) := std_logic_vector(to_unsigned(funct3, 3));
+        instruction(11 downto 7) := (others => '0');
         instruction(6 downto 0) := std_logic_vector(to_unsigned(opcode, 7));
         return instruction;
     end function;

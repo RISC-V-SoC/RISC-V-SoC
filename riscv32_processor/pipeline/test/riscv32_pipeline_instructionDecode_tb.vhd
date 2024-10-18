@@ -116,6 +116,10 @@ begin
                 instructionFromInstructionFetch <= construct_utype_instruction(opcode => riscv32_opcode_lui);
                 wait for 1 ns;
                 check_true(exception_type = exception_none);
+            elsif run("mret leads to exception_return") then
+                instructionFromInstructionFetch <= construct_system_instruction(opcode => riscv32_opcode_system, funct3 => riscv32_funct3_mret, funct12 => riscv32_funct12_mret);
+                wait for 1 ns;
+                check_true(exception_type = exception_return);
             end if;
         end loop;
         test_runner_cleanup(runner);
