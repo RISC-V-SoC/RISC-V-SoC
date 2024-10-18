@@ -102,9 +102,9 @@ begin
         end if;
     end process;
 
-    determineOutputInstruction : process(outputNop, instructionFromBus)
+    determineOutputInstruction : process(outputNop, is_interrupted, instructionFromBus)
     begin
-        if outputNop then
+        if outputNop or is_interrupted then
             isBubble_buf <= true;
             instructionToInstructionDecode_buf <= riscv32_instructionNop;
             currentInstructionTransfersControl <= false;

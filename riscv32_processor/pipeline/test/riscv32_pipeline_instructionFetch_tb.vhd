@@ -262,7 +262,7 @@ begin
                 rst <= false;
                 wait for clk_period;
                 check_equal(requestFromBusAddress, std_logic_vector(unsigned(startAddress) + 4));
-            elsif run("On first rising_edge, exception_data.carries_interrup is false") then
+            elsif run("On first rising_edge, there is no exception") then
                 wait until rising_edge(clk);
                 check_true(exception_data.exception_type = exception_none);
             elsif run("Stall holds the fault back") then
@@ -295,6 +295,18 @@ begin
                 rst <= true;
                 wait for clk_period;
                 check_equal(instructionToInstructionDecode, riscv32_instructionNop);
+            elsif run("Jump does not interfere with exception") then
+                -- We start at the falling edge of the clock
+                check_equal(requestFromBusAddress, startAddress);
+                instructionFromBus <= construct_utype_instruction(opcode => riscv32_opcode_jal, rd => 6, imm20 => X"01400");
+                newProgramCounterFromInterrupt <= interruptBaseAddress;
+                wait for clk_period;
+                has_fault <= true;
+                wait for 10*clk_period;
+                overrideProgramCounterFromInterrupt <= true;
+                wait for clk_period;
+                overrideProgramCounterFromInterrupt <= false;
+                check_equal(requestFromBusAddress, interruptBaseAddress);
             end if;
         end loop;
         wait until rising_edge(clk);
