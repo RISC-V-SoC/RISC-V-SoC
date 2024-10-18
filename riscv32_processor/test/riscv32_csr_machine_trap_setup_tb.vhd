@@ -141,7 +141,6 @@ begin
                 wait for clk_period;
                 check_false(interrupts_enabled);
                 check_equal(slv2mst.read_data(3), '0');
-                check_equal(slv2mst.read_data(7), '0');
             elsif run("reset resets mstatus") then
                 mst2slv.address <= 16#0#;
                 mst2slv.do_read <= true;

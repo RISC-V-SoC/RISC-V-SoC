@@ -153,6 +153,8 @@ begin
 
             if interrupt_resolved then
                 mstatus_mie <= mstatus_mpie;
+                mstatus_mpie <= '1';
+                mstatus_mpp <= (others => '0');
             end if;
 
             if rst then
