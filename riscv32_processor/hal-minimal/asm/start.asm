@@ -13,9 +13,9 @@ __start:
     # Setup the trap vector
     la      a0, syncExceptionHandler
     csrw    mtvec,a0
-
-illegal_instruction:
-    .word 0x0
-
+    li      a0, 0x200000
+    li      a1, 0
+    csrw    cycle, a0
+    sw      a1, 12(a0)
 back_stop:
     j back_stop

@@ -129,7 +129,10 @@ architecture behaviourial of riscv32_pipeline is
     -- From memory
     signal memDataFromMem : riscv32_data_type;
     signal cpzDataFromMem : riscv32_data_type;
+    signal exceptionTypeFromMem : riscv32_pipeline_exception_type;
+    signal exceptionCodeFromMem : riscv32_exception_code_type;
     -- From mem/wb
+    signal requiresServiceFromMemWb : boolean;
     signal wbControlWordFromMemWb : riscv32_WriteBackControlWord_type;
     signal isBubbleFromMemWb : boolean;
     signal exception_data_from_memwb : riscv32_exception_data_type;
@@ -167,7 +170,7 @@ begin
 
         requestFromBusAddress => instructionAddress,
         instructionFromBus => instruction,
-        has_fault => if_has_fault or requiresServiceFromIdReg,
+        has_fault => if_has_fault or requiresServiceFromIdReg or requiresServiceFromMemWb,
         exception_code => if_exception_code,
 
         isBubble => isBubbleFromIF,
@@ -235,6 +238,7 @@ begin
         exception_data_in => exception_data_from_if,
         exception_from_stage => exceptionTypeFromId,
         exception_from_stage_code => exceptionCodeFromId,
+        force_service_request => requiresServiceFromMemWb,
         -- Pipeline control in
         registerControlWordIn => regControlwordFromId,
         executeControlWordIn => exControlWordFromId,
@@ -309,6 +313,7 @@ begin
         rst => rst or handle_exception or nopOutputToResolveHazard,
         -- Exception data in
         exception_data_in => exception_data_from_idreg,
+        force_service_request => requiresServiceFromMemWb,
         -- Pipeline control in
         executeControlWordIn => exControlWordFromIdReg,
         memoryControlWordIn => memControlWordFromIdReg,
@@ -361,6 +366,7 @@ begin
        rst => rst or handle_exception,
 
        exception_data_in => exception_data_from_regex,
+       force_service_request => exceptionTypeFromMem /= exception_none,
 
        memoryControlWordIn => memControlWordFromRegEx,
        writeBackControlWordIn => wbControlWordFromRegEx,
@@ -406,7 +412,9 @@ begin
         dataToMem => dataOut,
         dataFromMem => dataIn,
         csrOut => csr_out,
-        csr_in => csr_in
+        csr_in => csr_in,
+        exception_type => exceptionTypeFromMem,
+        exception_code => exceptionCodeFromMem
     );
 
     memWbReg : entity work.riscv32_pipeline_stageRegister
@@ -416,7 +424,11 @@ begin
        stall => stall,
        rst => rst or handle_exception,
 
+       requires_service => requiresServiceFromMemWb,
+
        exception_data_in => exception_data_from_exmem,
+       exception_from_stage => exceptionTypeFromMem,
+       exception_from_stage_code => exceptionCodeFromMem,
 
        writeBackControlWordIn => wbControlWordFromExMem,
 
@@ -459,8 +471,11 @@ begin
     );
 
     exception_handler : entity work.riscv32_pipeline_exception_handler
-    port map (
+    generic map (
+        propagation_delay => 1
+    ) port map (
         clk => clk,
+        rst => rst,
         exception_data_in => exception_data_from_memwb,
         exception_vector_base_address => interrupt_vector_base_address,
         exception_return_address => interrupt_return_address,

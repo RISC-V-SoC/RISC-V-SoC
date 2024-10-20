@@ -17,6 +17,7 @@ end entity;
 architecture tb of riscv32_pipeline_exception_handler_tb is
     constant clk_period : time := 20 ns;
     signal clk : std_logic := '0';
+    signal reset : boolean := false;
     signal exception_data_in : riscv32_exception_data_type := riscv32_exception_data_idle;
 
     signal exception_base_address : riscv32_address_type := X"20000000";
@@ -38,7 +39,7 @@ begin
                 exception_data_in.exception_type <= exception_sync;
                 exception_data_in.exception_code <= riscv32_exception_code_illegal_instruction;
                 exception_data_in.interrupted_pc <= x"00000000";
-                wait until falling_edge(clk);
+                wait for 3*clk_period;
                 check_true(exception_trigger);
                 check_false(interrupt_is_async);
                 check_equal(exception_code, exception_data_in.exception_code);
@@ -47,7 +48,7 @@ begin
                 exception_data_in.exception_type <= exception_async;
                 exception_data_in.exception_code <= riscv32_exception_code_illegal_instruction;
                 exception_data_in.interrupted_pc <= x"00000004";
-                wait until falling_edge(clk);
+                wait for 3*clk_period;
                 check_true(exception_trigger);
                 check_true(interrupt_is_async);
                 check_equal(exception_code, exception_data_in.exception_code);
@@ -56,38 +57,47 @@ begin
                 exception_data_in.exception_type <= exception_sync;
                 exception_data_in.exception_code <= riscv32_exception_code_illegal_instruction;
                 exception_data_in.interrupted_pc <= x"00000000";
-                wait until falling_edge(clk);
+                wait for 3*clk_period;
                 check_equal(address_to_instruction_fetch, exception_base_address);
             elsif run("On exception_return, address_to_instruction_fetch is set to exception_return_address") then
                 exception_data_in.exception_type <= exception_return;
                 exception_data_in.exception_code <= riscv32_exception_code_illegal_instruction;
                 exception_data_in.interrupted_pc <= x"00000000";
-                wait until falling_edge(clk);
+                wait for 3*clk_period;
                 check_equal(address_to_instruction_fetch, exception_return_address);
             elsif run("On async except and exception code 1, address_to_instruction_fetch is set to exception_base_address + 4") then
                 exception_data_in.exception_type <= exception_async;
                 exception_data_in.exception_code <= 1;
                 exception_data_in.interrupted_pc <= x"00000000";
-                wait until falling_edge(clk);
+                wait for 3*clk_period;
                 check_equal(address_to_instruction_fetch, std_logic_vector(unsigned(exception_base_address) + 4));
             elsif run("On async except and exception code 20, address_to_instruction_fetch is set to exception_base_address + 80") then
                 exception_data_in.exception_type <= exception_async;
                 exception_data_in.exception_code <= 20;
                 exception_data_in.interrupted_pc <= x"00000000";
-                wait until falling_edge(clk);
+                wait for 3*clk_period;
                 check_equal(address_to_instruction_fetch, std_logic_vector(unsigned(exception_base_address) + 80));
             elsif run("On exception return, exception resolved is true, exception trigger is false") then
                 exception_data_in.exception_type <= exception_return;
                 exception_data_in.exception_code <= riscv32_exception_code_illegal_instruction;
                 exception_data_in.interrupted_pc <= x"00000000";
-                wait until falling_edge(clk);
+                wait for 3*clk_period;
                 check_true(exception_resolved);
                 check_false(exception_trigger);
             elsif run("When no exception, neither exception resolved, nor exception triggered is true") then
                 exception_data_in.exception_type <= exception_none;
                 exception_data_in.exception_code <= riscv32_exception_code_illegal_instruction;
                 exception_data_in.interrupted_pc <= x"00000000";
-                wait until falling_edge(clk);
+                wait for 3*clk_period;
+                check_false(exception_resolved);
+                check_false(exception_trigger);
+            elsif run("Reset works") then
+                exception_data_in.exception_type <= exception_return;
+                exception_data_in.exception_code <= riscv32_exception_code_illegal_instruction;
+                exception_data_in.interrupted_pc <= x"00000000";
+                wait for clk_period;
+                reset <= true;
+                wait for clk_period;
                 check_false(exception_resolved);
                 check_false(exception_trigger);
             end if;
@@ -99,8 +109,11 @@ begin
     end process;
 
     exception_handler : entity src.riscv32_pipeline_exception_handler
-    port map (
+    generic map (
+        propagation_delay => 2
+    ) port map (
         clk => clk,
+        rst => reset,
         exception_data_in => exception_data_in,
         exception_vector_base_address => exception_base_address,
         exception_return_address => exception_return_address,

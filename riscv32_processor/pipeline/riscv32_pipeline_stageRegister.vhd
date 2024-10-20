@@ -17,6 +17,7 @@ entity riscv32_pipeline_stageRegister is
         exception_data_in : in riscv32_exception_data_type;
         exception_from_stage : in riscv32_pipeline_exception_type := exception_none;
         exception_from_stage_code : in riscv32_exception_code_type := 0;
+        force_service_request : in boolean := false;
         -- Pipeline control in
         registerControlWordIn : in riscv32_RegisterControlWord_type := riscv32_registerControlWordAllFalse;
         executeControlWordIn : in riscv32_ExecuteControlWord_type := riscv32_executeControlWordAllFalse;
@@ -80,12 +81,13 @@ begin
 
             if rst then
                 is_in_exception := false;
+                exception_data_out <= riscv32_exception_data_idle;
                 push_nop := true;
             elsif stall then
                 -- pass
             elsif not is_in_exception then
                 exception_data_out <= exception_data_buf;
-                is_in_exception := exception_data_buf.exception_type /= exception_none;
+                is_in_exception := exception_data_buf.exception_type /= exception_none or force_service_request;
                 push_nop := is_in_exception;
             else
                 exception_data_out <= riscv32_exception_data_idle;

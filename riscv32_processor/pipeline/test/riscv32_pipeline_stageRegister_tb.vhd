@@ -26,6 +26,7 @@ architecture tb of riscv32_pipeline_stageRegister_tb is
     signal exception_data_in : riscv32_exception_data_type;
     signal exception_from_stage : riscv32_pipeline_exception_type := exception_none;
     signal exception_from_stage_code : riscv32_exception_code_type := 0;
+    signal force_service_request : boolean := false;
     -- Pipeline control in
     signal registerControlWordIn : riscv32_RegisterControlWord_type := riscv32_registerControlWordAllFalse;
     signal executeControlWordIn : riscv32_ExecuteControlWord_type := riscv32_executeControlWordAllFalse;
@@ -210,6 +211,10 @@ begin
                 exception_data_in.exception_type <= exception_none;
                 wait until falling_edge(clk);
                 check_false(requires_service);
+            elsif run("Requires service follows force_service_request") then
+                force_service_request <= true;
+                wait until falling_edge(clk);
+                check_true(requires_service);
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -231,6 +236,7 @@ begin
         exception_data_in => exception_data_in,
         exception_from_stage => exception_from_stage,
         exception_from_stage_code => exception_from_stage_code,
+        force_service_request => force_service_request,
         -- Pipeline control in
         registerControlWordIn => registerControlWordIn,
         executeControlWordIn => executeControlWordIn,
