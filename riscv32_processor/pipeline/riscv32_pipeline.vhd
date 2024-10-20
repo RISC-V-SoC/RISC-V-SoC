@@ -406,7 +406,8 @@ begin
         dataToMem => dataOut,
         dataFromMem => dataIn,
         csrOut => csr_out,
-        csrReadData => csr_data
+        csrReadData => csr_data,
+        csr_error => false
     );
 
     memWbReg : entity work.riscv32_pipeline_stageRegister

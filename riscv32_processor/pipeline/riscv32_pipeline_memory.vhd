@@ -32,7 +32,12 @@ entity riscv32_pipeline_memory is
 
         -- To/from control and status registers
         csrOut : out riscv32_to_csr_type;
-        csrReadData : in riscv32_data_type
+        csrReadData : in riscv32_data_type;
+        csr_error : in boolean;
+
+        -- Exception data
+        exception_type : out riscv32_pipeline_exception_type;
+        exception_code : out riscv32_exception_code_type
     );
 end entity;
 
@@ -41,6 +46,17 @@ architecture behaviourial of riscv32_pipeline_memory is
     signal byteMaskToMem : riscv32_byte_mask_type;
     signal memWriteData : riscv32_data_type;
 begin
+
+    exception_code <= riscv32_exception_code_illegal_instruction;
+
+    exception_handling : process(csr_error, memoryControlWord)
+    begin
+        if memoryControlWord.csrOp and csr_error then
+            exception_type <= exception_sync;
+        else
+            exception_type <= exception_none;
+        end if;
+    end process;
 
     postProcessMemRead : process(dataFromMem, memoryControlWord, requestAddress, csrReadData)
         variable memDataRead_buf : riscv32_data_type;

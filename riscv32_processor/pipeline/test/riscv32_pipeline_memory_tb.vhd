@@ -38,6 +38,10 @@ architecture tb of riscv32_pipeline_memory_tb is
     signal dataFromMem : riscv32_data_type;
     signal csrOut : riscv32_to_csr_type;
     signal csrReadData : riscv32_data_type;
+    signal csr_error : boolean := false;
+
+    signal exception_type : riscv32_pipeline_exception_type;
+    signal exception_code : riscv32_exception_code_type;
 
     signal instruction : riscv32_instruction_type;
 begin
@@ -276,6 +280,23 @@ begin
                 wait for 1 ns;
                 check(not csrOut.do_write);
                 check(not csrOut.do_read);
+            elsif run("If a CSR call causes an error, we get a synchronous illegal instruction trap") then
+                instruction <= construct_itype_instruction(opcode => riscv32_opcode_system, rs1 => 1, rd => 2, funct3 => riscv32_funct3_csrrw);
+                rs1Data <= X"01020304";
+                requestAddress <= X"fffffc01";
+                wait for 1 ns;
+                csr_error <= true;
+                wait for 1 ns;
+                check(exception_type = exception_sync);
+                check_equal(exception_code, riscv32_exception_code_illegal_instruction);
+            elsif run("No CSR call error, no exception") then
+                instruction <= construct_itype_instruction(opcode => riscv32_opcode_system, rs1 => 1, rd => 2, funct3 => riscv32_funct3_csrrw);
+                rs1Data <= X"01020304";
+                requestAddress <= X"fffffc01";
+                wait for 1 ns;
+                csr_error <= false;
+                wait for 1 ns;
+                check(exception_type = exception_none);
             end if;
         end loop;
         wait for 5 ns;
@@ -301,7 +322,10 @@ begin
         dataToMem => dataToMem,
         dataFromMem => dataFromMem,
         csrOut => csrOut,
-        csrReadData => csrReadData
+        csrReadData => csrReadData,
+        csr_error => csr_error,
+        exception_type => exception_type,
+        exception_code => exception_code
     );
 
     controlDecode : entity src.riscv32_control
