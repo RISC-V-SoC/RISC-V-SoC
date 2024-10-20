@@ -11,8 +11,7 @@ entity riscv32_csr_demux is
     );
     port (
         csr_in : in riscv32_to_csr_type;
-        read_data : out riscv32_data_type;
-        error : out boolean;
+        csr_out : out riscv32_from_csr_type;
 
         demux2slv : out riscv32_csr_mst2slv_array(mapping_array'range);
         slv2demux : in riscv32_csr_slv2mst_array(mapping_array'range)
@@ -42,8 +41,8 @@ begin
     readonly_error <= csr_in.do_write and access_mode = "11";
     decoded_address <= to_integer(unsigned(csr_in.address));
     decoded_subaddress <= decoded_address mod 256;
-    error <= error_buf;
-    read_data <= read_data_buf;
+    csr_out.error <= error_buf;
+    csr_out.data <= read_data_buf;
 
     process_write_data : process(csr_in, read_data_buf)
     begin

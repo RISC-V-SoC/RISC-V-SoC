@@ -77,7 +77,7 @@ architecture behaviourial of riscv32_processor is
     signal regFile_to_bus_slv_data : riscv32_data_type;
 
     signal pipeline_to_csr : riscv32_to_csr_type;
-    signal csr_to_pipeline : riscv32_data_type;
+    signal csr_to_pipeline : riscv32_from_csr_type;
 
     signal cycleCounter_value : unsigned(63 downto 0);
     signal systemtimer_value : unsigned(63 downto 0);
@@ -126,7 +126,7 @@ begin
             data_to_regFile => bus_slv_to_regFile_data,
             data_from_regFile => regFile_to_bus_slv_data,
             csr_out => pipeline_to_csr,
-            csr_data => csr_to_pipeline,
+            csr_in => csr_to_pipeline,
             interrupt_vector_base_address => interrupt_vector_base_address,
             interrupt_return_address => pc_on_interrupt_return,
             interrupt_trigger => interrupt_trigger,
@@ -235,7 +235,7 @@ begin
         mapping_array => csr_mapping_array
     ) port map (
         csr_in => pipeline_to_csr,
-        read_data => csr_to_pipeline,
+        csr_out => csr_to_pipeline,
         demux2slv(0) => demux2user_readonly,
         demux2slv(1) => demux2machine_readonly,
         demux2slv(2) => demux2machine_trap_setup,

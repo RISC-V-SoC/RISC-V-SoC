@@ -16,8 +16,7 @@ end entity;
 
 architecture tb of riscv32_csr_demux_tb is
     signal csr_in : riscv32_to_csr_type;
-    signal read_data : riscv32_data_type;
-    signal error : boolean;
+    signal csr_out : riscv32_from_csr_type;
 
     constant mapping_array : riscv32_csr_mapping_array := (
         (address_low => 16#C00#, mapping_size => 16#C0#),
@@ -41,7 +40,7 @@ begin
                 csr_in.do_write <= false;
                 csr_in.do_read <= true;
                 wait for 1 ns;
-                check_true(error);
+                check_true(csr_out.error);
             elsif run("Read from address 0xC00 does not result in error") then
                 csr_in.command <= csr_rw;
                 csr_in.address <= std_logic_vector(to_unsigned(16#C00#, csr_in.address'length));
@@ -49,7 +48,7 @@ begin
                 csr_in.do_write <= false;
                 csr_in.do_read <= true;
                 wait for 1 ns;
-                check_false(error);
+                check_false(csr_out.error);
             elsif run("No read or write with address 0x100 results in no error") then
                 csr_in.command <= csr_rw;
                 csr_in.address <= std_logic_vector(to_unsigned(16#100#, csr_in.address'length));
@@ -57,7 +56,7 @@ begin
                 csr_in.do_write <= false;
                 csr_in.do_read <= false;
                 wait for 1 ns;
-                check_false(error);
+                check_false(csr_out.error);
             elsif run("Read from address 0xC01 results in user_readonly read with address 1") then
                 csr_in.command <= csr_rw;
                 csr_in.address <= std_logic_vector(to_unsigned(16#C01#, csr_in.address'length));
@@ -84,7 +83,7 @@ begin
                 csr_in.do_read <= true;
                 user_readonly2demux.read_data <= std_logic_vector(to_unsigned(16#1234#, user_readonly2demux.read_data'length));
                 wait for 1 ns;
-                check_equal(read_data, user_readonly2demux.read_data);
+                check_equal(csr_out.data, user_readonly2demux.read_data);
             elsif run("Read from address 0x302 results in read_data from machine_trap_handling") then
                 csr_in.command <= csr_rw;
                 csr_in.address <= std_logic_vector(to_unsigned(16#302#, csr_in.address'length));
@@ -93,7 +92,7 @@ begin
                 csr_in.do_read <= true;
                 machine_trap_handling2demux.read_data <= std_logic_vector(to_unsigned(16#5678#, machine_trap_handling2demux.read_data'length));
                 wait for 1 ns;
-                check_equal(read_data, machine_trap_handling2demux.read_data);
+                check_equal(csr_out.data, machine_trap_handling2demux.read_data);
             elsif run("Error from address 0xC02 is forwarded") then
                 csr_in.command <= csr_rw;
                 csr_in.address <= std_logic_vector(to_unsigned(16#C02#, csr_in.address'length));
@@ -102,7 +101,7 @@ begin
                 csr_in.do_read <= true;
                 user_readonly2demux.has_error <= true;
                 wait for 1 ns;
-                check_true(error);
+                check_true(csr_out.error);
             elsif run("Write to user_readonly address 0xC03 results in error") then
                 csr_in.command <= csr_rw;
                 csr_in.address <= std_logic_vector(to_unsigned(16#C03#, csr_in.address'length));
@@ -110,7 +109,7 @@ begin
                 csr_in.do_write <= true;
                 csr_in.do_read <= false;
                 wait for 1 ns;
-                check_true(error);
+                check_true(csr_out.error);
             elsif run("RW to machine_trap_handling address 0x303 results in write to machine_trap_handling") then
                 csr_in.command <= csr_rw;
                 csr_in.address <= std_logic_vector(to_unsigned(16#303#, csr_in.address'length));
@@ -158,8 +157,7 @@ begin
         mapping_array => mapping_array
     ) port map (
         csr_in => csr_in,
-        read_data => read_data,
-        error => error,
+        csr_out => csr_out,
         demux2slv(0) => demux2user_readonly,
         demux2slv(1) => demux2machine_trap_handling,
         slv2demux(0) => user_readonly2demux,

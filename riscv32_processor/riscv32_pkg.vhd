@@ -46,6 +46,11 @@ package riscv32_pkg is
         do_read : boolean;
     end record;
 
+    type riscv32_from_csr_type is record
+        data : riscv32_data_type;
+        error : boolean;
+    end record;
+
     type riscv32_InstructionDecodeControlWord_type is record
         jump : boolean;
         PCSrc : boolean;

@@ -32,8 +32,7 @@ entity riscv32_pipeline_memory is
 
         -- To/from control and status registers
         csrOut : out riscv32_to_csr_type;
-        csrReadData : in riscv32_data_type;
-        csr_error : in boolean;
+        csr_in : in riscv32_from_csr_type;
 
         -- Exception data
         exception_type : out riscv32_pipeline_exception_type;
@@ -49,16 +48,16 @@ begin
 
     exception_code <= riscv32_exception_code_illegal_instruction;
 
-    exception_handling : process(csr_error, memoryControlWord)
+    exception_handling : process(csr_in, memoryControlWord)
     begin
-        if memoryControlWord.csrOp and csr_error then
+        if memoryControlWord.csrOp and csr_in.error then
             exception_type <= exception_sync;
         else
             exception_type <= exception_none;
         end if;
     end process;
 
-    postProcessMemRead : process(dataFromMem, memoryControlWord, requestAddress, csrReadData)
+    postProcessMemRead : process(dataFromMem, memoryControlWord, requestAddress, csr_in)
         variable memDataRead_buf : riscv32_data_type;
         variable shiftCount : natural range 0 to 31;
     begin
@@ -85,7 +84,7 @@ begin
         end case;
 
         if memoryControlWord.csrOp then
-            memDataRead_buf := csrReadData;
+            memDataRead_buf := csr_in.data;
         end if;
         memDataRead <= memDataRead_buf;
     end process;

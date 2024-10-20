@@ -36,7 +36,7 @@ entity riscv32_pipeline is
 
         -- From/to control status register
         csr_out : out riscv32_to_csr_type;
-        csr_data : in riscv32_data_type;
+        csr_in : in riscv32_from_csr_type;
 
         -- Exception data
         interrupt_vector_base_address : in riscv32_address_type;
@@ -406,8 +406,7 @@ begin
         dataToMem => dataOut,
         dataFromMem => dataIn,
         csrOut => csr_out,
-        csrReadData => csr_data,
-        csr_error => false
+        csr_in => csr_in
     );
 
     memWbReg : entity work.riscv32_pipeline_stageRegister

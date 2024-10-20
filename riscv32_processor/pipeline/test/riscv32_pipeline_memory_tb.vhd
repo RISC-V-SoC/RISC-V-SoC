@@ -37,8 +37,7 @@ architecture tb of riscv32_pipeline_memory_tb is
     signal dataToMem : riscv32_data_type;
     signal dataFromMem : riscv32_data_type;
     signal csrOut : riscv32_to_csr_type;
-    signal csrReadData : riscv32_data_type;
-    signal csr_error : boolean := false;
+    signal csr_in : riscv32_from_csr_type;
 
     signal exception_type : riscv32_pipeline_exception_type;
     signal exception_code : riscv32_exception_code_type;
@@ -269,9 +268,9 @@ begin
                 instruction <= construct_itype_instruction(opcode => riscv32_opcode_system, rs1 => 0, rd => 2, funct3 => riscv32_funct3_csrrs);
                 rs1Data <= X"01020304";
                 requestAddress <= X"fffffc01";
-                csrReadData <= X"abcdef01";
+                csr_in.data <= X"abcdef01";
                 wait for 1 ns;
-                check_equal(memDataRead, csrReadData);
+                check_equal(memDataRead, csr_in.data);
             elsif run("During stall, no CSR read or write will be active") then
                 instruction <= construct_itype_instruction(opcode => riscv32_opcode_system, rs1 => 1, rd => 2, funct3 => riscv32_funct3_csrrw);
                 rs1Data <= X"01020304";
@@ -285,7 +284,7 @@ begin
                 rs1Data <= X"01020304";
                 requestAddress <= X"fffffc01";
                 wait for 1 ns;
-                csr_error <= true;
+                csr_in.error <= true;
                 wait for 1 ns;
                 check(exception_type = exception_sync);
                 check_equal(exception_code, riscv32_exception_code_illegal_instruction);
@@ -294,7 +293,7 @@ begin
                 rs1Data <= X"01020304";
                 requestAddress <= X"fffffc01";
                 wait for 1 ns;
-                csr_error <= false;
+                csr_in.error <= false;
                 wait for 1 ns;
                 check(exception_type = exception_none);
             end if;
@@ -322,8 +321,7 @@ begin
         dataToMem => dataToMem,
         dataFromMem => dataFromMem,
         csrOut => csrOut,
-        csrReadData => csrReadData,
-        csr_error => csr_error,
+        csr_in => csr_in,
         exception_type => exception_type,
         exception_code => exception_code
     );
