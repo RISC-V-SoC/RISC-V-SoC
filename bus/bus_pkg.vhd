@@ -41,11 +41,13 @@ package bus_pkg is
     subtype bus_byte_type        is std_logic_vector(bus_byte_size - 1 downto 0);   -- A byte, lowest adressable unit
     subtype bus_fault_type       is std_logic_vector(bus_fault_size - 1 downto 0); -- any bus fault word
 
-    type bus_data_array is array (natural range <>) of bus_data_type;
-    type bus_byte_array is array (natural range <>) of bus_byte_type;
-
     constant bus_bytes_per_word : positive := bus_data_type'length / bus_byte_size;
     constant bus_bytes_per_word_log2b : natural := bus_data_width_log2b - bus_byte_size_log2b;
+
+    subtype bus_aligned_address_type is std_logic_vector(2**bus_address_width_log2b - 1 downto bus_bytes_per_word_log2b); -- Any bus address that is aligned to the bus.
+
+    type bus_data_array is array (natural range <>) of bus_data_type;
+    type bus_byte_array is array (natural range <>) of bus_byte_type;
 
     subtype bus_byte_mask_type is std_logic_vector(bus_bytes_per_word - 1 downto 0);
 
