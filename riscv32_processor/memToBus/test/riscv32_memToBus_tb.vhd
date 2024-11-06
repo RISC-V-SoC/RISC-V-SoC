@@ -154,7 +154,7 @@ begin
                 wait until falling_edge(clk);
                 address <= X"00003000";
                 doRead <= true;
-                wait until falling_edge(clk) and not stallOut;
+                wait until rising_edge(clk) and not stallOut;
                 check_equal(dataOut, std_logic_vector'(X"87654321"));
                 simulated_bus_memory_pkg.write_to_address(
                     net => net,
@@ -162,7 +162,7 @@ begin
                     addr => std_logic_vector'(X"00000000"),
                     mask => (others => '1'),
                     data => std_logic_vector'(X"01234567"));
-                wait until falling_edge(clk) and not stallOut;
+                wait until rising_edge(clk) and not stallOut;
                 check_equal(dataOut, std_logic_vector'(X"01234567"));
             elsif run("Valid cache does not prevent uncached read") then
                 simulated_bus_memory_pkg.write_to_address(
