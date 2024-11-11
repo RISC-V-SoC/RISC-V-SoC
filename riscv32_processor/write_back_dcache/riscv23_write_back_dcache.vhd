@@ -10,7 +10,8 @@ use work.bus_pkg.all;
 entity riscv32_write_back_dcache is
     generic (
         word_count_log2b : natural;
-        cache_range_size : natural
+        cache_range_size : natural;
+        cached_base_address : bus_aligned_address_type
     );
     port (
         clk : in std_logic;
@@ -49,7 +50,8 @@ architecture behaviourial of riscv32_write_back_dcache is
 begin
     reconstruct_address : process(cachedTag, addressIn)
     begin
-        reconstructedAddr <= addressIn;
+        reconstructedAddr <= cached_base_address;
+        reconstructedAddr(line_address_part_msb downto line_address_part_lsb) <= addressIn(line_address_part_msb downto line_address_part_lsb);
         reconstructedAddr(tag_part_msb downto tag_part_lsb) <= cachedTag;
     end process;
 

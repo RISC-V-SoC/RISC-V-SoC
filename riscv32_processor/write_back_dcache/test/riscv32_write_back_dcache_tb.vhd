@@ -19,6 +19,7 @@ architecture tb of riscv32_write_back_dcache_tb is
     constant clk_period : time := 20 ns;
     constant word_count_log2b : natural := 4;
     constant cache_range_size : natural := 16#10000#;
+    constant cached_base_address : bus_address_type := X"00020000";
 
     signal clk : std_logic := '0';
     signal rst : boolean := false;
@@ -41,6 +42,7 @@ begin
     clk <= not clk after (clk_period/2);
 
     main : process
+        variable fullAddress : bus_address_type;
         variable actualAddress : std_logic_vector(bus_address_type'range);
         variable writeValue : riscv32_data_type;
     begin
@@ -152,15 +154,18 @@ begin
                 rst <= false;
                 check_false(dirty);
             elsif run("Address can be reconstructed") then
-                addressIn <= std_logic_vector(to_unsigned(16#2100C#, addressIn'length));
+                fullAddress := std_logic_vector(to_unsigned(16#2100C#, fullAddress'length));
+                addressIn <= fullAddress(addressIn'range);
                 proc_dataIn <= X"12345678";
                 proc_byteMask <= "1111";
                 proc_doWrite <= true;
                 wait until falling_edge(clk);
-                addressIn <= std_logic_vector(to_unsigned(16#2200C#, addressIn'length));
+                fullAddress := std_logic_vector(to_unsigned(16#2200C#, fullAddress'length));
+                addressIn <= fullAddress(addressIn'range);
                 proc_doWrite <= false;
                 wait for 1 fs;
-                check_equal(reconstructedAddr, std_logic_vector(to_unsigned(16#2100C#, addressIn'length)));
+                fullAddress := std_logic_vector(to_unsigned(16#2100C#, fullAddress'length));
+                check_equal(reconstructedAddr, fullAddress(reconstructedAddr'range));
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -173,7 +178,8 @@ begin
     dcache : entity src.riscv32_write_back_dcache
     generic map (
         word_count_log2b => word_count_log2b,
-        cache_range_size => cache_range_size
+        cache_range_size => cache_range_size,
+        cached_base_address => cached_base_address(bus_aligned_address_type'range)
     ) port map (
         clk => clk,
         rst => rst,

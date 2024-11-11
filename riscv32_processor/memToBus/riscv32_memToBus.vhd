@@ -210,7 +210,7 @@ begin
         end if;
     end process;
 
-    determine_interactor_write_in : process(byteMask_indicates_full_word, cache_miss, cache_line_dirty, doWrite, doRead, cache_reconstructedAddr, cache_dataOut, dataIn, address, volatile_write_cache_valid, fsm_write_busy)
+    determine_interactor_write_in : process(byteMask_indicates_full_word, cache_miss, cache_line_dirty, doWrite, doRead, cache_reconstructedAddr, cache_dataOut, dataIn, address, volatile_write_cache_valid, fsm_write_busy, address_in_dcache_range)
     begin
         -- Cover all default cases
         interactor_should_write_cached <= false;
@@ -298,7 +298,8 @@ begin
     dcache : entity work.riscv32_write_back_dcache
     generic map (
         word_count_log2b => cache_word_count_log2b,
-        cache_range_size => cache_range
+        cache_range_size => cache_range,
+        cached_base_address => range_to_cache.low(bus_aligned_address_type'range)
     ) port map (
         clk => clk,
         rst => rst,
