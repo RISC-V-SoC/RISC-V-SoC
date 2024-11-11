@@ -37,7 +37,6 @@ architecture tb of riscv32_memToBus_bus_interaction_tb is
     signal completed : boolean;
     signal fault : boolean;
     signal dataOut : bus_data_type;
-    signal faultData : bus_fault_type;
 begin
     clk <= not clk after (clk_period/2);
 
@@ -101,7 +100,6 @@ begin
                 wait until rising_edge(clk) and bus_requesting(mst2slv);
                 slv2mst.valid <= false;
                 slv2mst.fault <= '1';
-                slv2mst.faultData <= bus_fault_illegal_byte_mask;
                 wait until rising_edge(clk);
                 slv2mst.valid <= false;
                 wait until falling_edge(clk);
@@ -148,7 +146,6 @@ begin
         busy => busy,
         completed => completed,
         fault => fault,
-        dataOut => dataOut,
-        faultData => faultData
+        dataOut => dataOut
     );
 end architecture;

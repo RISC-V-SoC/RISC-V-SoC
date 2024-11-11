@@ -25,8 +25,7 @@ entity riscv32_memToBus_bus_interaction is
         busy : out boolean;
         completed : out boolean;
         fault : out boolean;
-        dataOut : out bus_data_type;
-        faultData : out bus_fault_type
+        dataOut : out bus_data_type
     );
 end entity;
 
@@ -46,7 +45,6 @@ begin
                 completed <= true;
                 fault <= slv2mst.fault = '1';
                 dataOut <= slv2mst.readData;
-                faultData <= slv2mst.faultData;
                 mst2slv_buf := BUS_MST2SLV_IDLE;
             elsif bus_requesting(mst2slv_buf) then
                 busy <= true;
