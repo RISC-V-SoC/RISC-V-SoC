@@ -26,10 +26,15 @@ entity riscv32_write_back_dcache is
         bus_dataIn : in riscv32_data_type;
         bus_doWrite : in boolean;
 
-        dataOut : out riscv32_instruction_type;
+        dataOut : out bus_data_type;
         reconstructedAddr : out bus_aligned_address_type;
         dirty : out boolean;
-        miss : out boolean
+        miss : out boolean;
+
+        line_address : in natural range 0 to 2**word_count_log2b - 1;
+        line_reconstructedAddr : out bus_aligned_address_type;
+        line_dataOut : out bus_data_type;
+        line_dirty : out boolean
     );
 end entity;
 
@@ -47,12 +52,21 @@ architecture behaviourial of riscv32_write_back_dcache is
     type valid_array is array (natural range 0 to word_count - 1) of boolean;
 
     signal cachedTag : std_logic_vector(tag_size - 1 downto 0);
+
+    signal line_address_cachedTag : std_logic_vector(tag_size - 1 downto 0);
 begin
     reconstruct_address : process(cachedTag, addressIn)
     begin
         reconstructedAddr <= cached_base_address;
         reconstructedAddr(line_address_part_msb downto line_address_part_lsb) <= addressIn(line_address_part_msb downto line_address_part_lsb);
         reconstructedAddr(tag_part_msb downto tag_part_lsb) <= cachedTag;
+    end process;
+
+    reconstruct_line_address : process(line_address, line_address_cachedTag)
+    begin
+        line_reconstructedAddr <= cached_base_address;
+        line_reconstructedAddr(line_address_part_msb downto line_address_part_lsb) <= std_logic_vector(to_unsigned(line_address, line_address_part_msb - line_address_part_lsb + 1));
+        line_reconstructedAddr(tag_part_msb downto tag_part_lsb) <= line_address_cachedTag;
     end process;
 
     cache_bank : process(clk, addressIn)
@@ -68,6 +82,11 @@ begin
         lineAddress := to_integer(unsigned(addressIn(line_address_part_msb downto line_address_part_lsb)));
         tag := addressIn(tag_part_msb downto tag_part_lsb);
         if rising_edge(clk) then
+
+            line_address_cachedTag <= tag_bank(line_address);
+            line_dataOut <= data_bank(line_address);
+            line_dirty <= dirty_bank(line_address);
+
             if rst then
                 valid_bank := (others => false);
                 dirty_bank := (others => false);

@@ -37,6 +37,11 @@ architecture tb of riscv32_write_back_dcache_tb is
     signal reconstructedAddr : bus_aligned_address_type;
     signal dirty : boolean;
     signal miss : boolean;
+
+    signal line_address : natural := 0;
+    signal line_reconstructedAddr : bus_aligned_address_type;
+    signal line_dataOut : bus_data_type;
+    signal line_dirty : boolean;
 begin
 
     clk <= not clk after (clk_period/2);
@@ -166,6 +171,30 @@ begin
                 wait for 1 fs;
                 fullAddress := std_logic_vector(to_unsigned(16#2100C#, fullAddress'length));
                 check_equal(reconstructedAddr, fullAddress(reconstructedAddr'range));
+            elsif run("Check line_address logic") then
+                wait until falling_edge(clk);
+                addressIn <= std_logic_vector(to_unsigned(16#0#, addressIn'length));
+                proc_dataIn <= X"55667788";
+                proc_byteMask <= "1111";
+                proc_doWrite <= true;
+                wait until falling_edge(clk);
+                proc_doWrite <= false;
+                addressIn <= std_logic_vector(to_unsigned(16#1#, addressIn'length));
+                bus_dataIn <= X"11223344";
+                bus_doWrite <= true;
+                wait until falling_edge(clk);
+                bus_doWrite <= false;
+                line_address <= 0;
+                wait until falling_edge(clk);
+                check_equal(line_reconstructedAddr, cached_base_address(line_reconstructedAddr'range));
+                check_equal(line_dataOut, proc_dataIn);
+                check_true(line_dirty);
+                line_address <= 1;
+                wait until falling_edge(clk);
+                actualAddress := std_logic_vector((unsigned(cached_base_address) + 4));
+                check_equal(line_reconstructedAddr, actualAddress(line_reconstructedAddr'range));
+                check_equal(line_dataOut, bus_dataIn);
+                check_false(line_dirty);
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -173,7 +202,7 @@ begin
         test_runner_cleanup(runner);
         wait;
     end process;
-    test_runner_watchdog(runner,  100 ns);
+    test_runner_watchdog(runner,  1 us);
 
     dcache : entity src.riscv32_write_back_dcache
     generic map (
@@ -192,7 +221,11 @@ begin
         dataOut => dataOut,
         reconstructedAddr => reconstructedAddr,
         dirty => dirty,
-        miss => miss
+        miss => miss,
+        line_address => line_address,
+        line_reconstructedAddr => line_reconstructedAddr,
+        line_dataOut => line_dataOut,
+        line_dirty => line_dirty
     );
 
 

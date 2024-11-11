@@ -312,6 +312,7 @@ begin
         dataOut => cache_dataOut,
         reconstructedAddr => cache_reconstructedAddr,
         dirty => cache_line_dirty,
-        miss => cache_miss
+        miss => cache_miss,
+        line_address => 0
     );
 end architecture;
