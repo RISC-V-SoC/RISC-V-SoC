@@ -182,7 +182,11 @@ begin
     state_machine_next : process(clk)
     begin
         if rising_edge(clk) then
-            current_state <= next_state;
+            if rst then
+                current_state <= idle;
+            else
+                current_state <= next_state;
+            end if;
         end if;
     end process;
 
@@ -211,7 +215,11 @@ begin
     volatile_cache : process(clk)
     begin
         if rising_edge(clk) then
-            if volatile_cache_update_read then
+            if rst then
+                volatile_read_cache_valid <= false;
+                volatile_write_cache_valid <= false;
+                hasFault <= false;
+            elsif volatile_cache_update_read then
                 volatile_cache_data <= interactor_dataOut;
                 volatile_read_cache_valid <= true;
                 hasFault <= interactor_fault;
@@ -321,6 +329,11 @@ begin
         variable cache_line_address : natural range 0 to 2**cache_word_count_log2b - 1 := 0;
     begin
         if rising_edge(clk) then
+            if rst then
+                flush_cur_state := idle;
+            else
+                flush_cur_state := flush_next_state;
+            end if;
             case flush_cur_state is
                 when idle =>
                     cache_line_address := 0;
