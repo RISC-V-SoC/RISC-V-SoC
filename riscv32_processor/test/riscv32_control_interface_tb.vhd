@@ -32,6 +32,9 @@ architecture tb of riscv32_control_interface_tb is
     signal cpu_reset : boolean;
     signal cpu_stall : boolean;
 
+    signal flush_cache : boolean := true;
+    signal cache_flush_in_progress : boolean := false;
+
 begin
 
     clk <= not clk after (clk_period/2);
@@ -82,7 +85,7 @@ begin
                 wait until falling_edge(clk);
                 check(not cpu_reset);
                 check(cpu_stall);
-            elsif run("Only bits 0 and 1 are writable") then
+            elsif run("Only bits 0, 1 and 2 are writable") then
                 wait until falling_edge(clk);
                 address_from_controller <= 0;
                 data_from_controller <= (others => '1');
@@ -90,7 +93,7 @@ begin
                 wait until falling_edge(clk);
                 write_from_controller <= false;
                 wait until rising_edge(clk);
-                check(data_to_controller = X"00000003");
+                check(data_to_controller = X"00000007");
             elsif run("rst resets") then
                 wait until falling_edge(clk);
                 address_from_controller <= 0;
@@ -107,6 +110,25 @@ begin
                 address_from_controller <= 1;
                 wait until falling_edge(clk);
                 check_equal(to_integer(unsigned(data_to_controller)), clk_frequency);
+            elsif run("Setting bit 3 in address 0 puts cache_flush high for one cycle") then
+                wait until falling_edge(clk);
+                address_from_controller <= 0;
+                data_from_controller <= (others => '1');
+                write_from_controller <= true;
+                wait until falling_edge(clk);
+                write_from_controller <= false;
+                check_true(flush_cache);
+                wait for clk_period;
+                check_false(flush_cache);
+            elsif run("Address 4 bit 0 corresponds to cache_flush_in_progress") then
+                cache_flush_in_progress <= false;
+                wait until falling_edge(clk);
+                address_from_controller <= 4;
+                wait until falling_edge(clk);
+                check_true(data_to_controller(0) = '0');
+                cache_flush_in_progress <= true;
+                wait until falling_edge(clk);
+                check_true(data_to_controller(0) = '1');
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -133,6 +155,8 @@ begin
         mem_fault => false,
         mem_faultData => (others => '0'),
         cpu_reset => cpu_reset,
-        cpu_stall => cpu_stall
+        cpu_stall => cpu_stall,
+        flush_cache => flush_cache,
+        cache_flush_in_progress => cache_flush_in_progress
     );
 end architecture;

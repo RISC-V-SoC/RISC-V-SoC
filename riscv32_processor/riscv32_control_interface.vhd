@@ -25,17 +25,20 @@ entity riscv32_control_interface is
         mem_fault : in boolean;
         mem_faultData : in bus_pkg.bus_fault_type;
         cpu_reset : out boolean;
-        cpu_stall : out boolean
+        cpu_stall : out boolean;
+        flush_cache : out boolean;
+        cache_flush_in_progress : in boolean
     );
 end entity;
 
 architecture behaviourial of riscv32_control_interface is
     constant clk_frequency : natural := (1 sec)/clk_period;
-    signal regFile : riscv32_pkg.riscv32_data_array(0 to 3);
+    signal regFile : riscv32_pkg.riscv32_data_array(0 to 4);
 begin
 
     cpu_reset <= regFile(0)(0) = '1';
     cpu_stall <= regFile(0)(1) = '1';
+    flush_cache <= regFile(0)(2) = '1';
 
     regFile(1) <= std_logic_vector(to_unsigned(clk_frequency, regFile(1)'length));
     regFile(2) <= instructionAddress;
@@ -47,6 +50,8 @@ begin
     regFile(3)(23 downto 17) <= (others => '0');
     regFile(3)(27 downto 24) <= mem_faultData;
     regFile(3)(31 downto 28) <= (others => '0');
+    regFile(4)(0) <= '1' when cache_flush_in_progress else '0';
+    regFile(4)(31 downto 1) <= (others => '0');
 
     controller_reader : process(address_from_controller, regFile)
     begin
@@ -61,6 +66,7 @@ begin
         variable regZero_buf : riscv32_pkg.riscv32_data_type := (1 => '1', others => '0');
     begin
         if rising_edge(clk) then
+            regZero_buf(2) := '0';
             if rst then
                 regZero_buf := (1 => '1', others => '0');
             else
@@ -69,7 +75,7 @@ begin
                 end if;
             end if;
         end if;
-        regZero_buf(31 downto 2) := (others => '0');
+        regZero_buf(31 downto 3) := (others => '0');
         regFile(0) <= regZero_buf;
     end process;
 

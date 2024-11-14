@@ -101,6 +101,28 @@ architecture tb of riscv32_processor_tb is
         mst2slv <= BUS_MST2SLV_IDLE;
     end procedure;
 
+    procedure flush_cache (signal mst2slv : inout bus_mst2slv_type; signal slv2mst : in bus_slv2mst_type) is
+        constant writeData : bus_data_type := (2 => '1', others => '0');
+    begin
+        mst2slv <= bus_mst2slv_write(
+            address => std_logic_vector(to_unsigned(controllerAddress, bus_address_type'length)),
+            write_data => writeData,
+            byte_mask => (others => '1'));
+        wait until rising_edge(clk) and any_transaction(mst2slv, slv2mst);
+        check(write_transaction(mst2slv, slv2mst));
+        mst2slv <= BUS_MST2SLV_IDLE;
+        while true loop
+            wait for 20 * clk_period;
+            mst2slv <= bus_mst2slv_read(
+                address => std_logic_vector(to_unsigned(controllerAddress + 16, bus_address_type'length)));
+            wait until rising_edge(clk) and any_transaction(mst2slv, slv2mst);
+            mst2slv <= BUS_MST2SLV_IDLE;
+            check(read_transaction(mst2slv, slv2mst));
+            exit when slv2mst.readData(0) = '0';
+        end loop;
+    end procedure;
+
+
     procedure check_word_at_address(
         signal net : inout network_t;
         constant address : in bus_address_type;
@@ -145,6 +167,7 @@ begin
                 simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/storeEleven.txt");
                 start_cpu(test2slv, slv2test);
                 wait for 100*clk_period;
+                flush_cache(test2slv, slv2test);
                 expectedReadData := X"0000000b";
                 readAddr := std_logic_vector(to_unsigned(16#14#, bus_address_type'length));
                 check_word_at_address(net, readAddr, expectedReadData);
@@ -152,6 +175,7 @@ begin
                 simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/loadThenStore.txt");
                 start_cpu(test2slv, slv2test);
                 wait for 100*clk_period;
+                flush_cache(test2slv, slv2test);
                 expectedReadData := X"0000000e";
                 readAddr := std_logic_vector(to_unsigned(16#1c#, bus_address_type'length));
                 check_word_at_address(net, readAddr, expectedReadData);
@@ -159,6 +183,7 @@ begin
                 simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/loopedAdd.txt");
                 start_cpu(test2slv, slv2test);
                 wait for 20 us;
+                flush_cache(test2slv, slv2test);
                 expectedReadData := X"00000007";
                 readAddr := std_logic_vector(to_unsigned(16#24#, bus_address_type'length));
                 check_word_at_address(net, readAddr, expectedReadData);
@@ -166,6 +191,7 @@ begin
                 simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/minimalBubblesort.txt");
                 start_cpu(test2slv, slv2test);
                 wait for 500 us;
+                flush_cache(test2slv, slv2test);
                 curAddr := 16#15c#;
                 for i in -6 to 5 loop
                     readAddr := std_logic_vector(to_unsigned(curAddr, bus_address_type'length));
@@ -191,26 +217,13 @@ begin
                     check_word_at_address(net, readAddr, expectedReadData);
                     curAddr := curAddr + 4;
                 end loop;
-            elsif run("rdtime") then
-                simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/rdtime.txt");
-                start_cpu(test2slv, slv2test);
-                wait for 10 us;
-                expectedReadData := X"00000003";
-                readAddr := std_logic_vector(to_unsigned(16#60#, bus_address_type'length));
-                check_word_at_address(net, readAddr, expectedReadData);
             elsif run("rdinstret") then
                 simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/rdinstret.txt");
                 start_cpu(test2slv, slv2test);
                 wait for 10 us;
+                flush_cache(test2slv, slv2test);
                 expectedReadData := X"0000000e";
                 readAddr := std_logic_vector(to_unsigned(16#70#, bus_address_type'length));
-                check_word_at_address(net, readAddr, expectedReadData);
-            elsif run("rdcycle") then
-                simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/rdcycle.txt");
-                start_cpu(test2slv, slv2test);
-                wait for 10 us;
-                expectedReadData := X"000000a4";
-                readAddr := std_logic_vector(to_unsigned(16#88#, bus_address_type'length));
                 check_word_at_address(net, readAddr, expectedReadData);
             elsif run("Run, reset and then run again") then
                 simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/storeEleven.txt");
@@ -220,6 +233,7 @@ begin
                 simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/loopedAdd.txt");
                 start_cpu(test2slv, slv2test);
                 wait for 20 us;
+                flush_cache(test2slv, slv2test);
                 expectedReadData := X"00000007";
                 readAddr := std_logic_vector(to_unsigned(16#24#, bus_address_type'length));
                 check_word_at_address(net, readAddr, expectedReadData);

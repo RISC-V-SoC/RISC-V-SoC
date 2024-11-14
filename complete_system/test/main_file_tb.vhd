@@ -87,6 +87,40 @@ architecture tb of main_file_tb is
         check_stream(net, command_uart_slave_stream, uart_bus_master_pkg.ERROR_NO_ERROR);
     end procedure;
 
+    procedure read_word(
+        signal net : inout network_t;
+        constant addr : in bus_address_type;
+        variable data : out bus_data_type) is
+        variable stream_word : std_logic_vector(7 downto 0);
+    begin
+        push_stream(net, command_uart_master_stream, uart_bus_master_pkg.COMMAND_READ_WORD);
+        check_stream(net, command_uart_slave_stream, uart_bus_master_pkg.ERROR_NO_ERROR);
+        for i in 0 to bus_bytes_per_word - 1 loop
+            push_stream(net, command_uart_master_stream, addr(i*8 + 7 downto i*8));
+        end loop;
+        for i in 0 to bus_bytes_per_word - 1 loop
+            pop_stream(net, command_uart_slave_stream, stream_word);
+            data(i*8 + 7 downto i*8) := stream_word;
+        end loop;
+        check_stream(net, command_uart_slave_stream, uart_bus_master_pkg.ERROR_NO_ERROR);
+    end procedure;
+
+    procedure flush_cache(
+        signal net : inout network_t) is
+        variable data : bus_data_type;
+        variable address : bus_address_type;
+    begin
+        data := X"00000004";
+        address := std_logic_vector(to_unsigned(16#2000#, bus_address_type'length));
+        write(net, address, data);
+        address := std_logic_vector(to_unsigned(16#2000# + 16, bus_address_type'length));
+        while true loop
+            wait for 1 us;
+            read_word(net, address, data);
+            exit when data(0) = '0';
+        end loop;
+    end procedure;
+
     procedure write_file(
             signal net : inout network_t;
             constant addr : in bus_address_type;
@@ -131,6 +165,7 @@ begin
                 write_file(net, spimem0_start_address, "./complete_system/test/programs/fullBubblesort.txt");
                 write(net, processor_controller_start_address, X"00000000");
                 wait for 300 us;
+                flush_cache(net);
                 curAddr := 16#00120000#;
                 for i in -6 to 5 loop
                     address := std_logic_vector(to_unsigned(curAddr, address'length));

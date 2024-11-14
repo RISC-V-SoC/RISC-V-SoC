@@ -62,7 +62,6 @@ architecture behaviourial of riscv32_processor is
     signal instructionStall : boolean;
 
     signal memoryHasFault : boolean;
-    signal memoryFaultData : bus_fault_type;
     signal memoryStall : boolean;
     signal forbidBusInteraction : boolean;
 
@@ -100,6 +99,9 @@ architecture behaviourial of riscv32_processor is
     signal exception_code : riscv32_exception_code_type;
     signal interrupted_pc : riscv32_address_type;
     signal pc_on_interrupt_return : riscv32_address_type;
+
+    signal flush_cache : boolean;
+    signal cache_flush_in_progress : boolean;
 begin
     pipelineStall <= controllerStall or instructionStall or memoryStall;
     forbidBusInteraction <= controllerStall;
@@ -172,26 +174,26 @@ begin
         stall => instructionStall
     );
 
-    mem2bus : entity work.riscv32_mem2bus
+    mem2bus : entity work.riscv32_memTobus
     generic map (
         range_to_cache => dCache_range,
         cache_word_count_log2b => dCache_word_count_log2b
     ) port map (
         clk => clk,
         rst => rst,
-        forbidBusInteraction => forbidBusInteraction,
-        flushCache => rst,
+        flush_cache => flush_cache,
+        cache_flush_busy => cache_flush_in_progress,
         mst2slv => memory2slv,
         slv2mst => slv2memory,
         hasFault => memoryHasFault,
-        faultData => memoryFaultData,
         address => dataAddress,
         byteMask => dataByteMask,
         dataIn => dataToBus,
-        dataOut => dataFromBus,
         doWrite => dataWrite,
         doRead => dataRead,
-        stall => memoryStall
+        stallIn => pipelineStall,
+        dataOut => dataFromBus,
+        stallOut => memoryStall
     );
 
     control_interface : entity work.riscv32_control_interface
@@ -208,9 +210,11 @@ begin
         if_fault => instructionFetchHasFault,
         if_faultData => instructionFetchFaultData,
         mem_fault => memoryHasFault,
-        mem_faultData => memoryFaultData,
+        mem_faultData => (others => '0'),
         cpu_reset => reset_request,
-        cpu_stall => controllerStall
+        cpu_stall => controllerStall,
+        flush_cache => flush_cache,
+        cache_flush_in_progress => cache_flush_in_progress
     );
 
     systemtimer : entity work.riscv32_systemtimer
