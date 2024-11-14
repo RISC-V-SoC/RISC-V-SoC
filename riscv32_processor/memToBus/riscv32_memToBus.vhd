@@ -163,6 +163,7 @@ begin
                 cache_doWrite_fromBus <= false;
                 interactor_doWrite <= false;
                 interactor_doRead <= false;
+                volatile_cache_update_read <= false;
                 volatile_cache_update_write <= interactor_completed;
                 fsm_write_busy <= true;
                 cache_flush_allowed <= false;
@@ -195,7 +196,7 @@ begin
         end if;
     end process;
 
-    determine_stallout : process(cache_miss, doRead, state_forces_stall, address_in_dcache_range, volatile_read_cache_valid, interactor_should_write_cached, fsm_write_busy, flush_cache, cache_flush_required, interactor_should_write_uncached, byteMask_indicates_full_word)
+    determine_stallout : process(cache_miss, doRead, state_forces_stall, address_in_dcache_range, volatile_read_cache_valid, interactor_should_write_cached, fsm_write_busy, flush_cache, cache_flush_required, interactor_should_write_uncached, byteMask_indicates_full_word, doWrite)
     begin
         stallOut <= false;
         if state_forces_stall then
@@ -257,7 +258,7 @@ begin
         end if;
     end process;
 
-    determine_interactor_write_in : process(byteMask_indicates_full_word, cache_miss, cache_line_dirty, doWrite, doRead, cache_reconstructedAddr, cache_dataOut, dataIn, address, volatile_write_cache_valid, fsm_write_busy, address_in_dcache_range, cache_flush_reconstructedAddr, cache_flush_line_data_out, cache_flush_allowed)
+    determine_interactor_write_in : process(byteMask_indicates_full_word, cache_miss, cache_line_dirty, doWrite, doRead, cache_reconstructedAddr, cache_dataOut, dataIn, address, volatile_write_cache_valid, fsm_write_busy, address_in_dcache_range, cache_flush_reconstructedAddr, cache_flush_line_data_out, cache_flush_allowed, byteMask)
     begin
         -- Cover all default cases
         interactor_should_write_cached <= false;
