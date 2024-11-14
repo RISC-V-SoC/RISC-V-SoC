@@ -52,8 +52,7 @@ architecture tb of main_file_tb is
     -- SPI Device
     signal spi_ss : std_logic;
     signal spi_clk : std_logic;
-    signal spi_mosi : std_logic;
-    signal spi_miso : std_logic;
+    signal spi_mosi_miso : std_logic;
 
     procedure write(
         signal net : inout network_t;
@@ -214,6 +213,13 @@ begin
                     check_stream(net, slave_uart_slave_stream, X"0D");
                     check_stream(net, slave_uart_slave_stream, X"0A");
                 end loop;
+            elsif run("SPI test") then
+                write_file(net, spimem0_start_address, "./complete_system/test/programs/spi_test.txt");
+                write(net, processor_controller_start_address, X"00000000");
+                check_stream(net, slave_uart_slave_stream, X"4F");
+                check_stream(net, slave_uart_slave_stream, X"4B");
+                check_stream(net, slave_uart_slave_stream, X"0D");
+                check_stream(net, slave_uart_slave_stream, X"0A");
             end if;
         end loop;
         wait until rising_edge(clk) or falling_edge(clk);
@@ -252,8 +258,8 @@ begin
         slave_tx => slv_tx,
         spi_ss => spi_ss,
         spi_clk => spi_clk,
-        spi_mosi => spi_mosi,
-        spi_miso => spi_miso
+        spi_mosi => spi_mosi_miso,
+        spi_miso => spi_mosi_miso
     );
 
     command_uart_slave : entity vunit_lib.uart_slave
