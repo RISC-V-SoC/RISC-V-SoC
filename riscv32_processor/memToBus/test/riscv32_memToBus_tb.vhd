@@ -26,6 +26,9 @@ architecture tb of riscv32_memToBus_tb is
     signal clk : std_logic := '0';
     signal rst : boolean := false;
 
+    signal flush_cache : boolean := false;
+    signal cache_flush_busy : boolean;
+
     signal mst2slv : bus_mst2slv_type;
     signal slv2mst : bus_slv2mst_type := BUS_SLV2MST_IDLE;
 
@@ -359,6 +362,136 @@ begin
                 doRead <= true;
                 wait until rising_edge(clk) and not stallOut;
                 check_true(hasFault);
+            elsif run("Cache flush flushes cache") then
+                simulated_bus_memory_pkg.write_to_address(
+                    net => net,
+                    actor => cachedMemActor,
+                    addr => std_logic_vector'(X"00000000"),
+                    mask => (others => '1'),
+                    data => std_logic_vector'(X"01234567"));
+                wait until falling_edge(clk);
+                address <= X"00002004";
+                doWrite <= true;
+                dataIn <= X"F0002004";
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                address <= X"00002008";
+                doWrite <= true;
+                dataIn <= X"F0002008";
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                address <= X"00002014";
+                doWrite <= true;
+                dataIn <= X"F0002014";
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                doWrite <= false;
+                flush_cache <= true;
+                wait until rising_edge(clk);
+                check_true(stallOut);
+                flush_cache <= false;
+                wait until rising_edge(clk);
+                check_true(stallOut);
+                check_true(cache_flush_busy);
+                wait until rising_edge(clk) and not cache_flush_busy;
+                wait until rising_edge(clk) and not stallOut;
+                simulated_bus_memory_pkg.read_from_address(
+                    net => net,
+                    actor => cachedMemActor,
+                    addr => std_logic_vector'(X"00000000"),
+                    data => data);
+                check_equal(data, std_logic_vector'(X"01234567"));
+                simulated_bus_memory_pkg.read_from_address(
+                    net => net,
+                    actor => cachedMemActor,
+                    addr => std_logic_vector'(X"00000004"),
+                    data => data);
+                check_equal(data, std_logic_vector'(X"F0002004"));
+                simulated_bus_memory_pkg.read_from_address(
+                    net => net,
+                    actor => cachedMemActor,
+                    addr => std_logic_vector'(X"00000008"),
+                    data => data);
+                check_equal(data, std_logic_vector'(X"F0002008"));
+                simulated_bus_memory_pkg.read_from_address(
+                    net => net,
+                    actor => cachedMemActor,
+                    addr => std_logic_vector'(X"00000014"),
+                    data => data);
+                check_equal(data, std_logic_vector'(X"F0002014"));
+            elsif run("After a cache flush, the cache is reset") then
+                wait until falling_edge(clk);
+                address <= X"00002000";
+                doWrite <= true;
+                dataIn <= X"F0002004";
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                doWrite <= false;
+                flush_cache <= true;
+                wait until rising_edge(clk);
+                flush_cache <= false;
+                wait until rising_edge(clk) and not stallOut;
+                simulated_bus_memory_pkg.write_to_address(
+                    net => net,
+                    actor => cachedMemActor,
+                    addr => std_logic_vector'(X"00000000"),
+                    mask => (others => '1'),
+                    data => std_logic_vector'(X"01234567"));
+                doRead <= true;
+                wait until rising_edge(clk) and not stallOut;
+                check_equal(dataOut, std_logic_vector'(X"01234567"));
+            elsif run("Start cache flush together with uncached write") then
+                wait until falling_edge(clk);
+                address <= X"00002000";
+                doWrite <= true;
+                dataIn <= X"F0002000";
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                address <= X"00003000";
+                doWrite <= true;
+                dataIn <= X"87654321";
+                byteMask <= (others => '1');
+                flush_cache <= true;
+                stallIn <= true;
+                wait until rising_edge(clk);
+                flush_cache <= false;
+                wait until rising_edge(clk) and not stallOut;
+                flush_cache <= false;
+                doWrite <= false;
+                simulated_bus_memory_pkg.read_from_address(
+                    net => net,
+                    actor => cachedMemActor,
+                    addr => std_logic_vector'(X"00000000"),
+                    data => data);
+                check_equal(data, std_logic_vector'(X"F0002000"));
+                simulated_bus_memory_pkg.read_from_address(
+                    net => net,
+                    actor => uncachedMemActor,
+                    addr => std_logic_vector'(X"00000000"),
+                    data => data);
+                check_equal(data, std_logic_vector'(X"87654321"));
+            elsif run("Start cache flush together with cache-updating write") then
+                wait until falling_edge(clk);
+                address <= X"00002000";
+                doWrite <= true;
+                dataIn <= X"AAAAAAAA";
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                address <= X"00002000";
+                doWrite <= true;
+                dataIn <= X"FFFFFFFF";
+                byteMask <= "0101";
+                flush_cache <= true;
+                stallIn <= true;
+                wait until rising_edge(clk);
+                flush_cache <= false;
+                wait until rising_edge(clk) and not stallOut;
+                simulated_bus_memory_pkg.read_from_address(
+                    net => net,
+                    actor => cachedMemActor,
+                    addr => std_logic_vector'(X"00000000"),
+                    data => data);
+                check_equal(data, std_logic_vector'(X"AAFFAAFF"));
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -376,6 +509,8 @@ begin
     ) port map (
         clk => clk,
         rst => rst,
+        flush_cache => flush_cache,
+        cache_flush_busy => cache_flush_busy,
         mst2slv => mst2slv,
         slv2mst => slv2mst,
         hasFault => hasFault,

@@ -15,6 +15,9 @@ entity riscv32_memToBus is
         clk : in std_logic;
         rst : in boolean;
 
+        flush_cache : in boolean;
+        cache_flush_busy : out boolean;
+
         mst2slv : out bus_mst2slv_type;
         slv2mst : in bus_slv2mst_type;
 
@@ -37,7 +40,7 @@ architecture behaviourial of riscv32_memToBus is
     constant cache_range_high : natural := to_integer(unsigned(range_to_cache.high));
     constant cache_range : natural := cache_range_high - cache_range_low;
 
-    type state_type is (idle, cached_read_busy, uncached_read_busy, cached_write_busy, uncached_write_busy);
+    type state_type is (idle, cached_read_busy, uncached_read_busy, cached_write_busy, uncached_write_busy, cache_flushing);
     signal current_state : state_type := idle;
     signal next_state : state_type := idle;
     signal state_forces_stall : boolean := false;
@@ -71,19 +74,29 @@ architecture behaviourial of riscv32_memToBus is
     signal cache_line_dirty : boolean;
     signal cache_miss : boolean;
     signal cache_dataOut : riscv32_data_type;
+    signal cache_reset : boolean := false;
 
     signal volatile_cache_data : bus_data_type;
     signal volatile_read_cache_valid : boolean := false;
     signal volatile_write_cache_valid : boolean := false;
     signal volatile_cache_update_read : boolean;
     signal volatile_cache_update_write : boolean;
+
+    signal cache_flush_allowed : boolean := false;
+    signal cache_flush_required : boolean := false;
+    signal cache_flush_address : natural range 0 to 2**cache_word_count_log2b - 1;
+    signal cache_flush_reconstructedAddr : bus_aligned_address_type;
+    signal cache_flush_line_data_out : bus_data_type;
+    signal cache_flush_line_dirty : boolean;
+    signal cache_flush_write_required : boolean;
 begin
     address_in_dcache_range <= bus_addr_in_range(address, range_to_cache);
     cached_read_required <= doRead and address_in_dcache_range and cache_miss;
     uncached_read_required <= doRead and not address_in_dcache_range and not volatile_read_cache_valid;
     byteMask_indicates_full_word <= byteMask = "1111";
+    cache_flush_busy <= cache_flush_required;
 
-    state_machine_output : process (current_state, cache_miss, interactor_completed, doRead, cached_read_required, uncached_read_required, interactor_should_write_cached, interactor_should_write_uncached)
+    state_machine_output : process (current_state, cache_miss, interactor_completed, doRead, cached_read_required, uncached_read_required, interactor_should_write_cached, interactor_should_write_uncached, cache_flush_required, cache_flush_write_required)
     begin
         next_state <= current_state;
         case current_state is
@@ -94,6 +107,7 @@ begin
                 interactor_doRead <= cached_read_required or uncached_read_required;
                 volatile_cache_update_read <= false;
                 fsm_write_busy <= false;
+                cache_flush_allowed <= false;
                 if cached_read_required then
                     next_state <= cached_read_busy;
                 elsif uncached_read_required then
@@ -102,6 +116,8 @@ begin
                     next_state <= uncached_write_busy;
                 elsif interactor_should_write_cached then
                     next_state <= cached_write_busy;
+                elsif cache_flush_required then
+                    next_state <= cache_flushing;
                 end if;
             when cached_read_busy =>
                 state_forces_stall <= true;
@@ -110,6 +126,7 @@ begin
                 interactor_doRead <= false;
                 volatile_cache_update_read <= false;
                 fsm_write_busy <= false;
+                cache_flush_allowed <= false;
                 if interactor_completed and interactor_should_write_cached then
                     next_state <= cached_write_busy;
                 elsif interactor_completed then
@@ -122,6 +139,7 @@ begin
                 interactor_doRead <= false;
                 volatile_cache_update_read <= interactor_completed;
                 fsm_write_busy <= false;
+                cache_flush_allowed <= false;
                 if interactor_completed then
                     next_state <= idle;
                 end if;
@@ -132,6 +150,7 @@ begin
                 interactor_doRead <= false;
                 volatile_cache_update_write <= interactor_completed;
                 fsm_write_busy <= true;
+                cache_flush_allowed <= false;
                 if interactor_completed then
                     next_state <= idle;
                 end if;
@@ -142,7 +161,19 @@ begin
                 interactor_doRead <= false;
                 volatile_cache_update_write <= interactor_completed;
                 fsm_write_busy <= true;
+                cache_flush_allowed <= false;
                 if interactor_completed then
+                    next_state <= idle;
+                end if;
+            when cache_flushing =>
+                state_forces_stall <= true;
+                cache_doWrite_fromBus <= false;
+                interactor_doWrite <= cache_flush_write_required;
+                interactor_doRead <= false;
+                volatile_cache_update_read <= false;
+                fsm_write_busy <= false;
+                cache_flush_allowed <= true;
+                if not cache_flush_required then
                     next_state <= idle;
                 end if;
         end case;
@@ -155,9 +186,12 @@ begin
         end if;
     end process;
 
-    determine_stallout : process(cache_miss, doRead, state_forces_stall, address_in_dcache_range, volatile_read_cache_valid, interactor_busy, interactor_should_write_cached, fsm_write_busy)
+    determine_stallout : process(cache_miss, doRead, state_forces_stall, address_in_dcache_range, volatile_read_cache_valid, interactor_busy, interactor_should_write_cached, fsm_write_busy, flush_cache, cache_flush_required)
     begin
+        stallOut <= false;
         if state_forces_stall then
+            stallOut <= true;
+        elsif flush_cache or cache_flush_required then
             stallOut <= true;
         elsif doRead then
             if address_in_dcache_range then
@@ -210,7 +244,7 @@ begin
         end if;
     end process;
 
-    determine_interactor_write_in : process(byteMask_indicates_full_word, cache_miss, cache_line_dirty, doWrite, doRead, cache_reconstructedAddr, cache_dataOut, dataIn, address, volatile_write_cache_valid, fsm_write_busy, address_in_dcache_range)
+    determine_interactor_write_in : process(byteMask_indicates_full_word, cache_miss, cache_line_dirty, doWrite, doRead, cache_reconstructedAddr, cache_dataOut, dataIn, address, volatile_write_cache_valid, fsm_write_busy, address_in_dcache_range, cache_flush_reconstructedAddr, cache_flush_line_data_out, cache_flush_allowed)
     begin
         -- Cover all default cases
         interactor_should_write_cached <= false;
@@ -219,7 +253,14 @@ begin
         interactor_writeByteMask <= byteMask;
         interactor_dataIn <= dataIn;
         interactor_writeAddress <= address;
-        if doWrite and address_in_dcache_range then
+        if cache_flush_allowed then
+            interactor_should_write_cached <= false;
+            interactor_should_write_uncached <= false;
+            cache_doWrite_fromProc <= false;
+            interactor_writeByteMask <= (others => '1');
+            interactor_dataIn <= cache_flush_line_data_out;
+            interactor_writeAddress <= cache_flush_reconstructedAddr & "00";
+        elsif doWrite and address_in_dcache_range then
             -- Proc writes full word to a clean cache line, memory requires no update
             if byteMask_indicates_full_word and not cache_line_dirty then
                 interactor_should_write_cached <= false;
@@ -273,6 +314,73 @@ begin
         end if;
     end process;
 
+    cache_flusher : process(clk)
+        type flush_state_type is (idle, flush_requested, reading_data, decide_write, wait_for_interactor, increment_address, completing);
+        variable flush_cur_state : flush_state_type := idle;
+        variable flush_next_state : flush_state_type := idle;
+        variable cache_line_address : natural range 0 to 2**cache_word_count_log2b - 1 := 0;
+    begin
+        if rising_edge(clk) then
+            case flush_cur_state is
+                when idle =>
+                    cache_line_address := 0;
+                    cache_flush_required <= flush_cache;
+                    cache_flush_write_required <= false;
+                    cache_reset <= false;
+                    if flush_cache then
+                        flush_next_state := flush_requested;
+                    end if;
+                when flush_requested =>
+                    cache_line_address := 0;
+                    cache_flush_required <= true;
+                    cache_flush_write_required <= false;
+                    cache_reset <= false;
+                    if cache_flush_allowed then
+                        flush_next_state := reading_data;
+                    end if;
+                when reading_data =>
+                    cache_flush_required <= true;
+                    cache_flush_write_required <= false;
+                    cache_reset <= false;
+                    flush_next_state := decide_write;
+                when decide_write =>
+                    cache_flush_required <= true;
+                    cache_reset <= false;
+                    if cache_flush_line_dirty then
+                        cache_flush_write_required <= true;
+                        flush_next_state := wait_for_interactor;
+                    else
+                        cache_flush_write_required <= false;
+                        flush_next_state := increment_address;
+                    end if;
+                when wait_for_interactor =>
+                    cache_flush_required <= true;
+                    cache_flush_write_required <= false;
+                    cache_reset <= false;
+                    if interactor_completed then
+                        flush_next_state := increment_address;
+                    end if;
+                when increment_address =>
+                    cache_flush_required <= true;
+                    cache_flush_write_required <= false;
+                    cache_reset <= false;
+                    if cache_line_address = 2**cache_word_count_log2b - 1 then
+                        flush_next_state := completing;
+                    else
+                        cache_line_address := cache_line_address + 1;
+                        flush_next_state := reading_data;
+                    end if;
+                when completing =>
+                    cache_flush_required <= true;
+                    cache_flush_write_required <= false;
+                    cache_reset <= true;
+                    flush_next_state := idle;
+            end case;
+            flush_cur_state := flush_next_state;
+        end if;
+        cache_flush_address <= cache_line_address;
+    end process;
+
     interactor : entity work.riscv32_memToBus_bus_interaction
     port map (
         clk => clk,
@@ -302,7 +410,7 @@ begin
         cached_base_address => range_to_cache.low(bus_aligned_address_type'range)
     ) port map (
         clk => clk,
-        rst => rst,
+        rst => rst or cache_reset,
         addressIn => address(bus_aligned_address_type'range),
         proc_dataIn => dataIn,
         proc_byteMask => byteMask,
@@ -313,6 +421,9 @@ begin
         reconstructedAddr => cache_reconstructedAddr,
         dirty => cache_line_dirty,
         miss => cache_miss,
-        line_address => 0
+        line_address => cache_flush_address,
+        line_reconstructedAddr => cache_flush_reconstructedAddr,
+        line_dataOut => cache_flush_line_data_out,
+        line_dirty => cache_flush_line_dirty
     );
 end architecture;
