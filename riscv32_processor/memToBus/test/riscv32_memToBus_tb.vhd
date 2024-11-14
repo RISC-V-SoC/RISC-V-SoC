@@ -492,6 +492,73 @@ begin
                     addr => std_logic_vector'(X"00000000"),
                     data => data);
                 check_equal(data, std_logic_vector'(X"AAFFAAFF"));
+            elsif run("Back to back uncached writes") then
+                wait until falling_edge(clk);
+                address <= X"00003000";
+                doWrite <= true;
+                dataIn <= X"AAAAAAAA";
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                address <= X"00003004";
+                doWrite <= true;
+                dataIn <= X"FFFFFFFF";
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                simulated_bus_memory_pkg.read_from_address(
+                    net => net,
+                    actor => uncachedMemActor,
+                    addr => std_logic_vector'(X"00000000"),
+                    data => data);
+                check_equal(data, std_logic_vector'(X"AAAAAAAA"));
+                simulated_bus_memory_pkg.read_from_address(
+                    net => net,
+                    actor => uncachedMemActor,
+                    addr => std_logic_vector'(X"00000004"),
+                    data => data);
+                check_equal(data, std_logic_vector'(X"FFFFFFFF"));
+            elsif run("Update cached address multiple times") then
+                wait until falling_edge(clk);
+                address <= X"00002000";
+                doWrite <= true;
+                dataIn <= X"01234567";
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                address <= X"00002000";
+                doWrite <= true;
+                dataIn <= X"87654321";
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                doWrite <= false;
+                doRead <= true;
+                wait for 1 ns;
+                check_equal(dataOut, std_logic_vector'(X"87654321"));
+            elsif run("Write cached word byte-by-byte") then
+                wait until falling_edge(clk);
+                address <= X"00002000";
+                doWrite <= true;
+                dataIn <= X"33221100";
+                byteMask <= "0001";
+                wait until rising_edge(clk) and not stallOut;
+                address <= X"00002000";
+                doWrite <= true;
+                dataIn <= X"33221100";
+                byteMask <= "0010";
+                wait until rising_edge(clk) and not stallOut;
+                address <= X"00002000";
+                doWrite <= true;
+                dataIn <= X"33221100";
+                byteMask <= "0100";
+                wait until rising_edge(clk) and not stallOut;
+                address <= X"00002000";
+                doWrite <= true;
+                dataIn <= X"33221100";
+                byteMask <= "1000";
+                wait until rising_edge(clk) and not stallOut;
+                doWrite <= false;
+                doRead <= true;
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                check_equal(dataOut, std_logic_vector'(X"33221100"));
             end if;
         end loop;
         wait until rising_edge(clk);

@@ -106,6 +106,7 @@ begin
                 interactor_doWrite <= interactor_should_write_cached or interactor_should_write_uncached;
                 interactor_doRead <= cached_read_required or uncached_read_required;
                 volatile_cache_update_read <= false;
+                volatile_cache_update_write <= false;
                 fsm_write_busy <= false;
                 cache_flush_allowed <= false;
                 if cached_read_required then
@@ -125,6 +126,7 @@ begin
                 interactor_doWrite <= interactor_should_write_cached;
                 interactor_doRead <= false;
                 volatile_cache_update_read <= false;
+                volatile_cache_update_write <= false;
                 fsm_write_busy <= false;
                 cache_flush_allowed <= false;
                 if interactor_completed and interactor_should_write_cached then
@@ -138,6 +140,7 @@ begin
                 interactor_doWrite <= false;
                 interactor_doRead <= false;
                 volatile_cache_update_read <= interactor_completed;
+                volatile_cache_update_write <= false;
                 fsm_write_busy <= false;
                 cache_flush_allowed <= false;
                 if interactor_completed then
@@ -148,6 +151,7 @@ begin
                 cache_doWrite_fromBus <= false;
                 interactor_doWrite <= false;
                 interactor_doRead <= false;
+                volatile_cache_update_read <= false;
                 volatile_cache_update_write <= interactor_completed;
                 fsm_write_busy <= true;
                 cache_flush_allowed <= false;
@@ -171,6 +175,7 @@ begin
                 interactor_doWrite <= cache_flush_write_required;
                 interactor_doRead <= false;
                 volatile_cache_update_read <= false;
+                volatile_cache_update_write <= false;
                 fsm_write_busy <= false;
                 cache_flush_allowed <= true;
                 if not cache_flush_required then
@@ -190,7 +195,7 @@ begin
         end if;
     end process;
 
-    determine_stallout : process(cache_miss, doRead, state_forces_stall, address_in_dcache_range, volatile_read_cache_valid, interactor_busy, interactor_should_write_cached, fsm_write_busy, flush_cache, cache_flush_required)
+    determine_stallout : process(cache_miss, doRead, state_forces_stall, address_in_dcache_range, volatile_read_cache_valid, interactor_should_write_cached, fsm_write_busy, flush_cache, cache_flush_required, interactor_should_write_uncached, byteMask_indicates_full_word)
     begin
         stallOut <= false;
         if state_forces_stall then
@@ -204,7 +209,7 @@ begin
                 stallOut <= not volatile_read_cache_valid;
             end if;
         elsif doWrite then
-            if address_in_dcache_range then
+            if address_in_dcache_range and byteMask_indicates_full_word then
                 stallOut <= interactor_should_write_cached and fsm_write_busy;
             else
                 stallOut <= interactor_should_write_uncached;
@@ -277,8 +282,8 @@ begin
                 interactor_writeByteMask <= byteMask;
                 interactor_dataIn <= dataIn;
                 interactor_writeAddress <= address;
-            -- Proc writes partial data to cached word, just update the cache.
-            elsif not byteMask_indicates_full_word and not cache_miss then
+            -- Proc writes data to cached word, just update the cache
+            elsif not cache_miss then
                 interactor_should_write_cached <= false;
                 interactor_should_write_uncached <= false;
                 cache_doWrite_fromProc <= true;
@@ -295,8 +300,8 @@ begin
                 interactor_writeAddress <= cache_reconstructedAddr & "00";
             -- Proc writes partial data to uncached word, we have to commit to memory. Act as if it is a write to out-of-cache-range memory
             elsif not byteMask_indicates_full_word and cache_miss then
-                interactor_should_write_cached <= not volatile_write_cache_valid;
-                interactor_should_write_uncached <= false;
+                interactor_should_write_cached <= false;
+                interactor_should_write_uncached <= not volatile_write_cache_valid;
                 cache_doWrite_fromProc <= false;
                 interactor_writeByteMask <= byteMask;
                 interactor_dataIn <= dataIn;
@@ -389,7 +394,6 @@ begin
                     cache_reset <= true;
                     flush_next_state := idle;
             end case;
-            flush_cur_state := flush_next_state;
         end if;
         cache_flush_address <= cache_line_address;
     end process;
