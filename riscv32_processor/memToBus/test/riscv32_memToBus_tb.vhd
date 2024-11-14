@@ -559,6 +559,27 @@ begin
                 byteMask <= (others => '1');
                 wait until rising_edge(clk) and not stallOut;
                 check_equal(dataOut, std_logic_vector'(X"33221100"));
+            elsif run("Cached write into uncached write") then
+                wait until falling_edge(clk);
+                address <= X"00002000";
+                doWrite <= true;
+                dataIn <= X"01234567";
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                address <= X"00002100";
+                doWrite <= true;
+                dataIn <= X"87654321";
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                address <= X"00003000";
+                doWrite <= true;
+                dataIn <= X"abcdef01";
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                doWrite <= false;
+                doRead <= true;
+                wait until rising_edge(clk) and not stallOut;
+                check_equal(dataOut, std_logic_vector'(X"abcdef01"));
             end if;
         end loop;
         wait until rising_edge(clk);

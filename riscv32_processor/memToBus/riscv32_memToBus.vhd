@@ -152,7 +152,7 @@ begin
                 interactor_doWrite <= false;
                 interactor_doRead <= false;
                 volatile_cache_update_read <= false;
-                volatile_cache_update_write <= interactor_completed;
+                volatile_cache_update_write <= false;
                 fsm_write_busy <= true;
                 cache_flush_allowed <= false;
                 if interactor_completed then
