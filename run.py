@@ -50,9 +50,6 @@ tb_library.add_source_files(SRC_PATH / "riscv32_processor" / "utils" / "test" / 
 src_library.add_source_files(SRC_PATH / "riscv32_processor" / "pipeline" / "*.vhd")
 tb_library.add_source_files(SRC_PATH / "riscv32_processor" / "pipeline" / "test" / "*.vhd")
 
-src_library.add_source_files(SRC_PATH / "riscv32_processor" / "dcache" / "*.vhd")
-tb_library.add_source_files(SRC_PATH / "riscv32_processor" / "dcache" / "test" / "*.vhd")
-
 src_library.add_source_files(SRC_PATH / "riscv32_processor" / "write_back_dcache" / "*.vhd")
 tb_library.add_source_files(SRC_PATH / "riscv32_processor" / "write_back_dcache" / "test" / "*.vhd")
 
