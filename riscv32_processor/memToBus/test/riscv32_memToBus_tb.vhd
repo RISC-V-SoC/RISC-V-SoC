@@ -218,7 +218,7 @@ begin
                 check_false(stallOut);
                 doWrite <= false;
                 check_equal(dataOut, dataIn);
-            elsif run("Partial word write that misses only updates memory") then
+            elsif run("Test partial word write that misses") then
                 simulated_bus_memory_pkg.write_to_address(
                     net => net,
                     actor => cachedMemActor,
@@ -230,11 +230,38 @@ begin
                 doWrite <= true;
                 dataIn <= X"FFFFFFFF";
                 byteMask <= "0011";
-                wait until falling_edge(clk) and not stallOut;
+                wait until rising_edge(clk) and not stallOut;
                 doWrite <= false;
                 doRead <= true;
-                wait until falling_edge(clk) and not stallOut;
+                wait until rising_edge(clk) and not stallOut;
                 check_equal(dataOut, std_logic_vector'(X"8765FFFF"));
+            elsif run("Test partial word write that misses on a dirty line") then
+                simulated_bus_memory_pkg.write_to_address(
+                    net => net,
+                    actor => cachedMemActor,
+                    addr => std_logic_vector'(X"00000000"),
+                    mask => (others => '1'),
+                    data => std_logic_vector'(X"87654321"));
+                wait until falling_edge(clk);
+                address <= X"00002100";
+                doWrite <= true;
+                dataIn <= X"AABBCCDD";
+                byteMask <= (others => '1');
+                wait until rising_edge(clk) and not stallOut;
+                address <= X"00002000";
+                doWrite <= true;
+                dataIn <= X"FFFFFFFF";
+                byteMask <= "0011";
+                wait until rising_edge(clk) and not stallOut;
+                address <= X"00002000";
+                doWrite <= false;
+                doRead <= true;
+                byteMask <= "1111";
+                wait until rising_edge(clk) and not stallOut;
+                check_equal(dataOut, std_logic_vector'(X"8765FFFF"));
+                address <= X"00002100";
+                wait until rising_edge(clk) and not stallOut;
+                check_equal(dataOut, std_logic_vector'(X"AABBCCDD"));
             elsif run("Partial word write that hits should update cache") then
                 wait until falling_edge(clk);
                 address <= X"00002000";
