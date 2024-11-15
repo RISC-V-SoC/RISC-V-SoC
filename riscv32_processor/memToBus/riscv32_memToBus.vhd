@@ -91,8 +91,6 @@ architecture behaviourial of riscv32_memToBus is
     signal cache_flush_write_required : boolean;
 begin
     address_in_dcache_range <= bus_addr_in_range(address, range_to_cache);
-    cached_read_required <= doRead and address_in_dcache_range and cache_miss;
-    uncached_read_required <= doRead and not address_in_dcache_range and not volatile_read_cache_valid;
     byteMask_indicates_full_word <= byteMask = "1111";
     cache_flush_busy <= cache_flush_required;
 
@@ -240,15 +238,6 @@ begin
         end if;
     end process;
 
-    determine_interactor_readByteMask : process(byteMask, address_in_dcache_range, doRead)
-    begin
-        if doRead and address_in_dcache_range then
-            interactor_readByteMask <= (others => '1');
-        else
-            interactor_readByteMask <= byteMask;
-        end if;
-    end process;
-
     determine_data_out : process(address_in_dcache_range, cache_dataOut, volatile_cache_data)
     begin
         if address_in_dcache_range then
@@ -258,7 +247,7 @@ begin
         end if;
     end process;
 
-    determine_interactor_write_in : process(byteMask_indicates_full_word, cache_miss, cache_line_dirty, doWrite, doRead, cache_reconstructedAddr, cache_dataOut, dataIn, address, volatile_write_cache_valid, fsm_write_busy, address_in_dcache_range, cache_flush_reconstructedAddr, cache_flush_line_data_out, cache_flush_allowed, byteMask)
+    command_and_control : process(byteMask_indicates_full_word, cache_miss, cache_line_dirty, doWrite, doRead, cache_reconstructedAddr, cache_dataOut, dataIn, address, volatile_write_cache_valid, fsm_write_busy, address_in_dcache_range, cache_flush_reconstructedAddr, cache_flush_line_data_out, cache_flush_allowed, byteMask, volatile_read_cache_valid)
     begin
         -- Cover all default cases
         interactor_should_write_cached <= false;
@@ -267,6 +256,9 @@ begin
         interactor_writeByteMask <= byteMask;
         interactor_dataIn <= dataIn;
         interactor_writeAddress <= address;
+        interactor_readByteMask <= (others => '1');
+        cached_read_required <= false;
+        uncached_read_required <= false;
         if cache_flush_allowed then
             interactor_should_write_cached <= false;
             interactor_should_write_uncached <= false;
@@ -274,6 +266,9 @@ begin
             interactor_writeByteMask <= (others => '1');
             interactor_dataIn <= cache_flush_line_data_out;
             interactor_writeAddress <= cache_flush_reconstructedAddr & "00";
+            interactor_readByteMask <= (others => '1');
+            cached_read_required <= false;
+            uncached_read_required <= false;
         elsif doWrite and address_in_dcache_range then
             -- Proc writes full word to a clean cache line, memory requires no update
             if byteMask_indicates_full_word and not cache_line_dirty then
@@ -283,6 +278,9 @@ begin
                 interactor_writeByteMask <= byteMask;
                 interactor_dataIn <= dataIn;
                 interactor_writeAddress <= address;
+                interactor_readByteMask <= (others => '1');
+                cached_read_required <= false;
+                uncached_read_required <= false;
             -- Proc writes data to cached word, just update the cache
             elsif not cache_miss then
                 interactor_should_write_cached <= false;
@@ -291,6 +289,9 @@ begin
                 interactor_writeByteMask <= byteMask;
                 interactor_dataIn <= dataIn;
                 interactor_writeAddress <= address;
+                interactor_readByteMask <= (others => '1');
+                cached_read_required <= false;
+                uncached_read_required <= false;
             -- Proc overwrites existing and dirty cache line. Dirty cache line needs to be forwarded to memory
             elsif byteMask_indicates_full_word and cache_miss and cache_line_dirty then
                 interactor_should_write_cached <= true;
@@ -299,6 +300,9 @@ begin
                 interactor_writeByteMask <= (others => '1');
                 interactor_dataIn <= cache_dataOut;
                 interactor_writeAddress <= cache_reconstructedAddr & "00";
+                interactor_readByteMask <= (others => '1');
+                cached_read_required <= false;
+                uncached_read_required <= false;
             -- Proc writes partial data to uncached word, we have to commit to memory. Act as if it is a write to out-of-cache-range memory
             elsif not byteMask_indicates_full_word and cache_miss then
                 interactor_should_write_cached <= false;
@@ -307,6 +311,9 @@ begin
                 interactor_writeByteMask <= byteMask;
                 interactor_dataIn <= dataIn;
                 interactor_writeAddress <= address;
+                interactor_readByteMask <= (others => '1');
+                cached_read_required <= false;
+                uncached_read_required <= false;
             end if;
         elsif doWrite and not address_in_dcache_range then
             interactor_should_write_cached <= false;
@@ -315,6 +322,9 @@ begin
             interactor_writeByteMask <= byteMask;
             interactor_dataIn <= dataIn;
             interactor_writeAddress <= address;
+            interactor_readByteMask <= (others => '1');
+            cached_read_required <= false;
+            uncached_read_required <= false;
         elsif doRead and address_in_dcache_range then
             -- Dirty line needs to be comitted to memory
             if cache_miss and cache_line_dirty then
@@ -324,7 +334,30 @@ begin
                 interactor_writeByteMask <= (others => '1');
                 interactor_dataIn <= cache_dataOut;
                 interactor_writeAddress <= cache_reconstructedAddr & "00";
+                interactor_readByteMask <= (others => '1');
+                cached_read_required <= true;
+                uncached_read_required <= false;
+            elsif cache_miss then
+                interactor_should_write_cached <= false;
+                interactor_should_write_uncached <= false;
+                cache_doWrite_fromProc <= false;
+                interactor_writeByteMask <= (others => '1');
+                interactor_dataIn <= (others => '0');
+                interactor_writeAddress <= address;
+                interactor_readByteMask <= (others => '1');
+                cached_read_required <= true;
+                uncached_read_required <= false;
             end if;
+        elsif doRead and not address_in_dcache_range then
+            interactor_should_write_cached <= false;
+            interactor_should_write_uncached <= false;
+            cache_doWrite_fromProc <= false;
+            interactor_writeByteMask <= (others => '1');
+            interactor_dataIn <= (others => '0');
+            interactor_writeAddress <= address;
+            interactor_readByteMask <= byteMask;
+            cached_read_required <= false;
+            uncached_read_required <= not volatile_read_cache_valid;
         end if;
     end process;
 
