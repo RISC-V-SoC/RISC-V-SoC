@@ -120,27 +120,58 @@ architecture tb of main_file_tb is
         end loop;
     end procedure;
 
+    procedure write_buffer(
+        signal net : inout network_t;
+        constant addr : in bus_address_type;
+        constant data : in bus_data_array;
+        constant count : in natural range 1 to 64) is
+        variable seq_size_minus_one : bus_byte_type;
+    begin
+        seq_size_minus_one := std_logic_vector(to_unsigned(count - 1, seq_size_minus_one'length));
+        push_stream(net, command_uart_master_stream, uart_bus_master_pkg.COMMAND_WRITE_WORD_SEQUENCE);
+        check_stream(net, command_uart_slave_stream, uart_bus_master_pkg.ERROR_NO_ERROR);
+        for i in 0 to bus_bytes_per_word - 1 loop
+            push_stream(net, command_uart_master_stream, addr(i*8 + 7 downto i*8));
+        end loop;
+        push_stream(net, command_uart_master_stream, seq_size_minus_one);
+        for i in 0 to count - 1 loop
+            for j in 0 to bus_bytes_per_word - 1 loop
+                push_stream(net, command_uart_master_stream, data(i)(j*8 + 7 downto j*8));
+            end loop;
+        end loop;
+        check_stream(net, command_uart_slave_stream, uart_bus_master_pkg.ERROR_NO_ERROR);
+    end procedure;
+
     procedure write_file(
             signal net : inout network_t;
             constant addr : in bus_address_type;
             constant fileName : in string) is
         file read_file : text;
         variable line_v : line;
-        variable data : bus_data_type;
+        variable data : bus_data_array(0 to 63);
         variable address : natural;
         variable busAddress : bus_address_type;
+        variable count : natural range 0 to 64;
     begin
         address := to_integer(unsigned(addr));
         file_open(read_file, fileName, read_mode);
         while not endfile(read_file) loop
             readline(read_file, line_v);
-            hread(line_v, data);
-            busAddress := std_logic_vector(to_unsigned(address, busAddress'length));
-            write(net, busAddress, data);
-            address := address + 4;
+            hread(line_v, data(count));
+            count := count + 1;
+            if count = 64 then
+                busAddress := std_logic_vector(to_unsigned(address, busAddress'length));
+                write_buffer(net, busAddress, data, count);
+                address := address + (64 * 4);
+                count := 0;
+            end if;
         end loop;
+        if count > 0 then
+            busAddress := std_logic_vector(to_unsigned(address, busAddress'length));
+            write_buffer(net, busAddress, data, count);
+        end if;
         file_close(read_file);
-    end;
+    end procedure;
 begin
     clk <= not clk after (clk_period/2);
     process
@@ -163,7 +194,7 @@ begin
                 write(net, processor_controller_start_address, X"00000001");
                 write_file(net, spimem0_start_address, "./complete_system/test/programs/fullBubblesort.txt");
                 write(net, processor_controller_start_address, X"00000000");
-                wait for 300 us;
+                wait for 200 us;
                 flush_cache(net);
                 curAddr := 16#00120000#;
                 for i in -6 to 5 loop
