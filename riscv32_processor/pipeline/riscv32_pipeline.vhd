@@ -475,7 +475,7 @@ begin
 
     exception_handler : entity work.riscv32_pipeline_exception_handler
     generic map (
-        propagation_delay => 3
+        propagation_delay => 2
     ) port map (
         clk => clk,
         rst => rst,

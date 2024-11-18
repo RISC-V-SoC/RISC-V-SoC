@@ -296,6 +296,41 @@ begin
                 csr_in.error <= false;
                 wait for 1 ns;
                 check(exception_type = exception_none);
+            elsif run("Unaligned read leads to load_address_misaligned exception") then
+                instruction <= construct_itype_instruction(opcode => riscv32_opcode_load, funct3 => riscv32_funct3_lw);
+                requestAddress <= X"00004003";
+                wait for 1 ns;
+                check(exception_type = exception_sync);
+                check_equal(exception_code, riscv32_exception_code_load_address_misaligned);
+            elsif run("Unaligned write leads to store_address_misaligned exception") then
+                instruction <= construct_stype_instruction(opcode => riscv32_opcode_store, funct3 => riscv32_funct3_sw);
+                requestAddress <= X"00004003";
+                rs2Data <= X"ABABABAB";
+                wait for 1 ns;
+                check(exception_type = exception_sync);
+                check_equal(exception_code, riscv32_exception_code_store_address_misaligned);
+            elsif run("Unaligned halfword read leads to load_address_misaligned") then
+                instruction <= construct_itype_instruction(opcode => riscv32_opcode_load, funct3 => riscv32_funct3_lhu);
+                requestAddress <= X"00004001";
+                wait for 1 ns;
+                check(exception_type = exception_sync);
+                check_equal(exception_code, riscv32_exception_code_load_address_misaligned);
+            elsif run("Halfword but not word aligned halfword read does not lead to exception") then
+                instruction <= construct_itype_instruction(opcode => riscv32_opcode_load, funct3 => riscv32_funct3_lhu);
+                requestAddress <= X"00004002";
+                wait for 1 ns;
+                check(exception_type = exception_none);
+            elsif run("Unaligned read does not lead to read") then
+                instruction <= construct_itype_instruction(opcode => riscv32_opcode_load, funct3 => riscv32_funct3_lw);
+                requestAddress <= X"00004003";
+                wait for 1 ns;
+                check_false(doMemRead);
+            elsif run("Unaligned write does not lead to write") then
+                instruction <= construct_stype_instruction(opcode => riscv32_opcode_store, funct3 => riscv32_funct3_sw);
+                requestAddress <= X"00004003";
+                rs2Data <= X"ABABABAB";
+                wait for 1 ns;
+                check_false(doMemWrite);
             end if;
         end loop;
         wait for 5 ns;

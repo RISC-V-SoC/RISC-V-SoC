@@ -8,14 +8,14 @@ __start:
     # Load stackpointer
     la      sp, _stack_start
     # Load global pointer
-    la      gp, __global_pointer$
+    la      gp, 0xffffffff
 .option pop
     # Setup the trap vector
     la      a0, syncExceptionHandler
     csrw    mtvec,a0
     li      a0, 0x200000
     li      a1, 0
-    csrw    cycle, a0
-    sw      a1, 12(a0)
+    lw      a2, 1(a0)
+    li      gp, 0
 back_stop:
     j back_stop

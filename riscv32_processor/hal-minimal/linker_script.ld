@@ -32,5 +32,4 @@ SECTIONS
     } > SRAM
 
     _stack_start = ORIGIN(SRAM) + LENGTH(SRAM);
-    __global_pointer$ = ORIGIN(SRAM) + LENGTH(SRAM)/2;
 }

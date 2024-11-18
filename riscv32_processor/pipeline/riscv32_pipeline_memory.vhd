@@ -44,16 +44,29 @@ architecture behaviourial of riscv32_pipeline_memory is
     signal addressToMem : riscv32_address_type;
     signal byteMaskToMem : riscv32_byte_mask_type;
     signal memWriteData : riscv32_data_type;
+
+    signal address_misaligned : boolean;
 begin
 
-    exception_code <= riscv32_exception_code_illegal_instruction;
-
-    exception_handling : process(csr_in, memoryControlWord)
+    exception_handling : process(csr_in, memoryControlWord, address_misaligned)
     begin
         if memoryControlWord.csrOp and csr_in.error then
             exception_type <= exception_sync;
+        elsif memoryControlWord.MemOp and address_misaligned then
+            exception_type <= exception_sync;
         else
             exception_type <= exception_none;
+        end if;
+    end process;
+
+    exception_code_handling : process(memoryControlWord)
+    begin
+        if memoryControlWord.csrOp then
+            exception_code <= riscv32_exception_code_illegal_instruction;
+        elsif not memoryControlWord.MemOpIsWrite then
+            exception_code <= riscv32_exception_code_load_address_misaligned;
+        else
+            exception_code <= riscv32_exception_code_store_address_misaligned;
         end if;
     end process;
 
@@ -138,12 +151,14 @@ begin
         end case;
     end process;
 
+    address_misaligned <= addressToMem(1 downto 0) /= "00";
+
     -- mem2bus
     dataToMem <= memWriteData;
     memAddress <= addressToMem;
     memByteMask <= byteMaskToMem;
-    doMemWrite <= memoryControlWord.MemOp and memoryControlWord.MemOpIsWrite;
-    doMemRead <= memoryControlWord.MemOp and not memoryControlWord.MemOpIsWrite;
+    doMemWrite <= memoryControlWord.MemOp and memoryControlWord.MemOpIsWrite and not address_misaligned;
+    doMemRead <= memoryControlWord.MemOp and not memoryControlWord.MemOpIsWrite and not address_misaligned;
 
     -- csr out
     csrOut.command <= memoryControlWord.csrCmd;

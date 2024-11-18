@@ -15,6 +15,9 @@ syncExceptionHandler:
     li a0, 1
     csrr a1, mepc
     call auxMemWrite
+    li a0, 3
+    mv a1, gp
+    call auxMemWrite
     la a0, exceptionReturn
     csrw mepc, a0
     mret
