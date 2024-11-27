@@ -325,6 +325,26 @@ begin
                 expectedReadData := X"FFFFFFFF";
                 readAddr := std_logic_vector(to_unsigned(16#C#, bus_address_type'length));
                 check_word_at_address_in_outMem(net, readAddr, expectedReadData);
+            elsif run("Store access fault test") then
+                simulated_bus_memory_pkg.write_to_address(net, outputMemActor, X"00000000", X"00000000", X"f");
+                simulated_bus_memory_pkg.write_to_address(net, outputMemActor, X"00000004", X"00000000", X"f");
+                simulated_bus_memory_pkg.write_to_address(net, outputMemActor, X"00000008", X"00000000", X"f");
+                simulated_bus_memory_pkg.write_to_address(net, outputMemActor, X"0000000C", X"00000000", X"f");
+                simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/store_access_fault.txt");
+                start_cpu(test2slv, slv2test);
+                wait for 20 us;
+                expectedReadData := X"00000005";
+                readAddr := std_logic_vector(to_unsigned(16#0#, bus_address_type'length));
+                check_word_at_address_in_outMem(net, readAddr, expectedReadData);
+                expectedReadData := X"0010001c";
+                readAddr := std_logic_vector(to_unsigned(16#4#, bus_address_type'length));
+                check_word_at_address_in_outMem(net, readAddr, expectedReadData);
+                expectedReadData := X"00100028";
+                readAddr := std_logic_vector(to_unsigned(16#8#, bus_address_type'length));
+                check_word_at_address_in_outMem(net, readAddr, expectedReadData);
+                expectedReadData := X"FFFFFFFF";
+                readAddr := std_logic_vector(to_unsigned(16#C#, bus_address_type'length));
+                check_word_at_address_in_outMem(net, readAddr, expectedReadData);
             end if;
         end loop;
         wait until rising_edge(clk);

@@ -123,6 +123,7 @@ begin
             dataWrite => dataWrite,
             dataOut => dataToBus,
             dataIn => dataFromBus,
+            dataFault => memoryHasFault,
             address_to_regFile => bus_slv_to_regFile_address,
             write_to_regFile => bus_slv_to_regFile_doWrite,
             data_to_regFile => bus_slv_to_regFile_data,

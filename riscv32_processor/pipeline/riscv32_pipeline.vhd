@@ -27,6 +27,7 @@ entity riscv32_pipeline is
         dataWrite : out boolean;
         dataOut : out riscv32_data_type;
         dataIn : in riscv32_data_type;
+        dataFault : in boolean;
 
         -- From/to bus slave
         address_to_regFile : in riscv32_registerFileAddress_type;
@@ -416,7 +417,7 @@ begin
         memByteMask => dataByteMask,
         dataToMem => dataOut,
         dataFromMem => dataIn,
-        faultFromMem => false,
+        faultFromMem => dataFault,
 
         csrOut => csr_out,
         csr_in => csr_in,
