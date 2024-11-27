@@ -35,7 +35,9 @@ architecture tb of riscv32_pipeline_memory_tb is
     signal memAddress : riscv32_address_type;
     signal memByteMask : riscv32_byte_mask_type;
     signal dataToMem : riscv32_data_type;
-    signal dataFromMem : riscv32_data_type;
+    signal dataFromMem : riscv32_data_type := (others => '0');
+    signal faultFromMem : boolean := false;
+
     signal csrOut : riscv32_to_csr_type;
     signal csr_in : riscv32_from_csr_type;
 
@@ -331,6 +333,21 @@ begin
                 rs2Data <= X"ABABABAB";
                 wait for 1 ns;
                 check_false(doMemWrite);
+            elsif run("Write that results in bus fault leads to riscv32_exception_code_store_access_fault") then
+                instruction <= construct_stype_instruction(opcode => riscv32_opcode_store, funct3 => riscv32_funct3_sw);
+                requestAddress <= X"00004004";
+                rs2Data <= X"ABABABAB";
+                faultFromMem <= true;
+                wait for 1 ns;
+                check(exception_type = exception_sync);
+                check_equal(exception_code, riscv32_exception_code_store_access_fault);
+            elsif run("Read that results in bus fault leads to riscv32_exception_code_load_access_fault") then
+                instruction <= construct_itype_instruction(opcode => riscv32_opcode_load, funct3 => riscv32_funct3_lw);
+                requestAddress <= X"00004004";
+                faultFromMem <= true;
+                wait for 1 ns;
+                check(exception_type = exception_sync);
+                check_equal(exception_code, riscv32_exception_code_load_access_fault);
             end if;
         end loop;
         wait for 5 ns;
@@ -355,6 +372,7 @@ begin
         memByteMask => memByteMask,
         dataToMem => dataToMem,
         dataFromMem => dataFromMem,
+        faultFromMem => faultFromMem,
         csrOut => csrOut,
         csr_in => csr_in,
         exception_type => exception_type,

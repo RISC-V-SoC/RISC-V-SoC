@@ -22,13 +22,14 @@ entity riscv32_pipeline_memory is
         -- To writeback stage: data
         memDataRead: out riscv32_data_type;
 
-        -- To mem2bus unit
+        -- To/from mem2bus unit
         doMemRead : out boolean;
         doMemWrite : out boolean;
         memAddress : out riscv32_address_type;
         memByteMask : out riscv32_byte_mask_type;
         dataToMem : out riscv32_data_type;
         dataFromMem : in riscv32_data_type;
+        faultFromMem : in boolean;
 
         -- To/from control and status registers
         csrOut : out riscv32_to_csr_type;
@@ -48,25 +49,36 @@ architecture behaviourial of riscv32_pipeline_memory is
     signal address_misaligned : boolean;
 begin
 
-    exception_handling : process(csr_in, memoryControlWord, address_misaligned)
+    exception_handling : process(csr_in, memoryControlWord, address_misaligned, faultFromMem)
     begin
         if memoryControlWord.csrOp and csr_in.error then
             exception_type <= exception_sync;
         elsif memoryControlWord.MemOp and address_misaligned then
+            exception_type <= exception_sync;
+        elsif memoryControlWord.MemOp and faultFromMem then
             exception_type <= exception_sync;
         else
             exception_type <= exception_none;
         end if;
     end process;
 
-    exception_code_handling : process(memoryControlWord)
+    exception_code_handling : process(memoryControlWord, address_misaligned, faultFromMem)
     begin
+        exception_code <= 0;
         if memoryControlWord.csrOp then
             exception_code <= riscv32_exception_code_illegal_instruction;
-        elsif not memoryControlWord.MemOpIsWrite then
-            exception_code <= riscv32_exception_code_load_address_misaligned;
-        else
-            exception_code <= riscv32_exception_code_store_address_misaligned;
+        elsif memoryControlWord.MemOp and address_misaligned then
+            if not memoryControlWord.MemOpIsWrite then
+                exception_code <= riscv32_exception_code_load_address_misaligned;
+            else
+                exception_code <= riscv32_exception_code_store_address_misaligned;
+            end if;
+        elsif memoryControlWord.MemOp and faultFromMem then
+            if memoryControlWord.MemOpIsWrite then
+                exception_code <= riscv32_exception_code_store_access_fault;
+            else
+                exception_code <= riscv32_exception_code_load_access_fault;
+            end if;
         end if;
     end process;
 

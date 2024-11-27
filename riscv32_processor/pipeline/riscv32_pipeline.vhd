@@ -416,6 +416,8 @@ begin
         memByteMask => dataByteMask,
         dataToMem => dataOut,
         dataFromMem => dataIn,
+        faultFromMem => false,
+
         csrOut => csr_out,
         csr_in => csr_in,
         exception_type => exceptionTypeFromMem,
