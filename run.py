@@ -18,6 +18,9 @@ src_library.add_source_files(SRC_PATH / "main_file.vhd")
 src_library.add_source_files(SRC_PATH / "bus" / "*.vhd")
 tb_library.add_source_files(SRC_PATH / "bus" / "test" / "*.vhd")
 
+src_library.add_source_files(SRC_PATH / "bus" / "bus_cache"  / "*.vhd")
+tb_library.add_source_files(SRC_PATH / "bus" / "bus_cache" / "test" / "*.vhd")
+
 tb_library.add_source_files(SRC_PATH / "complete_system"/ "test" / "*.vhd")
 
 src_library.add_source_files(SRC_PATH / "triple_23lc1024_controller" / "*.vhd")
