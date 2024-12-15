@@ -48,6 +48,7 @@ package bus_pkg is
 
     type bus_data_array is array (natural range <>) of bus_data_type;
     type bus_byte_array is array (natural range <>) of bus_byte_type;
+    type bus_aligned_address_array is array (natural range <>) of bus_aligned_address_type;
 
     subtype bus_byte_mask_type is std_logic_vector(bus_bytes_per_word - 1 downto 0);
 
