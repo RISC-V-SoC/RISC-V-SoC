@@ -26,11 +26,12 @@ entity riscv32_flush_manager is
 end entity;
 
 architecture behaviourial of riscv32_flush_manager is
+    constant max_ext_mem_index : integer := external_memory_count - 1;
     type state_type is (idle, dcache_flush_start, dcache_flush_wait, ext_flush_start, ext_flush_wait);
     signal cur_state : state_type := idle;
     signal next_state : state_type := idle;
 
-    signal ext_mem_index : natural range 0 to external_memory_count - 1 := 0;
+    signal ext_mem_index : natural range 0 to max_ext_mem_index := 0;
 
     signal selected_ext_mem_do_flush : boolean := false;
     signal selected_ext_mem_busy : boolean;
@@ -53,7 +54,7 @@ begin
         if rising_edge(clk) and external_memory_count > 0 then
             if rst or cur_state = idle then
                 ext_mem_index <= 0;
-            elsif cur_state = ext_flush_wait and next_state = ext_flush_start then
+            elsif cur_state = ext_flush_wait and next_state = ext_flush_start and ext_mem_index < max_ext_mem_index then
                 ext_mem_index <= ext_mem_index + 1;
             end if;
         end if;
@@ -70,7 +71,7 @@ begin
         end if;
     end process;
 
-    next_state_handling : process(cur_state, do_flush, dcache_flush_busy, ext_flush_busy, ext_mem_index)
+    next_state_handling : process(cur_state, do_flush, dcache_flush_busy, ext_flush_busy, ext_mem_index, selected_ext_mem_busy)
     begin
         next_state <= cur_state;
         case cur_state is
