@@ -144,6 +144,7 @@ begin
                     end loop;
                     do_write_from_backend <= false;
                     wait until rising_edge(clk);
+                    wait until rising_edge(clk);
                     word_index_from_frontend <= 0;
                     do_read_from_frontend <= true;
                     wait until rising_edge(clk);
@@ -212,6 +213,7 @@ begin
                     end loop;
                     do_write_from_backend <= false;
                     wait until rising_edge(clk);
+                    wait until rising_edge(clk);
                     word_index_from_frontend <= 0;
                     do_read_from_frontend <= index rem 2 = 0;
                     do_write_from_frontend <= index rem 2 /= 0;
@@ -251,6 +253,7 @@ begin
                         mark_line_clean <= false;
                     end loop;
                     do_write_from_backend <= false;
+                    wait until rising_edge(clk);
                     wait until rising_edge(clk);
                     word_index_from_frontend <= 0;
                     do_read_from_frontend <= true;

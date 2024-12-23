@@ -120,13 +120,20 @@ begin
         end loop;
     end process;
 
-    age_handling : process(do_read_from_frontend, do_write_from_frontend, hit_index, hit_age, age_array)
+    age_handling : process(clk, do_read_from_frontend, do_write_from_frontend, age_array)
         variable bank_operation : boolean;
+
+        variable hit_index_buf : natural range 0 to bank_count -1;
+        variable hit_age_buf : natural range 0 to max_age;
     begin
+        if rising_edge(clk) then
+            hit_index_buf := hit_index;
+            hit_age_buf := hit_age;
+        end if;
         bank_operation := do_read_from_frontend or do_write_from_frontend;
         for i in 0 to bank_count - 1 loop
-            reset_age_array(i) <= bank_operation and i = hit_index;
-            increment_age_array(i) <= bank_operation and i /= hit_index and age_array(i) <= hit_age;
+            reset_age_array(i) <= bank_operation and i = hit_index_buf;
+            increment_age_array(i) <= bank_operation and i /= hit_index_buf and age_array(i) <= hit_age_buf;
         end loop;
     end process;
 
