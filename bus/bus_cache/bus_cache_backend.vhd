@@ -117,6 +117,7 @@ begin
         next_state <= cur_state;
         case cur_state is
             when idle =>
+                backend2slv_buf.address <= (others => '-');
                 backend2slv_buf.readReady <= '0';
                 backend2slv_buf.writeReady <= '0';
                 backend2slv_buf.burst <= '0';
@@ -191,6 +192,7 @@ begin
                     next_state <= read_word_store;
                 end if;
             when transaction_completing =>
+                backend2slv_buf.address <= (others => '-');
                 backend2slv_buf.readReady <= '0';
                 backend2slv_buf.writeReady <= '0';
                 backend2slv_buf.burst <= '0';
@@ -199,6 +201,7 @@ begin
                 bus_fault <= false;
                 next_state <= idle;
             when transaction_fault =>
+                backend2slv_buf.address <= (others => '-');
                 backend2slv_buf.readReady <= '0';
                 backend2slv_buf.writeReady <= '0';
                 backend2slv_buf.burst <= '0';
