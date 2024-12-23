@@ -63,6 +63,8 @@ architecture behaviourial of bus_cache_bank is
     signal tag : tag_type;
     signal address_tag : tag_type;
     signal age_buf : natural range 0 to max_age;
+
+    shared variable data_bank : bus_data_array(0 to line_count * words_per_line - 1);
 begin
     address_line_index <= to_integer(unsigned(address(address_line_index_msb downto address_line_index_lsb)));
     address_tag <= address(address_tag_msb downto address_tag_lsb);
@@ -101,20 +103,25 @@ begin
         end if;
     end process;
 
-    data_storage : process(clk)
-        variable data_bank : bus_data_array(line_count * words_per_line - 1 downto 0);
+    backend_data_storage : process(clk)
         variable backend_word_index : natural range 0 to data_bank'high;
-        variable frontend_word_index : natural range 0 to data_bank'high;
     begin
         if rising_edge(clk) then
             backend_word_index := actual_line_index * words_per_line + word_index_from_backend;
-            frontend_word_index := actual_line_index * words_per_line + word_index_from_frontend;
-
             data_to_backend <= data_bank(backend_word_index);
-            data_to_frontend <= data_bank(frontend_word_index);
             if do_write_from_backend then
                 data_bank(backend_word_index) := data_from_backend;
-            elsif do_write_from_frontend then
+            end if;
+        end if;
+    end process;
+
+    frontend_data_storage : process(clk)
+        variable frontend_word_index : natural range 0 to data_bank'high;
+    begin
+        if rising_edge(clk) then
+            frontend_word_index := actual_line_index * words_per_line + word_index_from_frontend;
+            data_to_frontend <= data_bank(frontend_word_index);
+            if do_write_from_frontend then
                 for i in 0 to bus_bytes_per_word-1 loop
                     if bytemask_from_frontend(i) = '1' then
                         data_bank(frontend_word_index)(i*8+7 downto i*8) := data_from_frontend(i*8+7 downto i*8);
