@@ -109,7 +109,7 @@ architecture tb of main_file_tb is
         variable data : bus_data_type;
         variable address : bus_address_type;
     begin
-        data := X"00000004";
+        data := X"00000006";
         address := std_logic_vector(to_unsigned(16#2000#, bus_address_type'length));
         write(net, address, data);
         address := std_logic_vector(to_unsigned(16#2000# + 16, bus_address_type'length));
@@ -233,7 +233,9 @@ begin
                 general_gpio(0) <= '1';
                 check_stream(net, slave_uart_slave_stream, X"31");
             elsif run("Run same uart program multiple times") then
+                write(net, processor_controller_start_address, X"00000001");
                 write_file(net, spimem0_start_address, "./complete_system/test/programs/uart_hw.txt");
+                flush_cache(net);
                 for i in 0 to 5 loop
                     info(logger, "Iteration " & integer'image(i + 1) & " of 5");
                     write(net, processor_controller_start_address, X"00000001");

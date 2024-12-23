@@ -105,9 +105,11 @@ architecture Behavioral of main_file is
     signal demux2gpio : bus_mst2slv_type;
     signal gpio2demux : bus_slv2mst_type;
 
-    signal demux2spimem : bus_mst2slv_type;
-    signal spimem2demux : bus_slv2mst_type;
+    signal demuxToL2cache : bus_mst2slv_type;
+    signal l2cacheToDemux : bus_slv2mst_type;
 
+    signal l2cacheToSpimem : bus_mst2slv_type;
+    signal spimemToL2cache : bus_slv2mst_type;
 
     signal mem_spi_sio_out : std_logic_vector(3 downto 0);
     signal mem_spi_sio_in : std_logic_vector(3 downto 0);
@@ -122,6 +124,10 @@ architecture Behavioral of main_file is
     signal spi_mem_reset : boolean;
     signal spi_master_reset : boolean;
     signal gpio_reset : boolean;
+    signal l2cache_reset : boolean;
+
+    signal l2cache_do_flush : boolean;
+    signal l2cache_flush_busy : boolean;
 begin
 
     mem_spi_sio_in <= JA_gpio;
@@ -149,7 +155,7 @@ begin
         iCache_word_count_log2b => 8,
         dCache_range => create_address_map_entry(spiMemStartAddress, spiMemMappingSize).addr_range,
         dCache_word_count_log2b => 8,
-        external_memory_count => 0
+        external_memory_count => 1
     ) port map (
         clk => clk,
         rst => processor_reset,
@@ -159,7 +165,9 @@ begin
         slv2instructionFetch => arbiter2instructionFetch,
         memory2slv => memory2arbiter,
         slv2memory => arbiter2memory,
-        reset_request => reset_request
+        reset_request => reset_request,
+        do_flush(0) => l2cache_do_flush,
+        flush_busy(0) => l2cache_flush_busy
     );
 
     arbiter : entity work.bus_arbiter
@@ -189,13 +197,13 @@ begin
         demux2slv(2) => demux2spiDevice,
         demux2slv(3) => demux2control,
         demux2slv(4) => demux2gpio,
-        demux2slv(5) => demux2spimem,
+        demux2slv(5) => demuxToL2cache,
         slv2demux(0) => uartSlave2demux,
         slv2demux(1) => staticInfo2demux,
         slv2demux(2) => spiDevice2demux,
         slv2demux(3) => control2demux,
         slv2demux(4) => gpio2demux,
-        slv2demux(5) => spimem2demux
+        slv2demux(5) => l2cacheToDemux
     );
 
     uart_bus_slave : entity work.uart_bus_slave
@@ -240,6 +248,22 @@ begin
         slv2mst => gpio2demux
     );
 
+    bus_cache : entity work.bus_cache
+    generic map (
+        words_per_line_log2b => 3,
+        total_line_count_log2b => 15,
+        bank_count_log2b => 3
+    ) port map (
+        clk => clk,
+        rst => l2cache_reset,
+        mst2frontend => demuxToL2cache,
+        frontend2mst => l2cacheToDemux,
+        backend2slv => l2cacheToSpimem,
+        slv2backend => spimemToL2cache,
+        do_flush => l2cache_do_flush,
+        flush_busy => l2cache_flush_busy
+    );
+
     spimem : entity work.triple_23lc1024_controller
     generic map (
         system_clock_period => clk_period
@@ -250,14 +274,14 @@ begin
         spi_sio_in => mem_spi_sio_in,
         spi_sio_out => mem_spi_sio_out,
         spi_cs => mem_spi_cs_n,
-        mst2slv => demux2spimem,
-        slv2mst => spimem2demux
+        mst2slv => l2cacheToSpimem,
+        slv2mst => spimemToL2cache
     );
 
     reset_controller : entity work.reset_controller
     generic map (
         master_count => 1,
-        slave_count => 4
+        slave_count => 5
     ) port map (
         clk => clk,
         do_reset => reset_request,
@@ -265,7 +289,8 @@ begin
         slave_reset(0) => uart_bus_slave_reset,
         slave_reset(1) => spi_mem_reset,
         slave_reset(2) => spi_master_reset,
-        slave_reset(3) => gpio_reset
+        slave_reset(3) => gpio_reset,
+        slave_reset(4) => l2cache_reset
     );
 
 end Behavioral;
