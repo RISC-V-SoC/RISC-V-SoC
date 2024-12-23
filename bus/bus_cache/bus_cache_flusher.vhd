@@ -49,7 +49,7 @@ begin
         end if;
     end process;
 
-    state_decider : process(clk, do_flush, line_index_buf, is_dirty)
+    state_decider : process(clk, do_flush, line_index_buf, is_dirty, cur_state, write_complete)
     begin
         if rising_edge(clk) then
             if rst then
