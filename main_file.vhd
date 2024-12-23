@@ -148,7 +148,8 @@ begin
         iCache_range => create_address_map_entry(spiMemStartAddress, spiMemMappingSize).addr_range,
         iCache_word_count_log2b => 8,
         dCache_range => create_address_map_entry(spiMemStartAddress, spiMemMappingSize).addr_range,
-        dCache_word_count_log2b => 8
+        dCache_word_count_log2b => 8,
+        external_memory_count => 0
     ) port map (
         clk => clk,
         rst => processor_reset,

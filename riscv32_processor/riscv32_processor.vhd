@@ -13,7 +13,8 @@ entity riscv32_processor is
         iCache_range : addr_range_type;
         iCache_word_count_log2b : natural;
         dCache_range : addr_range_type;
-        dCache_word_count_log2b : natural
+        dCache_word_count_log2b : natural;
+        external_memory_count : natural
     );
     port (
         clk : in std_logic;
@@ -31,7 +32,10 @@ entity riscv32_processor is
         memory2slv : out bus_mst2slv_type;
         slv2memory : in bus_slv2mst_type;
 
-        reset_request : out boolean
+        reset_request : out boolean;
+
+        do_flush : out boolean_vector(external_memory_count - 1 downto 0);
+        flush_busy : in boolean_vector(external_memory_count - 1 downto 0) := (others => false)
     );
 end entity;
 
@@ -100,8 +104,11 @@ architecture behaviourial of riscv32_processor is
     signal interrupted_pc : riscv32_address_type;
     signal pc_on_interrupt_return : riscv32_address_type;
 
-    signal flush_cache : boolean;
-    signal cache_flush_in_progress : boolean;
+    signal flush_dcache : boolean;
+    signal dcache_flush_in_progress : boolean;
+
+    signal flush_manager_do_flush : boolean;
+    signal flush_manager_busy : boolean;
 begin
     pipelineStall <= controllerStall or instructionStall or memoryStall;
     forbidBusInteraction <= controllerStall;
@@ -182,8 +189,8 @@ begin
     ) port map (
         clk => clk,
         rst => rst,
-        flush_cache => flush_cache,
-        cache_flush_busy => cache_flush_in_progress,
+        flush_cache => flush_dcache,
+        cache_flush_busy => dcache_flush_in_progress,
         mst2slv => memory2slv,
         slv2mst => slv2memory,
         hasFault => memoryHasFault,
@@ -214,8 +221,22 @@ begin
         mem_faultData => (others => '0'),
         cpu_reset => reset_request,
         cpu_stall => controllerStall,
-        flush_cache => flush_cache,
-        cache_flush_in_progress => cache_flush_in_progress
+        flush_cache => flush_manager_do_flush,
+        cache_flush_in_progress => flush_manager_busy
+    );
+
+    flush_manager : entity work.riscv32_flush_manager
+    generic map (
+        external_memory_count => external_memory_count
+    ) port map (
+        clk => clk,
+        rst => rst,
+        do_flush => flush_manager_do_flush,
+        flush_busy => flush_manager_busy,
+        dcache_do_flush => flush_dcache,
+        dcache_flush_busy => dcache_flush_in_progress,
+        ext_do_flush => do_flush,
+        ext_flush_busy => flush_busy
     );
 
     systemtimer : entity work.riscv32_systemtimer

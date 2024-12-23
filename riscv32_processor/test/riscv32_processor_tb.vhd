@@ -360,7 +360,8 @@ begin
         iCache_range => iCache_rangeMap.addr_range,
         iCache_word_count_log2b => iCache_word_count_log2b,
         dCache_range => iCache_rangeMap.addr_range,
-        dCache_word_count_log2b => dCache_word_count_log2b
+        dCache_word_count_log2b => dCache_word_count_log2b,
+        external_memory_count => 0 
     ) port map (
         clk => clk,
         rst => rst,
