@@ -90,6 +90,7 @@ begin
                 check_false(hit);
                 check_false(dirty);
                 for i in 0 to words_per_line-1 loop
+                    wait until rising_edge(clk);
                     word_index_from_backend <= i;
                     data_from_backend <= std_logic_vector(to_unsigned(i, data_from_backend'length));
                     do_write_from_backend <= true;
@@ -112,6 +113,7 @@ begin
                 check_false(hit);
                 check_false(dirty);
                 for i in 0 to words_per_line-1 loop
+                    wait until rising_edge(clk);
                     word_index_from_backend <= i;
                     data_from_backend <= std_logic_vector(to_unsigned(i + 4, data_from_backend'length));
                     do_write_from_backend <= true;
@@ -202,6 +204,7 @@ begin
                     address <= std_logic_vector(to_unsigned(index * words_per_line, address'length));
                     wait until rising_edge(clk);
                     for i in 0 to words_per_line-1 loop
+                        wait until rising_edge(clk);
                         word_index_from_backend <= i;
                         data_from_backend <= std_logic_vector(to_unsigned(index, data_from_backend'length));
                         do_write_from_backend <= true;
@@ -222,6 +225,7 @@ begin
                     wait until rising_edge(clk);
                     do_read_from_frontend <= false;
                     do_write_from_frontend <= false;
+                    wait until rising_edge(clk);
                 end loop;
                 wait until rising_edge(clk);
                 index_mode <= true;
@@ -243,6 +247,7 @@ begin
                     address <= std_logic_vector(to_unsigned((bank_count * words_per_line)*bank_index, address'length));
                     wait until rising_edge(clk);
                     for i in 0 to words_per_line-1 loop
+                        wait until rising_edge(clk);
                         word_index_from_backend <= i;
                         data_from_backend <= std_logic_vector(to_unsigned(i + (bank_index * bank_count), data_from_backend'length));
                         do_write_from_backend <= true;
@@ -271,6 +276,7 @@ begin
                     address <= std_logic_vector(to_unsigned((bank_count * words_per_line)*bank_index, address'length));
                     wait until rising_edge(clk);
                     for i in 0 to words_per_line-1 loop
+                        wait until rising_edge(clk);
                         word_index_from_backend <= i;
                         data_from_backend <= std_logic_vector(to_unsigned(i + (bank_index * bank_count), data_from_backend'length));
                         do_write_from_backend <= true;

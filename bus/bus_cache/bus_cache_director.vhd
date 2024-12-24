@@ -68,6 +68,11 @@ architecture behaviourial of bus_cache_director is
     signal evict_index : natural range 0 to bank_count - 1;
 
     signal hit_age : natural range 0 to max_age;
+
+    signal hit_index_buf : natural range 0 to bank_count - 1;
+    signal evict_index_buf : natural range 0 to bank_count - 1;
+    signal hit_age_buf : natural range 0 to max_age;
+    signal age_array_buf : age_array_type;
 begin
     assert(total_line_count_log2b > bank_count_log2b);
 
@@ -111,29 +116,32 @@ begin
         end loop;
     end process;
 
-    write_command_handling : process(hit_index, evict_index, do_write_from_frontend, do_write_from_backend, mark_line_clean)
+    feedback_break : process(clk)
+    begin
+        if rising_edge(clk) then
+            hit_index_buf <= hit_index;
+            evict_index_buf <= evict_index;
+            hit_age_buf <= hit_age;
+            age_array_buf <= age_array;
+        end if;
+    end process;
+
+    write_command_handling : process(hit_index_buf, evict_index_buf, do_write_from_frontend, do_write_from_backend, mark_line_clean)
     begin
         for i in 0 to bank_count - 1 loop
-            do_write_from_frontend_array(i) <= do_write_from_frontend and i = hit_index;
-            do_write_from_backend_array(i) <= do_write_from_backend and i = evict_index;
-            mark_line_clean_array(i) <= mark_line_clean and i = evict_index;
+            do_write_from_frontend_array(i) <= do_write_from_frontend and i = hit_index_buf;
+            do_write_from_backend_array(i) <= do_write_from_backend and i = evict_index_buf;
+            mark_line_clean_array(i) <= mark_line_clean and i = evict_index_buf;
         end loop;
     end process;
 
-    age_handling : process(clk, do_read_from_frontend, do_write_from_frontend, age_array)
+    age_handling : process(clk, do_read_from_frontend, do_write_from_frontend, hit_index_buf, hit_age_buf, age_array_buf)
         variable bank_operation : boolean;
-
-        variable hit_index_buf : natural range 0 to bank_count -1;
-        variable hit_age_buf : natural range 0 to max_age;
     begin
-        if rising_edge(clk) then
-            hit_index_buf := hit_index;
-            hit_age_buf := hit_age;
-        end if;
         bank_operation := do_read_from_frontend or do_write_from_frontend;
         for i in 0 to bank_count - 1 loop
             reset_age_array(i) <= bank_operation and i = hit_index_buf;
-            increment_age_array(i) <= bank_operation and i /= hit_index_buf and age_array(i) <= hit_age_buf;
+            increment_age_array(i) <= bank_operation and i /= hit_index_buf and age_array_buf(i) <= hit_age_buf;
         end loop;
     end process;
 
