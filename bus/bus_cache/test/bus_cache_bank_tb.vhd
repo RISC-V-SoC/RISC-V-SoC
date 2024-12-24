@@ -352,15 +352,15 @@ begin
                     mark_line_clean <= false;
                 end loop;
                 do_write_from_backend <= false;
+                wait until rising_edge(clk) and age = max_age;
                 reset_age <= true;
                 wait until rising_edge(clk);
                 reset_age <= false;
+                wait until rising_edge(clk) and age = 0;
                 increase_age <= true;
                 wait until rising_edge(clk);
                 increase_age <= false;
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
-                check_equal(age, 1);
+                wait until rising_edge(clk) and age = 1;
             elsif run("Age saturates") then
                 address <= (others => '0');
                 for i in 0 to words_per_line-1 loop

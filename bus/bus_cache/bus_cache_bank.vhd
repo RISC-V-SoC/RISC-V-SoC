@@ -161,12 +161,13 @@ begin
     begin
         if rising_edge(clk) then
             age_buf <= age_bank(actual_line_index);
+
             if reset_age then
                 age_bank(actual_line_index) := 0;
             elsif mark_line_clean then
                 age_bank(actual_line_index) := max_age;
-            elsif increase_age and age_bank(actual_line_index) < max_age then
-                age_bank(actual_line_index) := age_bank(actual_line_index) + 1;
+            elsif increase_age and age_buf < max_age then
+                age_bank(actual_line_index) := age_buf + 1;
             end if;
         end if;
     end process;
