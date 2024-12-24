@@ -46,22 +46,25 @@ architecture behaviourial of bus_cache_backend is
     signal actual_write_address : bus_address_type;
     signal actual_read_address : bus_address_type;
     signal read_word_retrieved_buf : boolean;
+
+    signal write_address_buf : bus_address_type;
+    signal read_address_buf : bus_address_type;
 begin
     backend2slv <= backend2slv_buf;
     backend2slv_buf.byteMask <= (others => '1');
     word_index <= current_word_index;
     read_word_retrieved <= read_word_retrieved_buf;
 
-    determine_actual_address : process(current_word_index, write_address, read_address)
+    determine_actual_address : process(current_word_index, write_address_buf, read_address_buf)
         variable base_address : unsigned(backend2slv_buf.address'range);
         variable sub_address : unsigned(backend2slv_buf.address'range);
     begin
         sub_address := unsigned(to_unsigned(current_word_index * bus_bytes_per_word, sub_address'length));
 
-        base_address := unsigned(write_address);
+        base_address := unsigned(write_address_buf);
         actual_write_address <= std_logic_vector(base_address + sub_address);
 
-        base_address := unsigned(read_address);
+        base_address := unsigned(read_address_buf);
         actual_read_address <= std_logic_vector(base_address + sub_address);
     end process;
 
@@ -75,6 +78,8 @@ begin
             if fault_transaction(backend2slv_buf, slv2backend) then
                 bus_fault_data <= slv2backend.faultData;
             end if;
+            write_address_buf <= write_address;
+            read_address_buf <= read_address;
         end if;
     end process;
 
