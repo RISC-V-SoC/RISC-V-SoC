@@ -30,6 +30,7 @@ architecture behaviourial of riscv32_pipeline_execute is
     signal aluResultImmidiate : riscv32_data_type;
     signal aluResultRtype : riscv32_data_type;
     signal bitManip_result : riscv32_data_type;
+    signal mul_result : riscv32_data_type;
 begin
     determineExecResult : process(executeControlWord, aluResultRtype, aluResultImmidiate, programCounter, immidiate)
     begin
@@ -44,6 +45,8 @@ begin
                 execResult <= immidiate;
             when riscv32_exec_auipc =>
                 execResult <= std_logic_vector(signed(immidiate) + signed(programCounter));
+            when riscv32_exec_mul =>
+                execResult <= mul_result;
         end case;
     end process;
 
@@ -95,6 +98,16 @@ begin
         shamt => to_integer(unsigned(rs2Data(4 downto 0))),
         cmd => executeControlWord.alu_cmd,
         output => aluResultRtype
+    );
+
+    multiplier : entity work.riscv32_multiplier
+    port map (
+        inputA => rs1Data,
+        inputB => rs2Data,
+        outputWordHigh => executeControlWord.is_mul_high,
+        inputASigned => executeControlWord.is_mul_rs1_signed,
+        inputBSigned => executeControlWord.is_mul_rs2_signed,
+        output => mul_result
     );
 
 end architecture;
