@@ -7,9 +7,6 @@ use work.riscv32_pkg.all;
 
 entity riscv32_pipeline_memory is
     port (
-        -- Stall signal is required for CSR operations
-        stall : in boolean;
-
         -- From execute stage: control signals
         memoryControlWord : in riscv32_MemoryControlWord_type;
 
@@ -176,6 +173,6 @@ begin
     csrOut.command <= memoryControlWord.csrCmd;
     csrOut.address <= requestAddress(11 downto 0);
     csrOut.data_in <= rs1Data;
-    csrOut.do_write <= memoryControlWord.csrOp and memoryControlWord.csrWrite and not stall;
-    csrOut.do_read <= memoryControlWord.csrOp and memoryControlWord.csrRead and not stall;
+    csrOut.do_write <= memoryControlWord.csrOp and memoryControlWord.csrWrite;
+    csrOut.do_read <= memoryControlWord.csrOp and memoryControlWord.csrRead;
 end architecture;

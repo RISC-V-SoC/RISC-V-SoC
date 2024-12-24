@@ -13,6 +13,8 @@ entity riscv32_csr_demux is
         csr_in : in riscv32_to_csr_type;
         csr_out : out riscv32_from_csr_type;
 
+        stall : in boolean;
+
         demux2slv : out riscv32_csr_mst2slv_array(mapping_array'range);
         slv2demux : in riscv32_csr_slv2mst_array(mapping_array'range)
     );
@@ -79,14 +81,14 @@ begin
         end loop;
     end process;
 
-    forward_handling : process(csr_in, decoded_address, decoded_subaddress, error_buf, processed_write_data)
+    forward_handling : process(csr_in, decoded_address, decoded_subaddress, error_buf, processed_write_data, stall)
     begin
         for i in mapping_array'range loop
             demux2slv(i).address <= decoded_subaddress;
             demux2slv(i).write_data <= (others => '-');
             if address_in_range(decoded_address, mapping_array(i)) and not error_buf then
-                demux2slv(i).do_read <= csr_in.do_read;
-                demux2slv(i).do_write <= csr_in.do_write;
+                demux2slv(i).do_read <= csr_in.do_read and not stall;
+                demux2slv(i).do_write <= csr_in.do_write and not stall;
                 demux2slv(i).write_data <= processed_write_data;
             else
                 demux2slv(i).do_read <= false;

@@ -26,6 +26,8 @@ architecture tb of riscv32_csr_demux_tb is
     signal demux2user_readonly : riscv32_csr_mst2slv_type;
     signal demux2machine_trap_handling : riscv32_csr_mst2slv_type;
 
+    signal stall : boolean := false;
+
     signal user_readonly2demux : riscv32_csr_slv2mst_type;
     signal machine_trap_handling2demux : riscv32_csr_slv2mst_type;
 begin
@@ -146,6 +148,24 @@ begin
                 machine_trap_handling2demux.read_data <= std_logic_vector(to_unsigned(16#fff#, machine_trap_handling2demux.read_data'length));
                 wait for 1 ns;
                 check_equal(demux2machine_trap_handling.write_data, std_logic_vector(to_unsigned(16#0f0#, demux2machine_trap_handling.write_data'length)));
+            elsif run("When stall is true, read is false") then
+                csr_in.command <= csr_rw;
+                csr_in.address <= std_logic_vector(to_unsigned(16#302#, csr_in.address'length));
+                csr_in.data_in <= (others => '0');
+                csr_in.do_write <= false;
+                csr_in.do_read <= true;
+                stall <= true;
+                wait for 1 ns;
+                check_false(demux2machine_trap_handling.do_read);
+            elsif run("When stall is true, write is false") then
+                csr_in.command <= csr_rw;
+                csr_in.address <= std_logic_vector(to_unsigned(16#303#, csr_in.address'length));
+                csr_in.data_in <= std_logic_vector(to_unsigned(16#1234#, csr_in.data_in'length));
+                csr_in.do_write <= true;
+                csr_in.do_read <= false;
+                stall <= true;
+                wait for 1 ns;
+                check_false(demux2machine_trap_handling.do_write);
             end if;
         end loop;
         test_runner_cleanup(runner);
@@ -158,6 +178,7 @@ begin
     ) port map (
         csr_in => csr_in,
         csr_out => csr_out,
+        stall => stall,
         demux2slv(0) => demux2user_readonly,
         demux2slv(1) => demux2machine_trap_handling,
         slv2demux(0) => user_readonly2demux,

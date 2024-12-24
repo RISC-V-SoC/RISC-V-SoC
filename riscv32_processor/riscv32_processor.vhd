@@ -262,6 +262,7 @@ begin
     ) port map (
         csr_in => pipeline_to_csr,
         csr_out => csr_to_pipeline,
+        stall => pipelineStall,
         demux2slv(0) => demux2user_readonly,
         demux2slv(1) => demux2machine_readonly,
         demux2slv(2) => demux2machine_trap_setup,
