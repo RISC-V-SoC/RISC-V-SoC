@@ -251,7 +251,7 @@ begin
     bus_cache : entity work.bus_cache
     generic map (
         words_per_line_log2b => 3,
-        total_line_count_log2b => 15,
+        total_line_count_log2b => 10,
         bank_count_log2b => 3
     ) port map (
         clk => clk,
