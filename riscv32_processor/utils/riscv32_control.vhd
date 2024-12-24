@@ -63,6 +63,7 @@ begin
         invalid_load := false;
         invalid_csr := false;
         invalid_trap_return := false;
+        invalid_muldiv := false;
 
         rdIsZero := instruction(11 downto 7) = "00000";
         rs1IsZero := instruction(19 downto 15) = "00000";
