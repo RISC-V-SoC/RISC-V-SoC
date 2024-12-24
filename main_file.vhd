@@ -280,17 +280,17 @@ begin
 
     reset_controller : entity work.reset_controller
     generic map (
-        master_count => 1,
-        slave_count => 5
+        master_count => 2,
+        slave_count => 4
     ) port map (
         clk => clk,
         do_reset => reset_request,
         master_reset(0) => processor_reset,
+        master_reset(1) => l2cache_reset,
         slave_reset(0) => uart_bus_slave_reset,
         slave_reset(1) => spi_mem_reset,
         slave_reset(2) => spi_master_reset,
-        slave_reset(3) => gpio_reset,
-        slave_reset(4) => l2cache_reset
+        slave_reset(3) => gpio_reset
     );
 
 end Behavioral;
