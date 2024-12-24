@@ -64,7 +64,7 @@ architecture behaviourial of bus_cache_bank is
     signal address_tag : tag_type;
     signal age_buf : natural range 0 to max_age;
 
-    shared variable data_bank : bus_data_array(0 to line_count * words_per_line - 1);
+    signal data_bank : bus_data_array(0 to line_count * words_per_line - 1);
 begin
     address_line_index <= to_integer(unsigned(address(address_line_index_msb downto address_line_index_lsb)));
     address_tag <= address(address_tag_msb downto address_tag_lsb);
@@ -103,9 +103,16 @@ begin
         end if;
     end process;
 
-    backend_data_storage : process(clk)
+    data_storage : process(clk)
+        variable data_bank : bus_data_array(0 to line_count * words_per_line - 1);
+
         variable backend_word_index : natural range 0 to data_bank'high;
+        variable frontend_word_index : natural range 0 to data_bank'high;
     begin
+        -- To make Vivado recognize that this is a true dual-port BRAM we need two seperate rising_edge(clk) checks
+        -- Vivado recommends having two processes, but this requires a shared variable. This needs to be a protected type,
+        -- which is quite hard and apparently also trips up Vivado. Alternatively, some rules can be relaxed, which is
+        -- also not ideal.
         if rising_edge(clk) then
             backend_word_index := actual_line_index * words_per_line + word_index_from_backend;
             data_to_backend <= data_bank(backend_word_index);
@@ -113,11 +120,7 @@ begin
                 data_bank(backend_word_index) := data_from_backend;
             end if;
         end if;
-    end process;
 
-    frontend_data_storage : process(clk)
-        variable frontend_word_index : natural range 0 to data_bank'high;
-    begin
         if rising_edge(clk) then
             frontend_word_index := actual_line_index * words_per_line + word_index_from_frontend;
             data_to_frontend <= data_bank(frontend_word_index);
