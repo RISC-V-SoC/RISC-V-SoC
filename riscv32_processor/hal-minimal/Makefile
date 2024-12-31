@@ -13,7 +13,7 @@ TARGET:=final
 TARGETBIN:=final.bin
 TARGETTXT:=final.txt
 LDFLAGS := -Wl,--gc-sections
-ARCHFLAGS := -march=rv32i -mabi=ilp32
+ARCHFLAGS := -march=rv32im -mabi=ilp32
 .PHONY: all release clean
 
 all: release

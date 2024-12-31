@@ -32,7 +32,7 @@ package riscv32_pkg is
     type riscv32_load_store_size is (ls_word, ls_halfword, ls_byte);
 
     type riscv32_immidiate_type is (riscv32_i_immidiate, riscv32_u_immidiate, riscv32_b_immidiate, riscv32_s_immidiate);
-    type riscv32_exec_type is (riscv32_exec_alu_imm, riscv32_exec_alu_rtype, riscv32_exec_calcReturn, riscv32_exec_lui, riscv32_exec_auipc);
+    type riscv32_exec_type is (riscv32_exec_alu_imm, riscv32_exec_alu_rtype, riscv32_exec_calcReturn, riscv32_exec_lui, riscv32_exec_auipc, riscv32_exec_mul);
     type riscv32_alu_cmd is (cmd_alu_add, cmd_alu_slt, cmd_alu_sltu, cmd_alu_and, cmd_alu_or, cmd_alu_xor, cmd_alu_sub, cmd_alu_sll, cmd_alu_srl, cmd_alu_sra);
     type riscv32_branch_cmd is (cmd_branch_eq, cmd_branch_ne, cmd_branch_lt, cmd_branch_ltu, cmd_branch_ge, cmd_branch_geu, cmd_branch_jalr);
     type riscv32_csr_cmd is (csr_rw, csr_rs, csr_rc);
@@ -68,6 +68,9 @@ package riscv32_pkg is
         is_branch_op : boolean;
         alu_cmd : riscv32_alu_cmd;
         branch_cmd : riscv32_branch_cmd;
+        is_mul_high : boolean;
+        is_mul_rs1_signed : boolean;
+        is_mul_rs2_signed : boolean;
     end record;
 
     type riscv32_MemoryControlWord_type is record
@@ -134,7 +137,10 @@ package riscv32_pkg is
         exec_directive => riscv32_exec_alu_imm,
         is_branch_op => false,
         alu_cmd => cmd_alu_add,
-        branch_cmd => cmd_branch_eq
+        branch_cmd => cmd_branch_eq,
+        is_mul_high => false,
+        is_mul_rs1_signed => false,
+        is_mul_rs2_signed => false
     );
 
     constant riscv32_memoryControlWordAllFalse : riscv32_MemoryControlWord_type := (
@@ -224,6 +230,18 @@ package riscv32_pkg is
     constant riscv32_funct3_csrrwi : riscv32_funct3_type := 16#5#;
     constant riscv32_funct3_csrrsi : riscv32_funct3_type := 16#6#;
     constant riscv32_funct3_csrrci : riscv32_funct3_type := 16#7#;
+
+    -- RV32M extension
+    constant riscv32_funct7_muldiv : riscv32_funct7_type := 16#1#;
+
+    constant riscv32_funct3_mul : riscv32_funct3_type := 16#0#;
+    constant riscv32_funct3_mulh : riscv32_funct3_type := 16#1#;
+    constant riscv32_funct3_mulhsu : riscv32_funct3_type := 16#2#;
+    constant riscv32_funct3_mulhu : riscv32_funct3_type := 16#3#;
+    constant riscv32_funct3_div : riscv32_funct3_type := 16#4#;
+    constant riscv32_funct3_divu : riscv32_funct3_type := 16#5#;
+    constant riscv32_funct3_rem : riscv32_funct3_type := 16#6#;
+    constant riscv32_funct3_remu : riscv32_funct3_type := 16#7#;
 
     constant riscv32_privilege_level_user : std_logic_vector(1 downto 0) := "00";
     constant riscv32_privilege_level_supervisor : std_logic_vector(1 downto 0) := "01";

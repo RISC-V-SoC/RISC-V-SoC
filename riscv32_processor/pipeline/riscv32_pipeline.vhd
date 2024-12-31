@@ -48,7 +48,8 @@ entity riscv32_pipeline is
         exception_code : out riscv32_exception_code_type;
         interrupted_pc : out riscv32_address_type;
 
-        instructionsRetiredCount : out unsigned(63 downto 0)
+        instructionsRetiredCount : out unsigned(63 downto 0);
+        stall_out : out boolean
     );
 end entity;
 
@@ -349,6 +350,10 @@ begin
     -- EX stage
     execute : entity work.riscv32_pipeline_execute
     port map (
+        clk => clk,
+        rst => rst,
+        stall_out => stall_out,
+
         executeControlWord => exControlWordFromRegEx,
 
         rs1Data => rs1DataFromRegEx,

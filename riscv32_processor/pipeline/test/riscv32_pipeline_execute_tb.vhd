@@ -18,7 +18,14 @@ entity riscv32_pipeline_execute_tb is
 end entity;
 
 architecture tb of riscv32_pipeline_execute_tb is
+    signal clk : std_logic := '0';
+    signal clk_period : time := 20 ns;
+
+    signal rst : boolean := false;
+
     signal executeControlWord : riscv32_ExecuteControlWord_type := riscv32_executeControlWordAllFalse;
+
+    signal stall_out : boolean;
 
     signal rs1Data : riscv32_data_type;
     signal rs2Data : riscv32_data_type;
@@ -32,6 +39,9 @@ architecture tb of riscv32_pipeline_execute_tb is
 
     signal instruction : riscv32_instruction_type := (others => '0');
 begin
+
+    clk <= not clk after clk_period / 2;
+
     main : process
         variable expectedExecResult : riscv32_data_type;
         variable expectedDestinationRegToMem : riscv32_registerFileAddress_type;
@@ -224,6 +234,9 @@ begin
 
     executeStage : entity src.riscv32_pipeline_execute
     port map (
+        clk => clk,
+        rst => rst,
+        stall_out => stall_out,
         executeControlWord => executeControlWord,
         rs1Data => rs1Data,
         rs2Data => rs2Data,

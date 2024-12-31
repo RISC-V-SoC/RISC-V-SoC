@@ -41,6 +41,7 @@ begin
         variable invalid_load : boolean := false;
         variable invalid_csr : boolean := false;
         variable invalid_trap_return : boolean := false;
+        variable invalid_muldiv : boolean := false;
 
         variable rdIsZero : boolean := false;
         variable rs1IsZero : boolean := false;
@@ -62,6 +63,7 @@ begin
         invalid_load := false;
         invalid_csr := false;
         invalid_trap_return := false;
+        invalid_muldiv := false;
 
         rdIsZero := instruction(11 downto 7) = "00000";
         rs1IsZero := instruction(19 downto 15) = "00000";
@@ -185,6 +187,25 @@ begin
             invalid_trap_return := true;
         end if;
 
+        case funct3 is
+            when riscv32_funct3_mul =>
+                executeControlWord_buf.exec_directive := riscv32_exec_mul;
+            when riscv32_funct3_mulh =>
+                executeControlWord_buf.exec_directive := riscv32_exec_mul;
+                executeControlWord_buf.is_mul_high := true;
+                executeControlWord_buf.is_mul_rs1_signed := true;
+                executeControlWord_buf.is_mul_rs2_signed := true;
+            when riscv32_funct3_mulhsu =>
+                executeControlWord_buf.exec_directive := riscv32_exec_mul;
+                executeControlWord_buf.is_mul_high := true;
+                executeControlWord_buf.is_mul_rs1_signed := true;
+            when riscv32_funct3_mulhu =>
+                executeControlWord_buf.exec_directive := riscv32_exec_mul;
+                executeControlWord_buf.is_mul_high := true;
+            when others =>
+                invalid_muldiv := true;
+        end case;
+
         case opcode is
             when riscv32_opcode_jalr =>
                 executeControlWord_buf.exec_directive := riscv32_exec_calcReturn;
@@ -206,10 +227,17 @@ begin
                 writeBackControlWord_buf.MemtoReg := false;
                 illegal_instruction <= invalid_func;
             when riscv32_opcode_op =>
-                executeControlWord_buf.exec_directive := riscv32_exec_alu_rtype;
-                illegal_instruction <= invalid_func;
-                writeBackControlWord_buf.regWrite := true;
-                writeBackControlWord_buf.MemtoReg := false;
+                if funct7 = riscv32_funct7_muldiv then
+                    executeControlWord_buf.exec_directive := riscv32_exec_mul;
+                    illegal_instruction <= invalid_muldiv;
+                    writeBackControlWord_buf.regWrite := true;
+                    writeBackControlWord_buf.MemtoReg := false;
+                else
+                    executeControlWord_buf.exec_directive := riscv32_exec_alu_rtype;
+                    illegal_instruction <= invalid_func;
+                    writeBackControlWord_buf.regWrite := true;
+                    writeBackControlWord_buf.MemtoReg := false;
+                end if;
             when riscv32_opcode_lui =>
                 registerControlWord_buf.no_dependencies := true;
                 instructionDecodeControlWord_buf.immidiate_type := riscv32_u_immidiate;

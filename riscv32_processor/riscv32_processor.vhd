@@ -49,6 +49,8 @@ architecture behaviourial of riscv32_processor is
 
     signal pipelineStall : boolean;
 
+    signal pipeline_requests_stall : boolean;
+
     signal instructionAddress : riscv32_address_type;
     signal instruction : riscv32_instruction_type;
     signal dataAddress : riscv32_address_type;
@@ -110,7 +112,7 @@ architecture behaviourial of riscv32_processor is
     signal flush_manager_do_flush : boolean;
     signal flush_manager_busy : boolean;
 begin
-    pipelineStall <= controllerStall or instructionStall or memoryStall;
+    pipelineStall <= controllerStall or instructionStall or memoryStall or pipeline_requests_stall;
     forbidBusInteraction <= controllerStall;
 
     pipeline : entity work.riscv32_pipeline
@@ -144,7 +146,8 @@ begin
             interrupt_is_async => interrupt_is_async,
             exception_code => exception_code,
             interrupted_pc => interrupted_pc,
-            instructionsRetiredCount => instructionsRetired_value
+            instructionsRetiredCount => instructionsRetired_value,
+            stall_out => pipeline_requests_stall
         );
 
     bus_slave : entity work.riscv32_bus_slave

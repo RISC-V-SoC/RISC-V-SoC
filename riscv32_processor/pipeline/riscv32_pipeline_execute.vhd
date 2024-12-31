@@ -8,6 +8,11 @@ use work.riscv32_pkg.all;
 
 entity riscv32_pipeline_execute is
     port (
+        clk : in std_logic;
+        rst : in boolean;
+
+        stall_out : out boolean;
+
         -- From decode stage: control signals
         executeControlWord : in riscv32_ExecuteControlWord_type;
 
@@ -30,8 +35,9 @@ architecture behaviourial of riscv32_pipeline_execute is
     signal aluResultImmidiate : riscv32_data_type;
     signal aluResultRtype : riscv32_data_type;
     signal bitManip_result : riscv32_data_type;
+    signal mul_result : riscv32_data_type;
 begin
-    determineExecResult : process(executeControlWord, aluResultRtype, aluResultImmidiate, programCounter, immidiate)
+    determineExecResult : process(executeControlWord, aluResultRtype, aluResultImmidiate, programCounter, immidiate, mul_result)
     begin
         case executeControlWord.exec_directive is
             when riscv32_exec_alu_rtype =>
@@ -44,6 +50,8 @@ begin
                 execResult <= immidiate;
             when riscv32_exec_auipc =>
                 execResult <= std_logic_vector(signed(immidiate) + signed(programCounter));
+            when riscv32_exec_mul =>
+                execResult <= mul_result;
         end case;
     end process;
 
@@ -95,6 +103,23 @@ begin
         shamt => to_integer(unsigned(rs2Data(4 downto 0))),
         cmd => executeControlWord.alu_cmd,
         output => aluResultRtype
+    );
+
+    multiplier : entity work.riscv32_multiplier
+    port map (
+        clk => clk,
+        rst => rst,
+
+        inputA => rs1Data,
+        inputB => rs2Data,
+        outputWordHigh => executeControlWord.is_mul_high,
+        inputASigned => executeControlWord.is_mul_rs1_signed,
+        inputBSigned => executeControlWord.is_mul_rs2_signed,
+
+        do_operation => executeControlWord.exec_directive = riscv32_exec_mul,
+        stall => stall_out,
+
+        output => mul_result
     );
 
 end architecture;

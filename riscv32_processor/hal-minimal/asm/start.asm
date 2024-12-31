@@ -13,10 +13,21 @@ __start:
     # Setup the trap vector
     la      a0, syncExceptionHandler
     csrw    mtvec,a0
-    # load some data from address 0 to trigger an exception
+
+    li      a0, -1
+    li      a1, 5
+    mulh    s0, a0, a1
+    mul     s1, a0, a1
+    mulhu   s2, a0, a1
     li      a0, 0
-    lw      a2, 0(a0)
-    # This instruction cannot be hit
-    li      gp, 0
+    mv      a1, s0
+    call    auxMemWrite
+    li      a0, 1
+    mv      a1, s1
+    call    auxMemWrite
+    li      a0, 2
+    mv      a1, s2
+    call    auxMemWrite
+
 back_stop:
     j back_stop
