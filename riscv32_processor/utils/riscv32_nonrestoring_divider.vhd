@@ -36,23 +36,37 @@ architecture behaviourial of riscv32_nonrestoring_divider is
         inputSigned => false
     );
 
+    constant initCycles : natural := 1;
+    constant initCountStart : natural := 0;
+    constant initCountEnd : natural := initCountStart + initCycles;
+
+    constant iterationCycles : natural := riscv32_data_type'length;
+    constant iterationCountStart : natural := initCountEnd;
+    constant iterationCountEnd : natural := iterationCountStart + iterationCycles;
+
+    constant postProcessCycles : natural := 1;
+    constant postProcessCountStart : natural := iterationCountEnd;
+    constant postProcessCountEnd : natural := postProcessCountStart + postProcessCycles;
+
+    constant totalCycles : natural := initCycles + iterationCycles + postProcessCycles;
+
     signal combinedInputCache : combinedInputType := combinedInputDefault;
     signal combinedInput : combinedInputType;
 
     signal stall_buf : boolean;
 
-    signal z_buf : signed(dividend'length * 2 downto 0);
-    signal quotient_buf : signed(riscv32_data_type'range);
-    signal p_buf : signed(quotient_buf'high + 1 downto 0);
-    signal s_buf : signed(output'range);
-
-    signal z_signbit_buf : std_logic;
-    signal dividend_signbit_buf : std_logic;
-    signal divisor_extended_buf : signed(divisor'high + 1 downto 0);
-
-
+    signal z : signed(dividend'length * 2 downto 0) := (others => '0');
+    alias z_high : signed(dividend'length downto 0) is z(dividend'length * 2 downto dividend'length);
+    signal dividend_signbit : std_logic;
+    signal divisor_extended : signed(divisor'high + 1 downto 0);
+    alias divisor_signbit : std_logic is divisor_extended(divisor'high);
+    signal p : signed(output'high + 1 downto 0) := (others => '0');
+    alias quotient : signed(output'range) is p(output'range);
+    alias remainder : signed(output'range) is z_high(output'range);
+    signal zeroRemainderFound : boolean := false;
+    signal isDivisionByZero : boolean := false;
 begin
-    --stall <= stall_buf and false;
+    stall <= stall_buf;
 
     combinedInput.dividend <= dividend;
     combinedInput.divisor <= divisor;
@@ -60,139 +74,98 @@ begin
 
     stall_buf <= do_operation and combinedInput /= combinedInputCache;
 
-    do_division : process
-        variable z : signed(dividend'length * 2 downto 0);
-        alias z_high : signed(dividend'length downto 0) is z(dividend'length * 2 downto dividend'length);
+    stages : process(clk)
+        variable z_buf : signed(z'range);
+        alias z_high_buf : signed(z_high'range) is z_buf(dividend'length * 2 downto dividend'length);
         variable z_signbit : std_logic;
+        variable index : natural;
+        variable p_buf : signed(p'range);
 
-        variable dividend_signbit : std_logic;
-
-        variable divisor_extended : signed(divisor'high + 1 downto 0);
-        alias divisor_signbit : std_logic is divisor_extended(divisor'high);
-
-        variable do_postincrement_quotient : boolean := false;
-
-        variable quotient : signed(riscv32_data_type'range) := (others => '0');
-        variable p : signed(quotient'high + 1 downto 0);
-        variable remainder : signed(riscv32_data_type'range) := (others => '0');
-
-        variable zeroRemainderFound : boolean := false;
-        variable isDivisionByZero : boolean := false;
+        variable count : natural range 0 to totalCycles - 1 := 0;
     begin
-        stall <= true;
-        wait until rising_edge(clk) and do_operation;
-        -- initial stage
-        zeroRemainderFound := false;
-        isDivisionByZero := signed(divisor) = 0;
-        if not is_signed then
-            z := (others => '0');
-            z(dividend'range) := signed(dividend);
-            divisor_extended := (others => '0');
-            divisor_extended(divisor'range) := signed(divisor);
-            dividend_signbit := '0';
-        else
-            z := resize(signed(dividend), z'length);
-            divisor_extended := resize(signed(divisor), divisor_extended'length);
-            dividend_signbit := dividend(dividend'high);
+        if rising_edge(clk) then
+            -- Initial stage
+            if count >= initCountStart and count < initCountEnd and stall_buf then
+                zeroRemainderFound <= false;
+                isDivisionByZero <= signed(divisor) = 0;
+                if is_signed then
+                    z <= resize(signed(dividend), z'length);
+                    divisor_extended <= resize(signed(divisor), divisor_extended'length);
+                    dividend_signbit <= dividend(dividend'high);
+                else
+                    z <= (others => '0');
+                    z(dividend'range) <= signed(dividend);
+                    divisor_extended <= (others => '0');
+                    divisor_extended(divisor'range) <= signed(divisor);
+                    dividend_signbit <= '0';
+                end if;
+            end if;
+            -- Iterative stage
+            if count >= iterationCountStart and count < iterationCountEnd then
+                z_buf := z;
+                index := p'high - (count - iterationCountStart);
+
+                if z_buf = 0 then
+                    zeroRemainderFound <= true;
+                end if;
+
+                z_signbit := z_high_buf(z_high_buf'high);
+                z_buf := shift_left(z_buf, 1);
+                if z_signbit = divisor_signbit then
+                    p(index) <= '1';
+                    z_high_buf := z_high_buf - divisor_extended;
+                else
+                    p(index) <= '0';
+                    z_high_buf := z_high_buf + divisor_extended;
+                end if;
+
+                z <= z_buf;
+            end if;
+            -- Finalization stage
+            if count >= postProcessCountStart and count < postProcessCountEnd then
+                p_buf := p;
+
+                p_buf(p_buf'high) := not p_buf(p_buf'high);
+                p_buf(0) := '1';
+
+                if isDivisionByZero then
+                    z_high(dividend'range) <= signed(dividend);
+                    p_buf := (others => '1');
+                elsif (dividend_signbit /= z_high(z_high'high) and z /= 0) or zeroRemainderFound then
+                    if z_high(z_high'high) = divisor_signbit then
+                        z_high <= z_high - divisor_extended;
+                        p_buf := p_buf + 1;
+                    else
+                        z_high <= z_high + divisor_extended;
+                        p_buf := p_buf - 1;
+                    end if;
+                end if;
+
+                p <= p_buf;
+                combinedInputCache.dividend <= dividend;
+                combinedInputCache.divisor <= divisor;
+                combinedInputCache.inputSigned <= is_signed;
+                count := 0;
+            elsif stall_buf then
+                count := count + 1;
+            end if;
+
+            if rst then
+                p <= (others => '0');
+                z <= (others => '0');
+                combinedInputCache <= combinedInputDefault;
+                count := 0;
+            end if;
+
         end if;
+    end process;
 
-        divisor_extended_buf <= divisor_extended;
-        z_buf <= z;
-        quotient_buf <= quotient;
-        p_buf <= p;
-        s_buf <= z(z'high -1 downto 32);
-        z_signbit_buf <= z_signbit;
-        dividend_signbit_buf <= dividend_signbit;
-
-        wait until rising_edge(clk);
-
-        -- iterative stage
-        for i in dividend'length -1 downto 0 loop
-            if z = 0 then
-                zeroRemainderFound := true;
-            end if;
-            z_signbit := z_high(z_high'high);
-            z := shift_left(z, 1);
-            z_buf <= z;
-            quotient_buf <= quotient;
-            p_buf <= p;
-            s_buf <= z(z'high -1 downto 32);
-            z_signbit_buf <= z_signbit;
-            dividend_signbit_buf <= dividend_signbit;
-            wait until rising_edge(clk);
-
-            if z_signbit = divisor_signbit then
-                p(i+1) := '1';
-                z_high := z_high - divisor_extended;
-            else
-                p(i+1) := '0';
-                z_high := z_high + divisor_extended;
-            end if;
-            z_buf <= z;
-            quotient_buf <= quotient;
-            p_buf <= p;
-            s_buf <= z(z'high -1 downto 32);
-            z_signbit_buf <= z_signbit;
-            dividend_signbit_buf <= dividend_signbit;
-            wait until rising_edge(clk);
-        end loop;
-
-        -- Post-process quotient
-        p(p'high) := not p(p'high);
-        p(0) := '1';
-        z_buf <= z;
-        quotient_buf <= quotient;
-        p_buf <= p;
-        s_buf <= z(z'high -1 downto 32);
-        z_signbit_buf <= z_signbit;
-        dividend_signbit_buf <= dividend_signbit;
-        wait until rising_edge(clk);
-        z_buf <= z;
-        quotient_buf <= quotient;
-        p_buf <= p;
-        s_buf <= z(z'high -1 downto 32);
-        z_signbit_buf <= z_signbit;
-        dividend_signbit_buf <= dividend_signbit;
-        wait until rising_edge(clk);
-
-        -- Correction stage
-        if isDivisionByZero then
-            z_high(dividend'range) := signed(dividend);
-            p := (others => '1');
-        elsif (dividend_signbit /= z_high(z_high'high) and z /= 0) or zeroRemainderFound then
-            if z_high(z_high'high) = divisor_signbit then
-                z_high := z_high - divisor_extended;
-                p := p + 1;
-            else
-                z_high := z_high + divisor_extended;
-                p := p - 1;
-            end if;
-        end if;
-        quotient := p(quotient'range);
-        z_buf <= z;
-        quotient_buf <= quotient;
-        p_buf <= p;
-        s_buf <= z(z'high -1 downto 32);
-        z_signbit_buf <= z_signbit;
-        dividend_signbit_buf <= dividend_signbit;
-        wait until rising_edge(clk);
-
-        -- set remainder
-        remainder := z_high(remainder'range);
-
+    determine_output : process(output_rem, quotient, remainder)
+    begin
         if output_rem then
             output <= std_logic_vector(remainder);
         else
             output <= std_logic_vector(quotient);
         end if;
-        z_buf <= z;
-        quotient_buf <= quotient;
-        p_buf <= p;
-        s_buf <= z(z'high -1 downto 32);
-        z_signbit_buf <= z_signbit;
-        dividend_signbit_buf <= dividend_signbit;
-        stall <= false;
-        wait until rising_edge(clk);
     end process;
-
 end architecture;
