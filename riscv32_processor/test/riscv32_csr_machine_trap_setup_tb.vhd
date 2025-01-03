@@ -162,13 +162,15 @@ begin
                 mst2slv.do_read <= true;
                 wait for clk_period;
                 check_equal(slv2mst.read_data(slv2mst.read_data'high downto slv2mst.read_data'high -1), std_logic_vector'("01"));
-            elsif run("misa only indicates I extension support") then
+            elsif run("misa indicates IM extension support") then
                 mst2slv.address <= 16#1#;
                 mst2slv.do_read <= true;
                 wait for clk_period;
-                check_equal(slv2mst.read_data(25 downto 9), std_logic_vector'("00000000000000000"));
+                check(or_reduce(slv2mst.read_data(25 downto 13)) = '0');
+                check_equal(slv2mst.read_data(12), '1');
+                check(or_reduce(slv2mst.read_data(11 downto 9)) = '0');
                 check_equal(slv2mst.read_data(8), '1');
-                check_equal(slv2mst.read_data(7 downto 0), std_logic_vector'("00000000"));
+                check(or_reduce(slv2mst.read_data(7 downto 0)) = '0');
             elsif run("Writing to misa has no effects") then
                 mst2slv.address <= 16#1#;
                 mst2slv.do_read <= true;
@@ -177,9 +179,11 @@ begin
                 wait for clk_period;
                 mst2slv.do_write <= false;
                 wait for clk_period;
-                check_equal(slv2mst.read_data(25 downto 9), std_logic_vector'("00000000000000000"));
+                check(or_reduce(slv2mst.read_data(25 downto 13)) = '0');
+                check_equal(slv2mst.read_data(12), '1');
+                check(or_reduce(slv2mst.read_data(11 downto 9)) = '0');
                 check_equal(slv2mst.read_data(8), '1');
-                check_equal(slv2mst.read_data(7 downto 0), std_logic_vector'("00000000"));
+                check(or_reduce(slv2mst.read_data(7 downto 0)) = '0');
                 check_false(slv2mst.has_error);
             elsif run("Reading from mie does not result in error") then
                 mst2slv.address <= 16#4#;

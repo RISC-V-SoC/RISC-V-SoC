@@ -67,7 +67,7 @@ architecture behaviourial of riscv32_csr_machine_trap_setup is
     alias mstatus_sd : std_logic is mstatus(31);
 
     constant misa_address : natural range 0 to 255 := 1;
-    constant misa_default : riscv32_data_type := X"40000100";
+    constant misa_default : riscv32_data_type := X"40001100";
     signal misa : riscv32_data_type := misa_default;
     alias misa_extensions : std_logic_vector(25 downto 0) is misa(25 downto 0);
     alias misa_warl_29_26 : std_logic_vector(3 downto 0) is misa(29 downto 26);
