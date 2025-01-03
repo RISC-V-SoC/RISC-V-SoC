@@ -48,7 +48,11 @@ architecture behaviourial of riscv32_nonrestoring_divider is
     constant postProcessCountStart : natural := iterationCountEnd;
     constant postProcessCountEnd : natural := postProcessCountStart + postProcessCycles;
 
-    constant totalCycles : natural := initCycles + iterationCycles + postProcessCycles;
+    constant finalizationCycles : natural := 1;
+    constant finalizationCountStart : natural := postProcessCountEnd;
+    constant finalizationCountEnd : natural := finalizationCountStart + finalizationCycles;
+
+    constant totalCycles : natural := initCycles + iterationCycles + postProcessCycles + finalizationCycles;
 
     signal combinedInputCache : combinedInputType := combinedInputDefault;
     signal combinedInput : combinedInputType;
@@ -121,7 +125,7 @@ begin
 
                 z <= z_buf;
             end if;
-            -- Finalization stage
+            -- Post-process stage
             if count >= postProcessCountStart and count < postProcessCountEnd then
                 p_buf := p;
 
@@ -142,6 +146,9 @@ begin
                 end if;
 
                 p <= p_buf;
+            end if;
+            -- Finalization stage
+            if count >= finalizationCountStart and count < finalizationCountEnd then
                 combinedInputCache.dividend <= dividend;
                 combinedInputCache.divisor <= divisor;
                 combinedInputCache.inputSigned <= is_signed;
