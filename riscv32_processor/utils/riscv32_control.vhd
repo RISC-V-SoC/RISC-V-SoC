@@ -189,19 +189,29 @@ begin
 
         case funct3 is
             when riscv32_funct3_mul =>
-                executeControlWord_buf.exec_directive := riscv32_exec_mul;
+                executeControlWord_buf.muldiv_is_mul := true;
             when riscv32_funct3_mulh =>
-                executeControlWord_buf.exec_directive := riscv32_exec_mul;
-                executeControlWord_buf.is_mul_high := true;
-                executeControlWord_buf.is_mul_rs1_signed := true;
-                executeControlWord_buf.is_mul_rs2_signed := true;
+                executeControlWord_buf.muldiv_is_mul := true;
+                executeControlWord_buf.muldiv_alt_output := true;
+                executeControlWord_buf.rs1_signed := true;
+                executeControlWord_buf.rs2_signed := true;
             when riscv32_funct3_mulhsu =>
-                executeControlWord_buf.exec_directive := riscv32_exec_mul;
-                executeControlWord_buf.is_mul_high := true;
-                executeControlWord_buf.is_mul_rs1_signed := true;
+                executeControlWord_buf.muldiv_is_mul := true;
+                executeControlWord_buf.muldiv_alt_output := true;
+                executeControlWord_buf.rs1_signed := true;
             when riscv32_funct3_mulhu =>
-                executeControlWord_buf.exec_directive := riscv32_exec_mul;
-                executeControlWord_buf.is_mul_high := true;
+                executeControlWord_buf.muldiv_is_mul := true;
+                executeControlWord_buf.muldiv_alt_output := true;
+            when riscv32_funct3_div =>
+                executeControlWord_buf.rs1_signed := true;
+                executeControlWord_buf.rs2_signed := true;
+            when riscv32_funct3_divu =>
+            when riscv32_funct3_rem =>
+                executeControlWord_buf.rs1_signed := true;
+                executeControlWord_buf.rs2_signed := true;
+                executeControlWord_buf.muldiv_alt_output := true;
+            when riscv32_funct3_remu =>
+                executeControlWord_buf.muldiv_alt_output := true;
             when others =>
                 invalid_muldiv := true;
         end case;
@@ -228,7 +238,7 @@ begin
                 illegal_instruction <= invalid_func;
             when riscv32_opcode_op =>
                 if funct7 = riscv32_funct7_muldiv then
-                    executeControlWord_buf.exec_directive := riscv32_exec_mul;
+                    executeControlWord_buf.exec_directive := riscv32_exec_muldiv;
                     illegal_instruction <= invalid_muldiv;
                     writeBackControlWord_buf.regWrite := true;
                     writeBackControlWord_buf.MemtoReg := false;

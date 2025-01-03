@@ -36,8 +36,16 @@ architecture behaviourial of riscv32_pipeline_execute is
     signal aluResultRtype : riscv32_data_type;
     signal bitManip_result : riscv32_data_type;
     signal mul_result : riscv32_data_type;
+    signal div_result : riscv32_data_type;
+
+    signal muldiv_result : riscv32_data_type;
+
+    signal mul_stall : boolean;
+    signal div_stall : boolean;
 begin
-    determineExecResult : process(executeControlWord, aluResultRtype, aluResultImmidiate, programCounter, immidiate, mul_result)
+    stall_out <= mul_stall or div_stall;
+
+    determineExecResult : process(executeControlWord, aluResultRtype, aluResultImmidiate, programCounter, immidiate, muldiv_result)
     begin
         case executeControlWord.exec_directive is
             when riscv32_exec_alu_rtype =>
@@ -50,8 +58,8 @@ begin
                 execResult <= immidiate;
             when riscv32_exec_auipc =>
                 execResult <= std_logic_vector(signed(immidiate) + signed(programCounter));
-            when riscv32_exec_mul =>
-                execResult <= mul_result;
+            when riscv32_exec_muldiv =>
+                execResult <= muldiv_result;
         end case;
     end process;
 
@@ -87,6 +95,15 @@ begin
         end if;
     end process;
 
+    determineMuldivResult : process(mul_result, div_result, executeControlWord.muldiv_is_mul)
+    begin
+        if executeControlWord.muldiv_is_mul then
+            muldiv_result <= mul_result;
+        else
+            muldiv_result <= div_result;
+        end if;
+    end process;
+
     alu_immidiate : entity work.riscv32_alu
     port map (
         inputA => rs1Data,
@@ -112,14 +129,29 @@ begin
 
         inputA => rs1Data,
         inputB => rs2Data,
-        outputWordHigh => executeControlWord.is_mul_high,
-        inputASigned => executeControlWord.is_mul_rs1_signed,
-        inputBSigned => executeControlWord.is_mul_rs2_signed,
+        outputWordHigh => executeControlWord.muldiv_alt_output,
+        inputASigned => executeControlWord.rs1_signed,
+        inputBSigned => executeControlWord.rs2_signed,
 
-        do_operation => executeControlWord.exec_directive = riscv32_exec_mul,
-        stall => stall_out,
+        do_operation => executeControlWord.exec_directive = riscv32_exec_muldiv and executeControlWord.muldiv_is_mul,
+        stall => mul_stall,
 
         output => mul_result
     );
 
+    divider : entity work.riscv32_nonrestoring_divider
+    port map (
+        clk => clk,
+        rst => rst,
+
+        dividend => rs1Data,
+        divisor => rs2Data,
+        is_signed => executeControlWord.rs1_signed,
+        output_rem => executeControlWord.muldiv_alt_output,
+
+        do_operation => executeControlWord.exec_directive = riscv32_exec_muldiv and not executeControlWord.muldiv_is_mul,
+        stall => div_stall,
+
+        output => div_result
+    );
 end architecture;
