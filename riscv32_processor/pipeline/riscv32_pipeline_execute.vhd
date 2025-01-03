@@ -38,12 +38,14 @@ architecture behaviourial of riscv32_pipeline_execute is
     signal mul_result : riscv32_data_type;
     signal div_result : riscv32_data_type;
 
+    signal muldiv_result : riscv32_data_type;
+
     signal mul_stall : boolean;
     signal div_stall : boolean;
 begin
     stall_out <= mul_stall or div_stall;
 
-    determineExecResult : process(executeControlWord, aluResultRtype, aluResultImmidiate, programCounter, immidiate, mul_result)
+    determineExecResult : process(executeControlWord, aluResultRtype, aluResultImmidiate, programCounter, immidiate, muldiv_result)
     begin
         case executeControlWord.exec_directive is
             when riscv32_exec_alu_rtype =>
@@ -57,7 +59,7 @@ begin
             when riscv32_exec_auipc =>
                 execResult <= std_logic_vector(signed(immidiate) + signed(programCounter));
             when riscv32_exec_muldiv =>
-                execResult <= mul_result;
+                execResult <= muldiv_result;
         end case;
     end process;
 
@@ -90,6 +92,15 @@ begin
                 when cmd_branch_jalr =>
                     overrideProgramCounter <= true;
             end case;
+        end if;
+    end process;
+
+    determineMuldivResult : process(mul_result, div_result, executeControlWord.muldiv_is_mul)
+    begin
+        if executeControlWord.muldiv_is_mul then
+            muldiv_result <= mul_result;
+        else
+            muldiv_result <= div_result;
         end if;
     end process;
 
@@ -143,6 +154,4 @@ begin
 
         output => div_result
     );
-
-
 end architecture;
