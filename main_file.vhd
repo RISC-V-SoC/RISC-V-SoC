@@ -9,7 +9,12 @@ use work.bus_pkg.all;
 entity main_file is
     generic (
         clk_freq_hz : natural;
-        baud_rate : positive := 115200
+        baud_rate : positive := 115200;
+        icache_word_count_log2b : natural := 8;
+        dcache_word_count_log2b : natural := 8;
+        l2cache_words_per_line_log2b : natural := 3;
+        l2cache_total_line_count_log2b : natural := 10;
+        l2cache_bank_count_log2b : natural := 3
     );
     port (
         JA_gpio : inout  STD_LOGIC_VECTOR (3 downto 0);
@@ -152,9 +157,9 @@ begin
         startAddress => procStartAddress,
         clk_period => clk_period,
         iCache_range => create_address_map_entry(spiMemStartAddress, spiMemMappingSize).addr_range,
-        iCache_word_count_log2b => 8,
+        iCache_word_count_log2b => icache_word_count_log2b,
         dCache_range => create_address_map_entry(spiMemStartAddress, spiMemMappingSize).addr_range,
-        dCache_word_count_log2b => 8,
+        dCache_word_count_log2b => dcache_word_count_log2b,
         external_memory_count => 1
     ) port map (
         clk => clk,
@@ -250,9 +255,9 @@ begin
 
     bus_cache : entity work.bus_cache
     generic map (
-        words_per_line_log2b => 3,
-        total_line_count_log2b => 10,
-        bank_count_log2b => 3
+        words_per_line_log2b => l2cache_words_per_line_log2b,
+        total_line_count_log2b => l2cache_total_line_count_log2b,
+        bank_count_log2b => l2cache_bank_count_log2b
     ) port map (
         clk => clk,
         rst => l2cache_reset,
