@@ -27,6 +27,7 @@ entity riscv32_if2bus is
         faultData : out bus_fault_type;
 
         requestAddress : in riscv32_address_type;
+        readEnabled : in boolean;
         instruction : out riscv32_instruction_type;
         stall : out boolean
     );
@@ -52,9 +53,17 @@ begin
     hasFault <= output_fault;
     output_fault <= hasFault_buf and requestAddress = faulty_address;
     icache_fault <= not bus_addr_in_range(requestAddress, range_to_cache);
-    stall <= (icache_miss or icache_fault or unaligned_address) and not output_fault;
     icache_reset <= '1' when flushCache or rst else '0';
     unaligned_address <= requestAddress(1 downto 0) /= "00";
+
+    generate_stall : process(icache_miss, icache_fault, unaligned_address, output_fault, readEnabled)
+    begin
+        if output_fault or not readEnabled then
+            stall <= false;
+        else
+            stall <= icache_miss or icache_fault or unaligned_address;
+        end if;
+    end process;
 
     handleBus : process(clk)
         variable mst2slv_buf : bus_mst2slv_type := BUS_MST2SLV_IDLE;
@@ -87,7 +96,7 @@ begin
                     end if;
                 elsif forbidBusInteraction then
                     -- Pass
-                elsif icache_miss and not icache_fault and not unaligned_address then
+                elsif icache_miss and not icache_fault and not unaligned_address and readEnabled then
                     mst2slv_buf := bus_mst2slv_read(address => requestAddress);
                 end if;
 

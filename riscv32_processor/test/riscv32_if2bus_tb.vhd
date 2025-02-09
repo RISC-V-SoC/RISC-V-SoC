@@ -39,6 +39,7 @@ architecture tb of riscv32_if2bus_tb is
     signal exception_code : riscv32_exception_code_type;
 
     signal requestAddress : riscv32_address_type := (others => '0');
+    signal readEnabled : boolean := true;
     signal instruction : riscv32_instruction_type := (others => '0');
     signal stall : boolean;
 begin
@@ -202,6 +203,17 @@ begin
                 wait until rising_edge(clk) and hasFault;
                 check_equal(bus_fault_address_out_of_range, faultData);
                 check_equal(exception_code, riscv32_exception_code_instruction_access_fault);
+            elsif run("When readEnabled is false, a miss does not lead to a stall") then
+                readEnabled <= false;
+                requestAddress <= X"00100000";
+                wait until rising_edge(clk);
+                check(not stall);
+            elsif run("When readEnabled is false, requesting instruction does not cause bus request") then
+                requestAddress <= X"00100000";
+                readEnabled <= false;
+                wait until rising_edge(clk);
+                wait until rising_edge(clk);
+                check(mst2slv.readReady = '0');
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -227,6 +239,7 @@ begin
         faultData => faultData,
         exception_code => exception_code,
         requestAddress => requestAddress,
+	readEnabled => readEnabled,
         instruction => instruction,
         stall => stall
     );

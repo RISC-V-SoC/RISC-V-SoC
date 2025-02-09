@@ -181,6 +181,7 @@ begin
         exception_code => instructionFetchExceptionCode,
         faultData => instructionFetchFaultData,
         requestAddress => instructionAddress,
+        readEnabled => true,
         instruction => instruction,
         stall => instructionStall
     );
