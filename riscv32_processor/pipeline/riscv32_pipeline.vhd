@@ -16,6 +16,7 @@ entity riscv32_pipeline is
 
         -- To/from instruction fetch unit
         instructionAddress : out riscv32_address_type;
+        instructionReadEnable : out boolean;
         instruction : in riscv32_instruction_type;
         if_has_fault : in boolean;
         if_exception_code : in riscv32_exception_code_type;
@@ -54,6 +55,8 @@ entity riscv32_pipeline is
 end entity;
 
 architecture behaviourial of riscv32_pipeline is
+    -- Inside instruction fetch
+    signal instruction_fetch_enable : boolean;
     -- Instruction fetch to instruction decode
     signal instructionToID : riscv32_instruction_type;
     signal programCounterFromIf : riscv32_address_type;
@@ -163,24 +166,17 @@ begin
     stallToResolveHazard <= stall or repeatInstructionFromReg;
     nopOutputToResolveHazard <= not stall and repeatInstructionFromReg;
 
-    -- IF stage
-    instructionFetch : entity work.riscv32_pipeline_instructionFetch
+    instructionFetch : entity work.riscv32_pipeline_programCounter
     generic map (
-        startAddress
+        startAddress => startAddress
     ) port map (
         clk => clk,
         rst => rst,
+        enable => instruction_fetch_enable,
+        stall => stall or stallToResolveHazard,
 
         requestFromBusAddress => instructionAddress,
-        instructionFromBus => instruction,
-        has_fault => if_has_fault or requiresServiceFromIdReg,
-        exception_code => if_exception_code,
-
-        isBubble => isBubbleFromIF,
-
-        instructionToInstructionDecode => instructionToID,
-        programCounter => programCounterFromIf,
-        exception_data => exception_data_from_if,
+        requestFromBusEnable => instructionReadEnable,
 
         overrideProgramCounterFromID => overrideProgramCounterFromID,
         newProgramCounterFromID => newProgramCounterFromID,
@@ -189,18 +185,37 @@ begin
         newProgramCounterFromEx => newProgramCounterFromEx,
 
         overrideProgramCounterFromInterrupt => handle_exception,
-        newProgramCounterFromInterrupt => programCounterFromExceptionHandler,
+        newProgramCounterFromInterrupt => programCounterFromExceptionHandler
+    );
 
-        injectBubble => injectBubbleFromBranchHelper,
-        stall => stallToResolveHazard
+    ifidReg : entity work.riscv32_pipeline_ifidreg
+    port map (
+        clk => clk,
+        rst => rst or handle_exception,
+        stall => stall or stallToResolveHazard,
+
+        force_bubble => injectBubbleFromBranchHelper,
+        force_service_request => requiresServiceFromIdReg,
+
+        enable_instruction_fetch => instruction_fetch_enable,
+        program_counter => instructionAddress,
+
+        instruction_from_bus => instruction,
+        has_fault_from_bus => if_has_fault,
+        exception_code_from_bus => if_exception_code,
+
+        exception_data_out => exception_data_from_if,
+        instruction_out => instructionToID,
+        program_counter_out => programCounterFromIf,
+        is_bubble => isBubbleFromIF
     );
 
     branchHelper : entity work.riscv32_pipeline_branchHelper
     generic map (
         array_size => 2
     ) port map (
-        executeControlWords(0) => exControlWordFromId,
-        executeControlWords(1) => exControlWordFromIdReg,
+        executeControlWords(0) => exControlWordFromIdReg,
+        executeControlWords(1) => exControlWordFromRegEx,
         injectBubble => injectBubbleFromBranchHelper
     );
 

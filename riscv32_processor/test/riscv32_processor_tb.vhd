@@ -222,7 +222,7 @@ begin
                 start_cpu(test2slv, slv2test);
                 wait for 10 us;
                 flush_cache(test2slv, slv2test);
-                expectedReadData := X"0000000e";
+                expectedReadData := X"0000000b";
                 readAddr := std_logic_vector(to_unsigned(16#70#, bus_address_type'length));
                 check_word_at_address(net, readAddr, expectedReadData);
             elsif run("Run, reset and then run again") then
