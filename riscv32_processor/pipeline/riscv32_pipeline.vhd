@@ -166,7 +166,7 @@ begin
     stallToResolveHazard <= stall or repeatInstructionFromReg;
     nopOutputToResolveHazard <= not stall and repeatInstructionFromReg;
 
-    instructionFetch : entity work.riscv32_pipeline_programCounter
+    instructionFetch : entity work.riscv32_pipeline_instructionFetch
     generic map (
         startAddress => startAddress
     ) port map (

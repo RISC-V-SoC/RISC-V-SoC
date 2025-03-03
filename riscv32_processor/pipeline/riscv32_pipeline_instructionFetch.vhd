@@ -6,7 +6,7 @@ library work;
 use work.bus_pkg.all;
 use work.riscv32_pkg.all;
 
-entity riscv32_pipeline_programCounter is
+entity riscv32_pipeline_instructionFetch is
     generic (
         startAddress : riscv32_address_type
     );
@@ -34,7 +34,7 @@ entity riscv32_pipeline_programCounter is
     );
 end entity;
 
-architecture behaviourial of riscv32_pipeline_programCounter is
+architecture behaviourial of riscv32_pipeline_instructionFetch is
 begin
     process(clk)
         variable current_pc : riscv32_address_type := startAddress;

@@ -13,12 +13,12 @@ use src.riscv32_pkg.all;
 library tb;
 use tb.riscv32_instruction_builder_pkg.all;
 
-entity riscv32_pipeline_programCounter_tb is
+entity riscv32_pipeline_instructionFetch_tb is
     generic (
         runner_cfg : string);
 end entity;
 
-architecture tb of riscv32_pipeline_programCounter_tb is
+architecture tb of riscv32_pipeline_instructionFetch_tb is
     constant clk_period : time := 20 ns;
     constant startAddress : natural := 16#00000014#;
 
@@ -107,7 +107,7 @@ begin
 
     test_runner_watchdog(runner,  1 us);
 
-    programCounter : entity src.riscv32_pipeline_programCounter
+    instructionFetch : entity src.riscv32_pipeline_instructionFetch
     generic map (
         startAddress => std_logic_vector(to_unsigned(startAddress, riscv32_address_type'length))
     ) port map (
