@@ -64,5 +64,6 @@ tb_library.add_source_files(SRC_PATH / "riscv32_processor" / "icache" / "test" /
 
 VU.set_sim_option("ghdl.gtkwave_script.gui", "gtkwave/setup.tcl")
 VU.set_sim_option("disable_ieee_warnings", True)
+VU.set_compile_option("ghdl.a_flags", ["-O2"])
 
 VU.main()
