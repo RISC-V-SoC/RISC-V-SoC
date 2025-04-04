@@ -26,7 +26,7 @@ entity bus_cache_flusher is
 end entity;
 
 architecture behaviourial of bus_cache_flusher is
-    type state_type is (idle, start, request_from_cache, process_response, initiate_write, wait_for_write, finish);
+    type state_type is (idle, start, request_from_cache, cache_wait_cycle, cache_wait_cycle_II, process_response, initiate_write, wait_for_write, finish);
 
     constant line_index_max : natural := 2**total_line_count_log2b - 1;
 
@@ -69,6 +69,10 @@ begin
             when start =>
                 next_state <= request_from_cache;
             when request_from_cache =>
+                next_state <= cache_wait_cycle;
+            when cache_wait_cycle =>
+                next_state <= cache_wait_cycle_II;
+            when cache_wait_cycle_II =>
                 next_state <= process_response;
             when process_response =>
                 if is_dirty then
@@ -108,7 +112,7 @@ begin
                 flush_busy <= true;
                 do_write <= false;
                 reset_cache <= false;
-            when process_response =>
+            when process_response|cache_wait_cycle|cache_wait_cycle_II =>
                 flush_busy <= true;
                 do_write <= false;
                 reset_cache <= false;

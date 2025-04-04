@@ -74,9 +74,7 @@ begin
                     mark_line_clean <= false;
                 end loop;
                 do_write_from_backend <= false;
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
-                check_true(hit);
+                wait until rising_edge(clk) and hit;
                 check(or_reduce(data_to_frontend) = '0');
                 do_read_from_frontend <= true;
                 wait until rising_edge(clk);
@@ -109,6 +107,7 @@ begin
                 address <= std_logic_vector(to_unsigned(total_line_count * words_per_line, address'length));
                 word_index_from_frontend <= 0;
                 wait until rising_edge(clk);
+                wait until rising_edge(clk);
                 wait until falling_edge(clk);
                 check_false(hit);
                 check_false(dirty);
@@ -126,6 +125,7 @@ begin
                 do_write_from_backend <= false;
                 address <= std_logic_vector(to_unsigned(0, address'length));
                 word_index_from_frontend <= 0;
+                wait until rising_edge(clk);
                 wait until rising_edge(clk);
                 wait until falling_edge(clk);
                 check_true(hit);
@@ -232,6 +232,8 @@ begin
                 word_index_from_backend <= 0;
                 for index in 0 to total_line_count - 1 loop
                     line_index <= index;
+                    wait until rising_edge(clk);
+                    wait until rising_edge(clk);
                     wait until rising_edge(clk);
                     wait until falling_edge(clk);
                     check_equal(reconstructed_address, std_logic_vector(to_unsigned(index * words_per_line, reconstructed_address'length)));

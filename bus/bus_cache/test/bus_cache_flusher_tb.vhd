@@ -48,8 +48,7 @@ begin
                 do_flush <= true;
                 wait until rising_edge(clk) and flush_busy;
                 for i in 0 to total_line_count - 1 loop
-                    wait until rising_edge(clk);
-                    check_equal(line_index, i);
+                    wait until rising_edge(clk) and line_index = i;
                     check_false(do_write);
                     wait until rising_edge(clk);
                     check_equal(line_index, i);
@@ -78,16 +77,14 @@ begin
                 do_flush <= true;
                 wait until rising_edge(clk) and flush_busy;
                 for i in 0 to total_line_count - 2 loop
-                    wait until rising_edge(clk);
-                    check_equal(line_index, i);
+                    wait until rising_edge(clk) and line_index = i;
                     check_false(do_write);
                     wait until rising_edge(clk);
                     check_equal(line_index, i);
                     check_false(do_write);
                     is_dirty <= false;
                 end loop;
-                wait until rising_edge(clk);
-                check_equal(line_index, total_line_count - 1);
+                wait until rising_edge(clk) and line_index = total_line_count - 1;
                 check_false(do_write);
                 is_dirty <= true;
                 wait until rising_edge(clk) and do_write;

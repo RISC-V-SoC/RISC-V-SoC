@@ -28,6 +28,8 @@ architecture tb of bus_cache_tb is
     constant total_line_count : natural := 2**total_line_count_log2b;
     constant bank_count : natural := 2**bank_count_log2b;
 
+    constant total_words_in_cache : natural := words_per_line * total_line_count;
+
     constant memActor : actor_t := new_actor("slave");
 
     signal clk : std_logic := '0';
@@ -185,6 +187,12 @@ begin
                     check_equal(frontend2mst.readData, std_logic_vector(to_unsigned(14, frontend2mst.readData'length)));
                 end loop;
             elsif run("Test flushing") then
+                memory_address := std_logic_vector(to_unsigned(0, memory_address'length));
+                memory_mask := (others => '1');
+                for i in 0 to words_per_line - 1 loop
+                    memory_words(i) := (others => '1');
+                end loop;
+                write_to_address(net, memActor, memory_address, memory_words, memory_mask);
                 wait until rising_edge(clk);
                 bus_address := std_logic_vector(to_unsigned(0, bus_address'length));
                 bus_write_data := std_logic_vector(to_unsigned(14, bus_write_data'length));
@@ -196,8 +204,46 @@ begin
                 do_flush <= false;
                 wait until rising_edge(clk) and not flush_busy;
                 memory_address := std_logic_vector(to_unsigned(0, memory_address'length));
-                read_from_address(net, memActor, memory_address, memory_words(0));
+                read_from_address(net, memActor, memory_address, memory_words);
                 check_equal(memory_words(0), std_logic_vector(to_unsigned(14, memory_words(0)'length)));
+                check_true(and_reduce(memory_words(1)) = '1');
+            elsif run("Test eviction") then
+                memory_words := (others => (others => '1'));
+                for i in 0 to total_words_in_cache / 2 loop
+                    memory_address := std_logic_vector(to_unsigned(i*8, memory_address'length));
+                    memory_mask := (others => '1');
+                    write_to_address(net, memActor, memory_address, memory_words, memory_mask);
+                end loop;
+                -- Now we write into the frontend, all zeros
+                for i in 0 to total_words_in_cache + 1 loop
+                    bus_address := std_logic_vector(to_unsigned(i*4, bus_address'length));
+                    info("Writing to bus address: " & to_string(i*4));
+                    bus_write_data := (others => '0');
+                    bus_byte_mask := (others => '1');
+                    mst2frontend <= bus_mst2slv_write(bus_address, bus_write_data, bus_byte_mask);
+                    wait until rising_edge(clk) and write_transaction(mst2frontend, frontend2mst);
+                end loop;
+                mst2frontend <= BUS_MST2SLV_IDLE;
+                -- Now we need to read all the zeros back
+                for i in 0 to total_words_in_cache + 1 loop
+                    bus_address := std_logic_vector(to_unsigned(i*4, bus_address'length));
+                    mst2frontend <= bus_mst2slv_read(bus_address);
+                    wait until rising_edge(clk) and read_transaction(mst2frontend, frontend2mst);
+                    check(or_reduce(frontend2mst.readData) = '0');
+                end loop;
+                mst2frontend <= BUS_MST2SLV_IDLE;
+                -- Flush it, then check main memory
+                do_flush <= true;
+                wait until rising_edge(clk) and flush_busy;
+                do_flush <= false;
+                wait until rising_edge(clk) and not flush_busy;
+                for i in 0 to total_words_in_cache / 2 loop
+                    memory_address := std_logic_vector(to_unsigned(i*8, memory_address'length));
+                    read_from_address(net, memActor, memory_address, memory_words);
+                    info("Read from memory address: " & to_string(i*8));
+                    check(or_reduce(memory_words(0)) = '0');
+                    check(or_reduce(memory_words(1)) = '0');
+                end loop;
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -206,7 +252,7 @@ begin
         wait;
     end process;
 
-    test_runner_watchdog(runner,  10 us);
+    test_runner_watchdog(runner,  50 us);
 
     bus_cache : entity src.bus_cache
     generic map (

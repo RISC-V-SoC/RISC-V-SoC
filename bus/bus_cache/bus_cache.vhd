@@ -31,7 +31,7 @@ architecture behaviourial of bus_cache is
     constant word_index_lsb : natural := bus_bytes_per_word_log2b;
     constant word_index_msb : natural := word_index_lsb + words_per_line_log2b - 1;
     constant truncated_address_lsb : natural := word_index_msb + 1;
-    type state_type is (idle, process_cache_response, bytemask_fault_detected, update_cache, dirty_word_to_backend, wait_for_backend_write, request_from_backend, wait_for_backend_read, flusher_start, flusher_active);
+    type state_type is (idle, wait_for_cache, wait_for_cache_II, process_cache_response, bytemask_fault_detected, update_cache, dirty_word_to_backend, wait_for_backend_write, request_from_backend, wait_for_backend_read, cache_write_runout, flusher_start, flusher_active);
 
     signal cur_state : state_type := idle;
     signal next_state : state_type := idle;
@@ -128,10 +128,14 @@ begin
         case cur_state is
             when idle =>
                 if frontend_requests_read or frontend_requests_write then
-                    next_state <= process_cache_response;
+                    next_state <= wait_for_cache;
                 elsif do_flush then
                     next_state <= flusher_start;
                 end if;
+            when wait_for_cache =>
+                next_state <= wait_for_cache_II;
+            when wait_for_cache_II =>
+                next_state <= process_cache_response;
             when process_cache_response =>
                 if bytemask_fault then
                     next_state <= bytemask_fault_detected;
@@ -143,7 +147,7 @@ begin
                     next_state <= request_from_backend;
                 end if;
             when update_cache =>
-                next_state <= idle;
+                next_state <= cache_write_runout;
             when bytemask_fault_detected =>
                 next_state <= idle;
             when dirty_word_to_backend =>
@@ -158,8 +162,10 @@ begin
                 next_state <= wait_for_backend_read;
             when wait_for_backend_read =>
                 if backend_line_operation_complete or backend_bus_fault then
-                    next_state <= idle;
+                    next_state <= cache_write_runout;
                 end if;
+            when cache_write_runout =>
+                next_state <= idle;
             when flusher_start =>
                 next_state <= flusher_active;
             when flusher_active =>
@@ -172,7 +178,7 @@ begin
     state_output : process(cur_state, backend_line_operation_complete, frontend_requests_read, frontend_requests_write, backend_bus_fault, flusher_do_write)
     begin
         case cur_state is
-            when idle|process_cache_response =>
+            when idle|wait_for_cache|wait_for_cache_II|process_cache_response|cache_write_runout =>
                 cache_mark_line_clean <= false;
                 cache_do_read <= false;
                 cache_do_write <= false;
