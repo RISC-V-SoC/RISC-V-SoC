@@ -63,8 +63,6 @@ architecture behaviourial of bus_cache_bank is
     signal tag : tag_type;
     signal address_tag : tag_type;
     signal age_buf : natural range 0 to max_age;
-
-    signal data_bank : bus_data_array(0 to line_count * words_per_line - 1);
 begin
     address_line_index <= to_integer(unsigned(address(address_line_index_msb downto address_line_index_lsb)));
     address_tag <= address(address_tag_msb downto address_tag_lsb);
