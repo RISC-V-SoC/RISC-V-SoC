@@ -53,7 +53,6 @@ architecture behaviourial of bus_cache_bank is
     constant address_tag_msb : natural := address'high;
 
     subtype tag_type is std_logic_vector(address_tag_msb - address_tag_lsb downto 0);
-    type tag_array_type is array(line_count-1 downto 0) of tag_type;
 
     signal address_line_index : natural range 0 to line_count-1;
 
@@ -88,11 +87,15 @@ begin
 
     valid_handling : process(clk)
         variable valid_bank : boolean_vector(line_count-1 downto 0) := (others => false);
+        -- The reg exists to support Vivado synthesis of BRAM
+        variable valid_reg : boolean := false;
     begin
         if rising_edge(clk) then
-            valid <= valid_bank(actual_line_index);
+            valid <= valid_reg;
+            valid_reg := valid_bank(actual_line_index);
             if rst then
                 valid_bank := (others => false);
+                valid_reg := false;
             elsif mark_line_clean then
                 valid_bank(actual_line_index) := true;
             elsif do_write_from_backend then
@@ -106,22 +109,28 @@ begin
 
         variable backend_word_index : natural range 0 to data_bank'high;
         variable frontend_word_index : natural range 0 to data_bank'high;
+
+        -- The regs exists to support Vivado synthesis of BRAM
+        variable data_to_backend_reg : bus_data_type := (others => '-');
+        variable data_to_frontend_reg : bus_data_type := (others => '-');
     begin
         -- To make Vivado recognize that this is a true dual-port BRAM we need two seperate rising_edge(clk) checks
         -- Vivado recommends having two processes, but this requires a shared variable. This needs to be a protected type,
         -- which is quite hard and apparently also trips up Vivado. Alternatively, some rules can be relaxed, which is
         -- also not ideal.
         if rising_edge(clk) then
+            data_to_backend <= data_to_backend_reg;
             backend_word_index := actual_line_index * words_per_line + word_index_from_backend;
-            data_to_backend <= data_bank(backend_word_index);
+            data_to_backend_reg := data_bank(backend_word_index);
             if do_write_from_backend then
                 data_bank(backend_word_index) := data_from_backend;
             end if;
         end if;
 
         if rising_edge(clk) then
+            data_to_frontend <= data_to_frontend_reg;
             frontend_word_index := actual_line_index * words_per_line + word_index_from_frontend;
-            data_to_frontend <= data_bank(frontend_word_index);
+            data_to_frontend_reg := data_bank(frontend_word_index);
             if do_write_from_frontend then
                 for i in 0 to bus_bytes_per_word-1 loop
                     if bytemask_from_frontend(i) = '1' then
@@ -134,9 +143,12 @@ begin
 
     dirty_handling : process(clk)
         variable dirty_bank : boolean_vector(line_count-1 downto 0) := (others => false);
+        -- The reg exists to support Vivado synthesis of BRAM
+        variable dirty_reg : boolean := false;
     begin
         if rising_edge(clk) then
-            dirty_buf <= dirty_bank(actual_line_index);
+            dirty_buf <= dirty_reg;
+            dirty_reg := dirty_bank(actual_line_index);
             if mark_line_clean then
                 dirty_bank(actual_line_index) := false;
             elsif do_write_from_frontend then
@@ -146,10 +158,14 @@ begin
     end process;
 
     tag_handling : process(clk)
-        variable tag_bank : tag_array_type;
+        type tag_array_type is array(line_count-1 downto 0) of tag_type;
+        variable tag_bank : tag_array_type := (others => (others => '-'));
+        -- The reg exists to support Vivado synthesis of BRAM
+        variable tag_reg : tag_type := (others => '-');
     begin
         if rising_edge(clk) then
-            tag <= tag_bank(actual_line_index);
+            tag <= tag_reg;
+            tag_reg := tag_bank(actual_line_index);
             if do_write_from_backend then
                 tag_bank(actual_line_index) := address_tag;
             end if;
@@ -158,16 +174,19 @@ begin
 
     age_handling : process(clk)
         type age_array_type is array(line_count-1 downto 0) of natural range 0 to max_age;
-        variable age_bank : age_array_type;
+        variable age_bank : age_array_type := (others => 0);
+        -- The reg exists to support Vivado synthesis of BRAM
+        variable age_reg : natural range 0 to max_age := max_age;
     begin
         if rising_edge(clk) then
-            age_buf <= age_bank(actual_line_index);
+            age_buf <= age_reg;
+            age_reg := age_bank(actual_line_index);
 
             if reset_age then
                 age_bank(actual_line_index) := 0;
             elsif mark_line_clean then
                 age_bank(actual_line_index) := max_age;
-            elsif increase_age and age_buf < max_age then
+            elsif increase_age and age_reg < max_age then
                 age_bank(actual_line_index) := age_buf + 1;
             end if;
         end if;

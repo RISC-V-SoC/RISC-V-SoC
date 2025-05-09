@@ -59,8 +59,7 @@ begin
             if run("Simulate read on invalid line") then
                 address <= std_logic_vector(to_unsigned(words_per_line * 0, address'length));
                 word_index_from_frontend <= 0;
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
+                wait for 5*clk_period;
                 check_false(hit);
                 check_false(dirty);
                 for i in 0 to words_per_line-1 loop
@@ -125,9 +124,7 @@ begin
                 do_write_from_backend <= false;
                 address <= std_logic_vector(to_unsigned(0, address'length));
                 word_index_from_frontend <= 0;
-                wait until rising_edge(clk);
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
+                wait for 5*clk_period;
                 check_true(hit);
                 check(or_reduce(data_to_frontend) = '0');
             elsif run("Oldest line is evicted first") then
@@ -162,8 +159,7 @@ begin
                 end loop;
                 do_write_from_backend <= false;
                 address <= std_logic_vector(to_unsigned(0, address'length));
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
+                wait for 5*clk_period;
                 check_false(hit);
             elsif run("Write also ages bank") then
                 for bank_index in 0 to bank_count - 1 loop
@@ -202,7 +198,7 @@ begin
             elsif run("Test index mode") then
                 for index in 0 to total_line_count - 1 loop
                     address <= std_logic_vector(to_unsigned(index * words_per_line, address'length));
-                    wait until rising_edge(clk);
+                    wait for 5*clk_period;
                     for i in 0 to words_per_line-1 loop
                         wait until rising_edge(clk);
                         word_index_from_backend <= i;
@@ -215,8 +211,7 @@ begin
                         mark_line_clean <= false;
                     end loop;
                     do_write_from_backend <= false;
-                    wait until rising_edge(clk);
-                    wait until rising_edge(clk);
+                    wait for 5*clk_period;
                     word_index_from_frontend <= 0;
                     do_read_from_frontend <= index rem 2 = 0;
                     do_write_from_frontend <= index rem 2 /= 0;
@@ -232,10 +227,7 @@ begin
                 word_index_from_backend <= 0;
                 for index in 0 to total_line_count - 1 loop
                     line_index <= index;
-                    wait until rising_edge(clk);
-                    wait until rising_edge(clk);
-                    wait until rising_edge(clk);
-                    wait until falling_edge(clk);
+                    wait for 5*clk_period;
                     check_equal(reconstructed_address, std_logic_vector(to_unsigned(index * words_per_line, reconstructed_address'length)));
                     check(dirty = (index rem 2 /= 0));
                     if index rem 2 = 0 then
@@ -247,7 +239,7 @@ begin
             elsif run("Lines older than the current line do not age") then
                 for bank_index in 0 to 1 loop
                     address <= std_logic_vector(to_unsigned((bank_count * words_per_line)*bank_index, address'length));
-                    wait until rising_edge(clk);
+                    wait for 5*clk_period;
                     for i in 0 to words_per_line-1 loop
                         wait until rising_edge(clk);
                         word_index_from_backend <= i;
@@ -298,8 +290,7 @@ begin
 
                 address <= std_logic_vector(to_unsigned(words_per_line * 0, address'length));
                 word_index_from_frontend <= 0;
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
+                wait for 5*clk_period;
                 check_true(hit);
             end if;
         end loop;

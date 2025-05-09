@@ -60,7 +60,7 @@ begin
         while test_suite loop
             if run("Invalid line causes miss") then
                 address <= (others => '0');
-                wait until rising_edge(clk);
+                wait for 10*clk_period;
                 check(miss);
             elsif run("Valid line does not cause miss") then
                 address <= (others => '0');
@@ -75,9 +75,7 @@ begin
                     mark_line_clean <= false;
                 end loop;
                 do_write_from_backend <= false;
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
-                check(not miss);
+                wait until rising_edge(clk) and not miss;
             elsif run("Directly after a backend line write, the age of the line is max_age") then
                 address <= (others => '0');
                 for i in 0 to words_per_line-1 loop
@@ -91,8 +89,7 @@ begin
                     mark_line_clean <= false;
                 end loop;
                 do_write_from_backend <= false;
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
+                wait until rising_edge(clk) and not miss;
                 check(age = max_age);
             elsif run("Partial line write still misses") then
                 address <= (others => '0');
@@ -115,8 +112,7 @@ begin
                 do_write_from_backend <= true;
                 wait until rising_edge(clk);
                 do_write_from_backend <= false;
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
+                wait for 10*clk_period;
                 check(miss);
             elsif run("Read line trough backend") then
                 address <= (others => '0');
@@ -134,7 +130,7 @@ begin
                 wait until falling_edge(clk);
                 for i in 0 to words_per_line-1 loop
                     word_index_from_backend <= i;
-                    wait until falling_edge(clk);
+                    wait for 5*clk_period;
                     check_equal(data_to_backend, std_logic_vector(to_unsigned(i, data_from_backend'length)));
                 end loop;
             elsif run("Read line trough frontend") then
@@ -152,7 +148,7 @@ begin
                 wait until falling_edge(clk);
                 for i in 0 to words_per_line-1 loop
                     word_index_from_frontend <= i;
-                    wait until falling_edge(clk);
+                    wait for 5*clk_period;
                     check_equal(data_to_frontend, std_logic_vector(to_unsigned(i, data_from_frontend'length)));
                 end loop;
             elsif run("Test write trough frontend") then
@@ -174,8 +170,7 @@ begin
                 do_write_from_frontend <= true;
                 wait until rising_edge(clk);
                 do_write_from_frontend <= false;
-                wait until falling_edge(clk);
-                wait until falling_edge(clk);
+                wait for 5*clk_period;
                 check(or_reduce(data_to_frontend) = '1');
             elsif run("After backend write, a line is clean") then
                 address <= (others => '0');
@@ -189,9 +184,7 @@ begin
                     wait until rising_edge(clk);
                     mark_line_clean <= false;
                 end loop;
-                wait until falling_edge(clk);
-                wait until falling_edge(clk);
-                check(not dirty);
+                wait until rising_edge(clk) and not dirty;
             elsif run("After a frondend write, a line is dirty") then
                 address <= (others => '0');
                 for i in 0 to words_per_line-1 loop
@@ -212,8 +205,7 @@ begin
                 do_write_from_frontend <= true;
                 wait until rising_edge(clk);
                 do_write_from_frontend <= false;
-                wait until falling_edge(clk);
-                wait until falling_edge(clk);
+                wait for 5*clk_period;
                 check(dirty);
             elsif run("After frontend then backend write, a line is clean") then
                 address <= (others => '0');
@@ -234,8 +226,7 @@ begin
                     wait until rising_edge(clk);
                     mark_line_clean <= false;
                 end loop;
-                wait until falling_edge(clk);
-                wait until falling_edge(clk);
+                wait for 5*clk_period;
                 check(not dirty);
             elsif run("Frontend bytemask is respected") then
                 address <= (others => '0');
@@ -256,8 +247,7 @@ begin
                 do_write_from_frontend <= true;
                 wait until rising_edge(clk);
                 do_write_from_frontend <= false;
-                wait until falling_edge(clk);
-                wait until falling_edge(clk);
+                wait for 5*clk_period;
                 check(or_reduce(data_to_frontend) = '0');
             elsif run("After a reset, no line is dirty") then
                 address <= (others => '0');
@@ -283,8 +273,7 @@ begin
                 rst <= true;
                 wait until rising_edge(clk);
                 rst <= false;
-                wait until falling_edge(clk);
-                wait until falling_edge(clk);
+                wait for 5*clk_period;
                 check(not dirty);
             elsif run("Line will miss if it points to different address") then
                 address <= (others => '0');
@@ -301,8 +290,7 @@ begin
                 do_write_from_backend <= false;
                 wait until rising_edge(clk);
                 address <= std_logic_vector(to_unsigned(words_per_line * line_count, address'length));
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
+                wait for 5*clk_period;
                 check(miss);
             elsif run("Reconstructed address is correct") then
                 address <= std_logic_vector(to_unsigned(words_per_line * line_count, address'length));
@@ -331,13 +319,11 @@ begin
                     wait until rising_edge(clk);
                 end loop;
                 do_write_from_backend <= false;
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
+                wait for 5*clk_period;
                 check_equal(reconstructed_address, std_logic_vector(to_unsigned(words_per_line * (line_count + 1), reconstructed_address'length)));
             elsif run("The age of an invalid line is always max_age") then
                 address <= (others => '0');
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
+                wait for 5*clk_period;
                 check_equal(age, max_age);
             elsif run("Increase age") then
                 address <= (others => '0');
@@ -375,8 +361,10 @@ begin
                 end loop;
                 do_write_from_backend <= false;
                 wait until rising_edge(clk);
+                check_equal(age, max_age);
                 increase_age <= true;
                 for i in 0 to max_age loop
+                    check_equal(age, max_age);
                     wait until rising_edge(clk);
                 end loop;
                 increase_age <= false;
@@ -396,16 +384,10 @@ begin
                     mark_line_clean <= false;
                 end loop;
                 do_write_from_backend <= false;
-                wait until rising_edge(clk);
-                increase_age <= true;
-                wait until rising_edge(clk);
-                increase_age <= false;
                 reset_age <= true;
                 wait until rising_edge(clk);
                 reset_age <= false;
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
-                check_equal(age, 0);
+                wait until rising_edge(clk) and age = 0;
             elsif run("Test index mode") then
                 address <= std_logic_vector(to_unsigned(words_per_line * 1, address'length));
                 wait until rising_edge(clk);
@@ -445,16 +427,14 @@ begin
                 line_index <= 1;
                 for i in 0 to words_per_line - 1 loop
                     word_index_from_frontend <= i;
-                    wait until rising_edge(clk);
-                    wait until falling_edge(clk);
+                    wait for 5*clk_period;
                     check_equal(reconstructed_address, std_logic_vector(to_unsigned(words_per_line * 1, reconstructed_address'length)));
                     check_false(dirty);
                     check_equal(data_to_frontend, std_logic_vector(to_unsigned(i, data_to_frontend'length)));
                 end loop;
                 line_index <= 2;
                 word_index_from_backend <= 0;
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
+                wait for 5*clk_period;
                 check_equal(reconstructed_address, std_logic_vector(to_unsigned(words_per_line * 2, reconstructed_address'length)));
                 check_true(dirty);
                 check(and_reduce(data_to_backend) = '1');

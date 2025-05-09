@@ -71,6 +71,8 @@ architecture behaviourial of bus_cache_director is
     signal bytemask_from_frontend_buf : bus_byte_mask_type;
     signal word_index_from_backend_buf : natural range 0 to 2**words_per_line_log2b - 1;
     signal data_from_backend_buf : bus_data_type;
+
+    signal evict_index_sig : natural range 0 to bank_count - 1;
 begin
     assert(total_line_count_log2b > bank_count_log2b);
 
@@ -150,6 +152,7 @@ begin
                 increment_age_array(i) <= bank_operation and i /= hit_index and age_array_reg(i) <= hit_age;
             end loop;
         end if;
+        evict_index_sig <= evict_index;
     end process;
 
     banks : for index in 0 to bank_count - 1 generate
