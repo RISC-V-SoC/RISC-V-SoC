@@ -34,6 +34,7 @@ architecture tb of riscv32_pipeline_instructionDecode_tb is
     signal rs2Address : riscv32_registerFileAddress_type;
     signal immidiate : riscv32_data_type;
     signal rdAddress : riscv32_registerFileAddress_type;
+    signal branchTarget : riscv32_address_type;
     signal exception_type : riscv32_pipeline_exception_type;
     signal exception_code : riscv32_exception_code_type;
 begin
@@ -86,13 +87,15 @@ begin
                 check_equal(rdAddress, 12);
                 check_equal(rs1Address, 31);
                 check_equal(rs2Address, 30);
-            elsif run("Branch instructions cause correct rs2, rs1 and immidiate") then
+            elsif run("Branch instructions cause correct rs2, rs1, immidiate and branchTarget") then
+                programCounter <= X"00100000";
                 instructionFromInstructionFetch <= construct_btype_instruction(opcode => riscv32_opcode_branch, rs1 => 1, rs2 => 2, funct3 => riscv32_funct3_bne, imm5 => "10100", imm7 => "0000000");
                 wait for 1 ns;
                 check(not overrideProgramCounter);
                 check_equal(rs1Address, 1);
                 check_equal(rs2Address, 2);
                 check_equal(immidiate, std_logic_vector'(X"00000014"));
+                check_equal(branchTarget,  std_logic_vector'(X"00100014"));
             elsif run("LOAD instructions cause correct rs1, rd and immidiate") then
                 instructionFromInstructionFetch <= construct_itype_instruction(opcode => riscv32_opcode_load, rs1 =>4, rd => 6, funct3 => riscv32_funct3_lb, imm12 => X"ffc");
                 wait for 1 ns;
@@ -141,6 +144,7 @@ begin
         rs2Address => rs2Address,
         immidiate => immidiate,
         rdAddress => rdAddress,
+        branchTarget => branchTarget,
         exception_type => exception_type,
         exception_code => exception_code
     );
