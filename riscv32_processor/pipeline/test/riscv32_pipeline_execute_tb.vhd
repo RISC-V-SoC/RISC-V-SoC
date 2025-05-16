@@ -35,6 +35,7 @@ architecture tb of riscv32_pipeline_execute_tb is
     signal execResult : riscv32_data_type;
 
     signal overrideProgramCounter : boolean;
+    signal branchNotTaken : boolean;
     signal newProgramCounter : riscv32_address_type;
 
     signal instruction : riscv32_instruction_type := (others => '0');
@@ -56,6 +57,7 @@ begin
                 immidiate <= X"ffffffff";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"00000000"));
             elsif run("Test SLTI") then
                 instruction <= construct_itype_instruction(opcode => riscv32_opcode_opimm, funct3 => riscv32_funct3_slt);
@@ -63,6 +65,7 @@ begin
                 immidiate <= X"00000002";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"00000001"));
             elsif run("Test SLTIU") then
                 instruction <= construct_itype_instruction(opcode => riscv32_opcode_opimm, funct3 => riscv32_funct3_sltu);
@@ -70,6 +73,7 @@ begin
                 immidiate <= X"00000002";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"00000000"));
             elsif run("Test ANDI") then
                 instruction <= construct_itype_instruction(opcode => riscv32_opcode_opimm, funct3 => riscv32_funct3_and);
@@ -77,6 +81,7 @@ begin
                 immidiate <= X"11111111";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"11111111"));
             elsif run("Test ORI") then
                 instruction <= construct_itype_instruction(opcode => riscv32_opcode_opimm, funct3 => riscv32_funct3_or);
@@ -84,6 +89,7 @@ begin
                 immidiate <= X"0b0b0b0b";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"abababab"));
             elsif run("Test XORI") then
                 instruction <= construct_itype_instruction(opcode => riscv32_opcode_opimm, funct3 => riscv32_funct3_xor);
@@ -91,6 +97,7 @@ begin
                 immidiate <= X"0b0b0b0b";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"abababaa"));
             elsif run("Test SLLI") then
                 instruction <= construct_stype_instruction(opcode => riscv32_opcode_opimm, funct3 => riscv32_funct3_sll);
@@ -98,6 +105,7 @@ begin
                 immidiate <= X"00000002";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"0003fffc"));
             elsif run("Test SRLI") then
                 instruction <= construct_stype_instruction(opcode => riscv32_opcode_opimm, funct3 => riscv32_funct3_srl_sra, funct7 => riscv32_funct7_srl);
@@ -105,6 +113,7 @@ begin
                 immidiate <= X"00000002";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"00003fff"));
             elsif run("Test SRAI") then
                 instruction <= construct_stype_instruction(opcode => riscv32_opcode_opimm, funct3 => riscv32_funct3_srl_sra, funct7 => riscv32_funct7_sra);
@@ -112,12 +121,14 @@ begin
                 immidiate <= X"00000001";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"ffffffff"));
             elsif run ("Test LUI") then
                 instruction <= construct_stype_instruction(opcode => riscv32_opcode_lui);
                 immidiate <= X"fafbc000";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, immidiate);
             elsif run ("Test AIUPC") then
                 instruction <= construct_stype_instruction(opcode => riscv32_opcode_auipc);
@@ -125,6 +136,7 @@ begin
                 programCounter <= X"00000004";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector(signed(immidiate) + signed(programCounter)));
             elsif run("Test ADD") then
                 instruction <= construct_rtype_instruction(opcode => riscv32_opcode_op, funct3 => riscv32_funct3_add_sub, funct7 => riscv32_funct7_add);
@@ -132,6 +144,7 @@ begin
                 rs2Data <= X"00000007";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"0000000e"));
             elsif run("Test SUB") then
                 instruction <= construct_rtype_instruction(opcode => riscv32_opcode_op, funct3 => riscv32_funct3_add_sub, funct7 => riscv32_funct7_sub);
@@ -139,6 +152,7 @@ begin
                 rs2Data <= X"00000007";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"00000000"));
             elsif run("Test LOAD") then
                 instruction <= construct_itype_instruction(opcode => riscv32_opcode_load, funct3 => riscv32_funct3_lb);
@@ -146,6 +160,7 @@ begin
                 immidiate <= X"ffffffff";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"00000000"));
             elsif run("Test STORE") then
                 instruction <= construct_itype_instruction(opcode => riscv32_opcode_store, funct3 => riscv32_funct3_sw);
@@ -153,12 +168,14 @@ begin
                 immidiate <= X"ffffffff";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"00000000"));
             elsif run("Test JAL") then
                 instruction <= construct_utype_instruction(opcode => riscv32_opcode_jal);
                 programCounter <= X"00000004";
                 wait for 1 ns;
                 check(not overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"00000008"));
             elsif run("Test JALR") then
                 instruction <= construct_itype_instruction(opcode => riscv32_opcode_jalr);
@@ -167,6 +184,7 @@ begin
                 immidiate <= X"0000000c";
                 wait for 1 ns;
                 check(overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(execResult, std_logic_vector'(X"00000008"));
                 check_equal(newProgramCounter, std_logic_vector'(X"00001010"));
             elsif run("Test BEQ") then
@@ -177,7 +195,14 @@ begin
                 immidiate <= X"0000000c";
                 wait for 1 ns;
                 check(overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(newProgramCounter, std_logic_vector'(X"00000010"));
+
+                rs1Data <= X"00001004";
+                rs2Data <= X"00001000";
+                wait for 1 ns;
+                check(not overrideProgramCounter);
+                check(branchNotTaken);
             elsif run("Test BNE") then
                 instruction <= construct_btype_instruction(opcode => riscv32_opcode_branch, funct3 => riscv32_funct3_bne);
                 programCounter <= X"00000004";
@@ -186,7 +211,14 @@ begin
                 immidiate <= X"0000000c";
                 wait for 1 ns;
                 check(overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(newProgramCounter, std_logic_vector'(X"00000010"));
+
+                rs1Data <= X"00001004";
+                rs2Data <= X"00001004";
+                wait for 1 ns;
+                check(not overrideProgramCounter);
+                check(branchNotTaken);
             elsif run("Test BLT") then
                 instruction <= construct_btype_instruction(opcode => riscv32_opcode_branch, funct3 => riscv32_funct3_blt);
                 programCounter <= X"00000004";
@@ -195,7 +227,14 @@ begin
                 immidiate <= X"00000004";
                 wait for 1 ns;
                 check(overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(newProgramCounter, std_logic_vector'(X"00000008"));
+
+                rs1Data <= X"ffffffff";
+                rs2Data <= X"ffffffff";
+                wait for 1 ns;
+                check(not overrideProgramCounter);
+                check(branchNotTaken);
             elsif run("Test BLTU") then
                 instruction <= construct_btype_instruction(opcode => riscv32_opcode_branch, funct3 => riscv32_funct3_bltu);
                 programCounter <= X"00000004";
@@ -204,7 +243,14 @@ begin
                 immidiate <= X"fffffffc";
                 wait for 1 ns;
                 check(overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(newProgramCounter, std_logic_vector'(X"00000000"));
+
+                rs1Data <= X"00000000";
+                rs2Data <= X"00000000";
+                wait for 1 ns;
+                check(not overrideProgramCounter);
+                check(branchNotTaken);
             elsif run("Test BGE") then
                 instruction <= construct_btype_instruction(opcode => riscv32_opcode_branch, funct3 => riscv32_funct3_bge);
                 programCounter <= X"00000004";
@@ -213,7 +259,14 @@ begin
                 immidiate <= X"fffffffc";
                 wait for 1 ns;
                 check(overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(newProgramCounter, std_logic_vector'(X"00000000"));
+
+                rs1Data <= X"ffffffff";
+                rs2Data <= X"00000000";
+                wait for 1 ns;
+                check(not overrideProgramCounter);
+                check(branchNotTaken);
             elsif run("Test BGEU") then
                 instruction <= construct_btype_instruction(opcode => riscv32_opcode_branch, funct3 => riscv32_funct3_bgeu);
                 programCounter <= X"00000004";
@@ -222,7 +275,14 @@ begin
                 immidiate <= X"fffffffc";
                 wait for 1 ns;
                 check(overrideProgramCounter);
+                check(not branchNotTaken);
                 check_equal(newProgramCounter, std_logic_vector'(X"00000000"));
+
+                rs1Data <= X"00000000";
+                rs2Data <= X"00000001";
+                wait for 1 ns;
+                check(not overrideProgramCounter);
+                check(branchNotTaken);
             end if;
         end loop;
         wait for 2 ns;
@@ -244,7 +304,8 @@ begin
         programCounter => programCounter,
         execResult => execResult,
         overrideProgramCounter => overrideProgramCounter,
-        newProgramCounter => newProgramCounter
+        newProgramCounter => newProgramCounter,
+        branchNotTaken => branchNotTaken
     );
 
     controlDecode : entity src.riscv32_control

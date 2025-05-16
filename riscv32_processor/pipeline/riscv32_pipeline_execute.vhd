@@ -27,7 +27,9 @@ entity riscv32_pipeline_execute is
 
         -- To instruction fetch: branch
         overrideProgramCounter : out boolean;
-        newProgramCounter : out riscv32_address_type
+        newProgramCounter : out riscv32_address_type;
+
+        branchNotTaken : out boolean
     );
 end entity;
 
@@ -73,26 +75,30 @@ begin
     end process;
 
     determineOverridePC : process(executeControlWord, rs1Data, rs2Data)
+        variable overrideProgramCounter_buf : boolean;
     begin
-        overrideProgramCounter <= false;
+        overrideProgramCounter_buf := false;
+        branchNotTaken <= false;
         if executeControlWord.is_branch_op then
             case executeControlWord.branch_cmd is
                 when cmd_branch_eq =>
-                    overrideProgramCounter <= rs1Data = rs2Data;
+                    overrideProgramCounter_buf := rs1Data = rs2Data;
                 when cmd_branch_ne =>
-                    overrideProgramCounter <= rs1Data /= rs2Data;
+                    overrideProgramCounter_buf := rs1Data /= rs2Data;
                 when cmd_branch_lt =>
-                    overrideProgramCounter <= signed(rs1Data) < signed(rs2Data);
+                    overrideProgramCounter_buf := signed(rs1Data) < signed(rs2Data);
                 when cmd_branch_ltu =>
-                    overrideProgramCounter <= unsigned(rs1Data) < unsigned(rs2Data);
+                    overrideProgramCounter_buf := unsigned(rs1Data) < unsigned(rs2Data);
                 when cmd_branch_ge =>
-                    overrideProgramCounter <= signed(rs1Data) >= signed(rs2Data);
+                    overrideProgramCounter_buf := signed(rs1Data) >= signed(rs2Data);
                 when cmd_branch_geu =>
-                    overrideProgramCounter <= unsigned(rs1Data) >= unsigned(rs2Data);
+                    overrideProgramCounter_buf := unsigned(rs1Data) >= unsigned(rs2Data);
                 when cmd_branch_jalr =>
-                    overrideProgramCounter <= true;
+                    overrideProgramCounter_buf := true;
             end case;
+            branchNotTaken <= not overrideProgramCounter_buf;
         end if;
+        overrideProgramCounter <= overrideProgramCounter_buf;
     end process;
 
     determineMuldivResult : process(mul_result, div_result, executeControlWord.muldiv_is_mul)
