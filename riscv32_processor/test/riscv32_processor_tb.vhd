@@ -361,6 +361,14 @@ begin
                 expectedReadData := std_logic_vector(to_signed(4, expectedReadData'length));
                 readAddr := std_logic_vector(to_unsigned(16#8#, bus_address_type'length));
                 check_word_at_address_in_outMem(net, readAddr, expectedReadData);
+            elsif run("Count to 10") then
+                simulated_bus_memory_pkg.write_to_address(net, outputMemActor, X"00000000", X"00000000", X"f");
+                simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/count_to_ten.txt");
+                start_cpu(test2slv, slv2test);
+                wait for 20 us;
+                expectedReadData := std_logic_vector(to_signed(10, expectedReadData'length));
+                readAddr := std_logic_vector(to_unsigned(16#0#, bus_address_type'length));
+                check_word_at_address_in_outMem(net, readAddr, expectedReadData);
             end if;
         end loop;
         wait until rising_edge(clk);
