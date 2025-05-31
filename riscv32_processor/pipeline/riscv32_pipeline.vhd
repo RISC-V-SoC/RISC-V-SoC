@@ -67,6 +67,11 @@ architecture behaviourial of riscv32_pipeline is
     signal newProgramCounterFromID : riscv32_address_type;
     -- Branchhelper to IF
     signal injectBubbleFromBranchHelper : boolean;
+    -- From branch predictor
+    signal injectBubbleFromBranchPredictor : boolean;
+    signal branchPredictorMisPredicted : boolean;
+    signal overrideProgramCounterFromBranchPredictor : boolean;
+    signal newProgramCounterFromBranchPredictor : riscv32_address_type;
     -- From ID
     signal regControlwordFromId : riscv32_RegisterControlWord_type;
     signal exControlWordFromId : riscv32_ExecuteControlWord_type;
@@ -77,6 +82,7 @@ architecture behaviourial of riscv32_pipeline is
     signal immidiateFromId : riscv32_data_type;
     signal uimmidiateFromId : riscv32_data_type;
     signal rdAddressFromId : riscv32_registerFileAddress_type;
+    signal branchTargetFromId : riscv32_address_type;
     signal exceptionTypeFromId : riscv32_pipeline_exception_type;
     signal exceptionCodeFromId : riscv32_exception_code_type;
     -- Registerfile to register stage
@@ -133,6 +139,7 @@ architecture behaviourial of riscv32_pipeline is
     -- Execute to instruction fetch
     signal overrideProgramCounterFromEx : boolean;
     signal newProgramCounterFromEx : riscv32_address_type;
+    signal branchNotTakenFromEx : boolean;
     -- From memory
     signal memDataFromMem : riscv32_data_type;
     signal cpzDataFromMem : riscv32_data_type;
@@ -181,8 +188,8 @@ begin
         overrideProgramCounterFromID => overrideProgramCounterFromID,
         newProgramCounterFromID => newProgramCounterFromID,
 
-        overrideProgramCounterFromEx => overrideProgramCounterFromEx,
-        newProgramCounterFromEx => newProgramCounterFromEx,
+        overrideProgramCounterFromEx => overrideProgramCounterFromBranchPredictor,
+        newProgramCounterFromEx => newProgramCounterFromBranchPredictor,
 
         overrideProgramCounterFromInterrupt => handle_exception,
         newProgramCounterFromInterrupt => programCounterFromExceptionHandler
@@ -191,10 +198,10 @@ begin
     ifidReg : entity work.riscv32_pipeline_ifidreg
     port map (
         clk => clk,
-        rst => rst or handle_exception,
+        rst => rst or handle_exception or branchPredictorMisPredicted,
         stall => stall or stallToResolveHazard,
 
-        force_bubble => injectBubbleFromBranchHelper,
+        force_bubble => injectBubbleFromBranchPredictor,
         force_service_request => requiresServiceFromIdReg,
 
         enable_instruction_fetch => instruction_fetch_enable,
@@ -219,6 +226,26 @@ begin
         injectBubble => injectBubbleFromBranchHelper
     );
 
+    branchPredictor : entity work.riscv32_pipeline_branchPredictor
+    port map (
+        clk => clk,
+        rst => rst or handle_exception,
+        stall => stall or stallToResolveHazard,
+        currentIDProgramCounter => programCounterFromIf,
+        executeControlWordFromID => exControlWordFromId,
+        branchTargetAddressFromID => branchTargetFromId,
+        exceptionTypeFromID => exceptionTypeFromId,
+        IDContainsBubble => isBubbleFromIF,
+
+        branchIsTakenFromEX => overrideProgramCounterFromEx,
+        branchIsNotTakenFromEX => branchNotTakenFromEx,
+        branchTargetAddressFromEX => newProgramCounterFromEx,
+
+        stallAwaitingBranchResolution => injectBubbleFromBranchPredictor,
+        handleMisPrediction => branchPredictorMisPredicted,
+        takeBranch => overrideProgramCounterFromBranchPredictor,
+        branchTarget => newProgramCounterFromBranchPredictor
+    );
 
     -- ID stage
     instructionDecode : entity work.riscv32_pipeline_instructionDecode
@@ -239,6 +266,7 @@ begin
         immidiate => immidiateFromId,
         uimmidiate => uimmidiateFromId,
         rdAddress => rdAddressFromId,
+        branchTarget => branchTargetFromId,
 
         exception_type => exceptionTypeFromId,
         exception_code => exceptionCodeFromId
@@ -249,7 +277,7 @@ begin
         clk => clk,
         -- Control in
         stall => stall or stallToResolveHazard,
-        rst => rst or handle_exception,
+        rst => rst or handle_exception or branchPredictorMisPredicted,
         -- Control out
         requires_service => requiresServiceFromIdReg,
         -- Exception data in
@@ -328,7 +356,7 @@ begin
         clk => clk,
         -- Control in
         stall => stall,
-        rst => rst or handle_exception or nopOutputToResolveHazard,
+        rst => rst or handle_exception or nopOutputToResolveHazard or branchPredictorMisPredicted,
         -- Control out
         requires_service => requiresServiceFromRegEx,
         -- Exception data in
@@ -379,7 +407,8 @@ begin
         execResult => execResFromExec,
 
         overrideProgramCounter => overrideProgramCounterFromEx,
-        newProgramCounter => newProgramCounterFromEx
+        newProgramCounter => newProgramCounterFromEx,
+        branchNotTaken => branchNotTakenFromEx
     );
 
     exMemReg : entity work.riscv32_pipeline_stageRegister
