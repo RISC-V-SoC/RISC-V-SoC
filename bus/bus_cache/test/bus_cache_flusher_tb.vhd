@@ -27,6 +27,7 @@ architecture tb of bus_cache_flusher_tb is
     signal flush_busy : boolean;
 
     signal line_index : natural range 0 to 2**total_line_count_log2b - 1;
+    signal cache_read_busy : boolean := false;
     signal is_dirty : boolean := false;
     signal do_write : boolean;
     signal write_complete : boolean := false;
@@ -64,6 +65,10 @@ begin
                 wait until rising_edge(clk);
                 check_equal(line_index, 0);
                 check_false(do_write);
+                cache_read_busy <= true;
+                wait for 5*clk_period;
+                check_false(do_write);
+                cache_read_busy <= false;
                 is_dirty <= true;
                 wait until rising_edge(clk) and do_write;
                 check_equal(line_index, 0);
@@ -115,6 +120,7 @@ begin
         do_flush => do_flush,
         flush_busy => flush_busy,
         line_index => line_index,
+        cache_read_busy => cache_read_busy,
         is_dirty => is_dirty,
         do_write => do_write,
         write_complete => write_complete,

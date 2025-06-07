@@ -23,6 +23,9 @@ architecture tb of main_file_tb is
     constant baud_rate : positive := 2000000;
     constant logger : logger_t := get_logger("Complete system test");
 
+    constant l2cache_words_per_line_log2b : natural := 3;
+    constant l2cache_words_per_line : natural := 2**l2cache_words_per_line_log2b;
+
     constant command_uart_slave_bfm : uart_slave_t := new_uart_slave(initial_baud_rate => baud_rate);
     constant command_uart_slave_stream : stream_slave_t := as_stream(command_uart_slave_bfm);
     constant command_uart_master_bfm : uart_master_t := new_uart_master(initial_baud_rate => baud_rate);
@@ -188,8 +191,13 @@ begin
         test_runner_setup(runner, runner_cfg);
         while test_suite loop
             if run("Spi mem is usable") then
-                write(net, spimem0_start_address, X"01020304");
-                read(net, spimem0_start_address, X"01020304");
+                for i in 0 to l2cache_words_per_line - 1 loop
+                    write(net, std_logic_vector(unsigned(spimem0_start_address) + i*4), std_logic_vector(to_unsigned(i, bus_data_type'length)));
+                end loop;
+                flush_cache(net);
+                for i in 0 to l2cache_words_per_line - 1 loop
+                    read(net, std_logic_vector(unsigned(spimem0_start_address) + i*4), std_logic_vector(to_unsigned(i, bus_data_type'length)));
+                end loop;
             elsif run("Riscv32: bubblesort") then
                 write(net, processor_controller_start_address, X"00000001");
                 write_file(net, spimem0_start_address, "./complete_system/test/programs/fullBubblesort.txt");
@@ -283,7 +291,12 @@ begin
     main_file : entity src.main_file
     generic map (
         clk_freq_hz => (1 sec)/clk_period,
-        baud_rate => baud_rate
+        baud_rate => baud_rate,
+        icache_word_count_log2b => 9,
+        dcache_word_count_log2b => 9,
+        l2cache_words_per_line_log2b => l2cache_words_per_line_log2b,
+        l2cache_total_line_count_log2b => 11,
+        l2cache_bank_count_log2b => 3
     ) port map (
         JA_gpio(0) => si_sio0,
         JA_gpio(1) => so_sio1,
