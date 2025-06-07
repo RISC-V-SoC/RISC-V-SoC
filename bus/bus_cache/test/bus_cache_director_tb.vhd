@@ -47,6 +47,8 @@ architecture tb of bus_cache_director_tb is
 
     signal reconstructed_address : bus_aligned_address_type;
 
+    signal read_busy : boolean;
+
     signal hit : boolean;
     signal dirty : boolean;
 begin
@@ -58,8 +60,8 @@ begin
         while test_suite loop
             if run("Simulate read on invalid line") then
                 address <= std_logic_vector(to_unsigned(words_per_line * 0, address'length));
-                word_index_from_frontend <= 0;
-                wait for 5*clk_period;
+                word_index_from_frontend <= 1;
+                wait until falling_edge(clk) and not read_busy;
                 check_false(hit);
                 check_false(dirty);
                 for i in 0 to words_per_line-1 loop
@@ -73,17 +75,14 @@ begin
                     mark_line_clean <= false;
                 end loop;
                 do_write_from_backend <= false;
-                wait until rising_edge(clk) and hit;
-                check(or_reduce(data_to_frontend) = '0');
-                do_read_from_frontend <= true;
-                wait until rising_edge(clk);
-                do_read_from_frontend <= false;
-                wait until rising_edge(clk);
+                wait until rising_edge(clk) and not read_busy;
+                check(hit);
+                check(or_reduce(data_to_frontend(data_to_frontend'high downto 1)) = '0');
+                check(data_to_frontend(0) = '1');
             elsif run("Cache two colliding lines") then
                 address <= std_logic_vector(to_unsigned(0, address'length));
                 word_index_from_frontend <= 0;
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
+                wait until falling_edge(clk) and not read_busy;
                 check_false(hit);
                 check_false(dirty);
                 for i in 0 to words_per_line-1 loop
@@ -105,9 +104,7 @@ begin
                 do_read_from_frontend <= false;
                 address <= std_logic_vector(to_unsigned(total_line_count * words_per_line, address'length));
                 word_index_from_frontend <= 0;
-                wait until rising_edge(clk);
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
+                wait until falling_edge(clk) and not read_busy;
                 check_false(hit);
                 check_false(dirty);
                 for i in 0 to words_per_line-1 loop
@@ -124,7 +121,7 @@ begin
                 do_write_from_backend <= false;
                 address <= std_logic_vector(to_unsigned(0, address'length));
                 word_index_from_frontend <= 0;
-                wait for 5*clk_period;
+                wait until falling_edge(clk) and not read_busy;
                 check_true(hit);
                 check(or_reduce(data_to_frontend) = '0');
             elsif run("Oldest line is evicted first") then
@@ -159,7 +156,7 @@ begin
                 end loop;
                 do_write_from_backend <= false;
                 address <= std_logic_vector(to_unsigned(0, address'length));
-                wait for 5*clk_period;
+                wait until falling_edge(clk) and not read_busy;
                 check_false(hit);
             elsif run("Write also ages bank") then
                 for bank_index in 0 to bank_count - 1 loop
@@ -175,6 +172,7 @@ begin
                         wait until rising_edge(clk);
                     end loop;
                     do_write_from_backend <= false;
+                    mark_line_clean <= false;
                     wait until rising_edge(clk);
                     word_index_from_frontend <= 0;
                     do_write_from_frontend <= true;
@@ -192,8 +190,7 @@ begin
                 end loop;
                 do_write_from_backend <= false;
                 address <= std_logic_vector(to_unsigned(0, address'length));
-                wait until rising_edge(clk);
-                wait until falling_edge(clk);
+                wait until falling_edge(clk) and not read_busy;
                 check_false(hit);
             elsif run("Test index mode") then
                 for index in 0 to total_line_count - 1 loop
@@ -227,7 +224,7 @@ begin
                 word_index_from_backend <= 0;
                 for index in 0 to total_line_count - 1 loop
                     line_index <= index;
-                    wait for 5*clk_period;
+                    wait until falling_edge(clk) and not read_busy;
                     check_equal(reconstructed_address, std_logic_vector(to_unsigned(index * words_per_line, reconstructed_address'length)));
                     check(dirty = (index rem 2 /= 0));
                     if index rem 2 = 0 then
@@ -290,8 +287,77 @@ begin
 
                 address <= std_logic_vector(to_unsigned(words_per_line * 0, address'length));
                 word_index_from_frontend <= 0;
-                wait for 5*clk_period;
+                wait until falling_edge(clk) and not read_busy;
                 check_true(hit);
+            elsif run("Read busy goes high when address changes") then
+                address <= std_logic_vector(to_unsigned(0, address'length));
+                wait until falling_edge(clk) and not read_busy;
+                wait until falling_edge(clk);
+                check(not read_busy);
+                address <= std_logic_vector(to_unsigned(4, address'length));
+                wait until falling_edge(clk);
+                check(read_busy);
+            elsif run("Read busy goes high when word_index_from_frontend changes") then
+                address <= std_logic_vector(to_unsigned(0, address'length));
+                word_index_from_frontend <= 0;
+                wait until falling_edge(clk) and not read_busy;
+                wait until falling_edge(clk);
+                check(not read_busy);
+                word_index_from_frontend <= 1;
+                wait until falling_edge(clk);
+                check(read_busy);
+            elsif run("Read busy goes high when word_index_from_backend changes") then
+                address <= std_logic_vector(to_unsigned(0, address'length));
+                word_index_from_backend <= 0;
+                wait until falling_edge(clk) and not read_busy;
+                wait until falling_edge(clk);
+                check(not read_busy);
+                word_index_from_backend <= 1;
+                wait until falling_edge(clk);
+                check(read_busy);
+            elsif run("Read busy goes high when line_index changes") then
+                address <= std_logic_vector(to_unsigned(0, address'length));
+                word_index_from_frontend <= 0;
+                line_index <= 0;
+                wait until falling_edge(clk) and not read_busy;
+                wait until falling_edge(clk);
+                check(not read_busy);
+                line_index <= 1;
+                wait until falling_edge(clk);
+                check(read_busy);
+            elsif run("Read busy time resets every time the address changes") then
+                for i in 0 to 20 loop
+                    address <= std_logic_vector(to_unsigned(i, address'length));
+                    wait until falling_edge(clk);
+                    check(read_busy);
+                end loop;
+            elsif run("Read busy activates after a frontend write") then
+                address <= std_logic_vector(to_unsigned(0, address'length));
+                word_index_from_frontend <= 0;
+                line_index <= 0;
+                wait until falling_edge(clk) and not read_busy;
+                wait until falling_edge(clk);
+                check(not read_busy);
+                do_write_from_frontend <= true;
+                wait until falling_edge(clk);
+                check(read_busy);
+            elsif run("Read busy activates after a backend write") then
+                address <= std_logic_vector(to_unsigned(0, address'length));
+                word_index_from_frontend <= 0;
+                line_index <= 0;
+                wait until falling_edge(clk) and not read_busy;
+                wait until falling_edge(clk);
+                check(not read_busy);
+                do_write_from_backend <= true;
+                wait until falling_edge(clk);
+                check(read_busy);
+            elsif run("Read busy activates after a mark line clean operation") then
+                wait until falling_edge(clk) and not read_busy;
+                wait until falling_edge(clk);
+                check(not read_busy);
+                mark_line_clean <= true;
+                wait until falling_edge(clk);
+                check(read_busy);
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -325,6 +391,7 @@ begin
         do_write_from_backend => do_write_from_backend,
         mark_line_clean => mark_line_clean,
         reconstructed_address => reconstructed_address,
+        read_busy => read_busy,
         hit => hit,
         dirty => dirty
     );

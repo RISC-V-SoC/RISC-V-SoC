@@ -31,7 +31,7 @@ architecture behaviourial of bus_cache is
     constant word_index_lsb : natural := bus_bytes_per_word_log2b;
     constant word_index_msb : natural := word_index_lsb + words_per_line_log2b - 1;
     constant truncated_address_lsb : natural := word_index_msb + 1;
-    type state_type is (idle, wait_for_cache, wait_for_cache_II, wait_for_cache_III, process_cache_response, bytemask_fault_detected, update_cache, dirty_word_to_backend, wait_for_backend_write, request_from_backend, wait_for_backend_read, flusher_start, flusher_active);
+    type state_type is (idle, wait_for_cache, process_cache_response, bytemask_fault_detected, update_cache, dirty_word_to_backend, wait_for_backend_write, request_from_backend, wait_for_backend_read, flusher_start, flusher_active);
 
     signal cur_state : state_type := idle;
     signal next_state : state_type := idle;
@@ -43,6 +43,7 @@ architecture behaviourial of bus_cache is
     signal cache_reconstructed_address : bus_aligned_address_type;
     signal cache_do_read : boolean;
     signal cache_do_write : boolean;
+    signal cache_read_busy : boolean;
     signal cache_hit : boolean;
     signal cache_dirty : boolean;
     signal cache_frontend_read_data : bus_data_type;
@@ -122,7 +123,7 @@ begin
         end if;
     end process;
 
-    next_state_handling : process(cur_state, cache_hit, cache_dirty, frontend_requests_write, frontend_requests_read, backend_line_operation_complete, backend_bus_fault, bytemask_fault, flusher_flush_busy, do_flush)
+    next_state_handling : process(cur_state, cache_hit, cache_dirty, frontend_requests_write, frontend_requests_read, backend_line_operation_complete, backend_bus_fault, bytemask_fault, flusher_flush_busy, do_flush, cache_read_busy)
     begin
         next_state <= cur_state;
         case cur_state is
@@ -133,11 +134,9 @@ begin
                     next_state <= flusher_start;
                 end if;
             when wait_for_cache =>
-                next_state <= wait_for_cache_II;
-            when wait_for_cache_II =>
-                next_state <= wait_for_cache_III;
-            when wait_for_cache_III =>
-                next_state <= process_cache_response;
+                if not cache_read_busy then
+                    next_state <= process_cache_response;
+                end if;
             when process_cache_response =>
                 if bytemask_fault then
                     next_state <= bytemask_fault_detected;
@@ -178,7 +177,7 @@ begin
     state_output : process(cur_state, backend_line_operation_complete, frontend_requests_read, frontend_requests_write, backend_bus_fault, flusher_do_write)
     begin
         case cur_state is
-            when idle|wait_for_cache|wait_for_cache_II|wait_for_cache_III|process_cache_response =>
+            when idle|wait_for_cache|process_cache_response =>
                 cache_mark_line_clean <= false;
                 cache_do_read <= false;
                 cache_do_write <= false;
@@ -297,6 +296,7 @@ begin
 
         mark_line_clean => cache_mark_line_clean,
         reconstructed_address => cache_reconstructed_address,
+        read_busy => cache_read_busy,
         hit => cache_hit,
         dirty => cache_dirty
     );
@@ -334,6 +334,7 @@ begin
         read_word_retrieved => backend_word_read_complete,
         read_address => cache_input_address & "00",
         read_data => backend_read_data,
+        cache_read_busy => cache_read_busy,
         line_complete => backend_line_operation_complete,
 
         bus_fault => backend_bus_fault,
@@ -349,6 +350,7 @@ begin
         do_flush => flusher_do_flush,
         flush_busy => flusher_flush_busy,
         line_index => cache_line_index,
+        cache_read_busy => cache_read_busy,
         is_dirty => cache_dirty,
         do_write => flusher_do_write,
         write_complete => backend_line_operation_complete,

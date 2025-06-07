@@ -27,6 +27,8 @@ entity bus_cache_backend is
         read_address : in bus_address_type;
         read_data : out bus_data_type;
 
+        cache_read_busy : in boolean;
+
         line_complete : out boolean;
         bus_fault : out boolean;
         bus_fault_data : out bus_fault_type
@@ -73,7 +75,7 @@ begin
     data_vault : process(clk)
     begin
         if rising_edge(clk) then
-            if cur_state = write_word_retrieve or cur_state = idle then
+            if cur_state = write_word_retrieve then
                 backend2slv_buf.writeData <= write_data;
                 write_address_to_send <= actual_write_address;
                 buffered_write_index <= current_word_index;
@@ -100,7 +102,7 @@ begin
                 else
                     current_word_index <= 0;
                 end if;
-            elsif cur_state = write_word_retrieve then
+            elsif cur_state = write_word_retrieve and next_state = write_send then
                 if current_word_index < word_index_max then
                     current_word_index <= current_word_index + 1;
                 else
@@ -121,7 +123,7 @@ begin
         end if;
     end process;
 
-    fsm_combinatorial : process(cur_state, slv2backend, do_write, do_read, current_word_index, actual_write_address, actual_read_address, write_address_to_send, buffered_write_index)
+    fsm_combinatorial : process(cur_state, slv2backend, do_write, do_read, current_word_index, actual_write_address, actual_read_address, write_address_to_send, buffered_write_index, cache_read_busy)
     begin
         next_state <= cur_state;
         case cur_state is
@@ -147,7 +149,9 @@ begin
                 read_word_retrieved_buf <= false;
                 line_complete <= false;
                 bus_fault <= false;
-                next_state <= write_send;
+                if not cache_read_busy then
+                    next_state <= write_send;
+                end if;
             when write_send =>
                 backend2slv_buf.address <= write_address_to_send;
                 backend2slv_buf.readReady <= '0';

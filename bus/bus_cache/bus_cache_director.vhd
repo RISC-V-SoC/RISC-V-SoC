@@ -34,6 +34,8 @@ entity bus_cache_director is
 
         reconstructed_address : out bus_aligned_address_type;
 
+        read_busy : out boolean;    
+
         hit : out boolean;
         dirty : out boolean
     );
@@ -46,6 +48,8 @@ architecture behaviourial of bus_cache_director is
 
     constant line_count_log2b : natural := total_line_count_log2b - bank_count_log2b;
     constant max_age : natural := 2**bank_count_log2b - 1;
+
+    constant cache_response_time : natural := 2;
 
     type age_array_type is array(0 to bank_count - 1) of natural range 0 to max_age;
 
@@ -73,6 +77,9 @@ architecture behaviourial of bus_cache_director is
     signal data_from_backend_buf : bus_data_type;
 
     signal evict_index_sig : natural range 0 to bank_count - 1;
+
+    signal read_timer_reset : std_logic;
+    signal read_timer_done : std_logic;
 begin
     assert(total_line_count_log2b > bank_count_log2b);
 
@@ -155,6 +162,41 @@ begin
         evict_index_sig <= evict_index;
     end process;
 
+    read_timer : process(clk, address, word_index_from_frontend, word_index_from_backend, line_index)
+        variable cache_valid : boolean := false;
+        variable cache_address : bus_aligned_address_type;
+        variable line_index_cache : natural range 0 to 2**total_line_count_log2b - 1;
+        variable frontend_word_index_cache : natural range 0 to 2**words_per_line_log2b - 1;
+        variable backend_word_index_cache : natural range 0 to 2**words_per_line_log2b - 1;
+
+        variable awaiting : boolean := false;
+        variable cache_mismatch : boolean;
+    begin
+        if rising_edge(clk) then
+            if do_write_from_frontend or do_write_from_backend or mark_line_clean then
+                cache_valid := false;
+            end if;
+            if read_timer_done then
+                awaiting := false;
+            end if;
+            if cache_mismatch or not cache_valid then
+                awaiting := true;
+                cache_valid := true;
+                cache_address := address;
+                frontend_word_index_cache := word_index_from_frontend;
+                backend_word_index_cache := word_index_from_backend;
+                line_index_cache := line_index;
+            end if;
+        end if;
+        cache_mismatch := cache_address /= address or frontend_word_index_cache /= word_index_from_frontend or line_index /= line_index_cache or backend_word_index_cache /= word_index_from_backend;
+        if awaiting and cache_mismatch then
+            read_timer_reset <= '1';
+        else
+            read_timer_reset <= '0' when awaiting else '1';
+        end if;
+        read_busy <= awaiting;
+    end process;
+
     banks : for index in 0 to bank_count - 1 generate
         bank : entity work.bus_cache_bank
         generic map (
@@ -190,4 +232,14 @@ begin
             reconstructed_address => reconstructed_address_array(index)
         );
     end generate;
+
+    read_multishot_timer : entity work.simple_multishot_timer
+    generic map (
+        match_val => cache_response_time
+    )
+    port map (
+        clk => clk,
+        rst => read_timer_reset,
+        done => read_timer_done
+    );
 end architecture;

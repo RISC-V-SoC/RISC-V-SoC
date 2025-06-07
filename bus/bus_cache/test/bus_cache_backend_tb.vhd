@@ -42,6 +42,8 @@ architecture tb of bus_cache_backend_tb is
     signal read_address : bus_address_type := (others => '0');
     signal read_data : bus_data_type;
 
+    signal cache_read_busy : boolean := false;
+
     signal line_complete : boolean;
     signal bus_fault : boolean;
     signal bus_fault_data : bus_fault_type;
@@ -66,6 +68,29 @@ begin
                 for i in 1 to words_per_line - 1 loop
                     wait until rising_edge(clk) and word_index = i;
                     write_data <= std_logic_vector(to_unsigned(i, write_data'length));
+                end loop;
+                wait until rising_edge(clk) and line_complete;
+                memory_address := std_logic_vector(to_unsigned(0, memory_address'length));
+                read_from_address(net, memActor, memory_address, memory_words);
+                for i in 0 to words_per_line - 1 loop
+                    check_equal(memory_words(i), std_logic_vector(to_unsigned(i, memory_words(i)'length)));
+                end loop;
+            elsif run("Writer respects cache_read_busy") then
+                do_write <= true;
+                cache_read_busy <= true;
+                write_data <= (others => '1');
+                wait until rising_edge(clk);
+                do_write <= false;
+                assert(word_index = 0);
+                wait for 5*clk_period;
+                cache_read_busy <= false;
+                write_data <= std_logic_vector(to_unsigned(0, write_data'length));
+                for i in 1 to words_per_line - 1 loop
+                    wait until rising_edge(clk) and word_index = i;
+                    cache_read_busy <= true;
+                    wait for 5*clk_period;
+                    write_data <= std_logic_vector(to_unsigned(i, write_data'length));
+                    cache_read_busy <= false;
                 end loop;
                 wait until rising_edge(clk) and line_complete;
                 memory_address := std_logic_vector(to_unsigned(0, memory_address'length));
@@ -175,6 +200,7 @@ begin
         read_word_retrieved => read_word_retrieved,
         read_address => read_address,
         read_data => read_data,
+        cache_read_busy => cache_read_busy,
         line_complete => line_complete,
         bus_fault => bus_fault,
         bus_fault_data => bus_fault_data

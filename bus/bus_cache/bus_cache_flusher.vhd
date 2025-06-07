@@ -17,6 +17,7 @@ entity bus_cache_flusher is
         flush_busy : out boolean;
 
         line_index : out natural range 0 to 2**total_line_count_log2b - 1;
+        cache_read_busy : in boolean;
         is_dirty : in boolean;
         do_write : out boolean;
         write_complete : in boolean;
@@ -26,7 +27,7 @@ entity bus_cache_flusher is
 end entity;
 
 architecture behaviourial of bus_cache_flusher is
-    type state_type is (idle, start, request_from_cache, cache_wait_cycle, cache_wait_cycle_II, cache_wait_cycle_III, process_response, initiate_write, wait_for_write, finish);
+    type state_type is (idle, start, request_from_cache, cache_wait_cycle, process_response, initiate_write, wait_for_write, finish);
 
     constant line_index_max : natural := 2**total_line_count_log2b - 1;
 
@@ -49,7 +50,7 @@ begin
         end if;
     end process;
 
-    state_decider : process(clk, do_flush, line_index_buf, is_dirty, cur_state, write_complete)
+    state_decider : process(clk, do_flush, line_index_buf, is_dirty, cur_state, write_complete, cache_read_busy)
     begin
         if rising_edge(clk) then
             if rst then
@@ -71,11 +72,9 @@ begin
             when request_from_cache =>
                 next_state <= cache_wait_cycle;
             when cache_wait_cycle =>
-                next_state <= cache_wait_cycle_II;
-            when cache_wait_cycle_II =>
-                next_state <= cache_wait_cycle_III;
-            when cache_wait_cycle_III =>
-                next_state <= process_response;
+                if not cache_read_busy then
+                    next_state <= process_response;
+                end if;
             when process_response =>
                 if is_dirty then
                     next_state <= initiate_write;
@@ -114,7 +113,7 @@ begin
                 flush_busy <= true;
                 do_write <= false;
                 reset_cache <= false;
-            when process_response|cache_wait_cycle|cache_wait_cycle_II|cache_wait_cycle_III =>
+            when process_response|cache_wait_cycle =>
                 flush_busy <= true;
                 do_write <= false;
                 reset_cache <= false;
