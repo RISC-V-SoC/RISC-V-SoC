@@ -29,9 +29,6 @@ entity riscv32_pipeline_instructionDecode is
         uimmidiate : out riscv32_data_type;
         rdAddress : out riscv32_registerFileAddress_type;
 
-        -- To branch predictor
-        branchTarget : out riscv32_address_type;
-
         -- Error output
         exception_type : out riscv32_pipeline_exception_type;
         exception_code : out riscv32_exception_code_type
@@ -48,8 +45,6 @@ architecture behaviourial of riscv32_pipeline_instructionDecode is
     signal jumpTarget : riscv32_address_type;
     signal overrideProgramCounter_buf : boolean := false;
     signal illegal_instruction : boolean := false;
-    
-    signal immidiate_buf : riscv32_data_type;
 begin
     overrideProgramCounter <= decodedInstructionDecodeControlWord.jump;
     newProgramCounter <= jumpTarget;
@@ -59,7 +54,6 @@ begin
     rdAddress <= to_integer(unsigned(instructionFromInstructionFetch(11 downto 7)));
 
     uimmidiate <= std_logic_vector(resize(unsigned(instructionFromInstructionFetch(19 downto 15)), uimmidiate'length));
-    immidiate <= immidiate_buf;
 
     writeBackControlWord <= decodedWriteBackControlWord;
     memoryControlWord <= decodedMemoryControlWord;
@@ -79,27 +73,27 @@ begin
     end process;
 
     determineImmidiate : process(decodedInstructionDecodeControlWord, instructionFromInstructionFetch)
-        variable immidiate_reg : riscv32_data_type := (others => '0');
+        variable immidiate_buf : riscv32_data_type := (others => '0');
         variable imm12 : std_logic_vector(11 downto 0) := (others => '0');
     begin
         case decodedInstructionDecodeControlWord.immidiate_type is
             when riscv32_i_immidiate =>
-                immidiate_reg := std_logic_vector(resize(signed(instructionFromInstructionFetch(31 downto 20)), immidiate'length));
+                immidiate_buf := std_logic_vector(resize(signed(instructionFromInstructionFetch(31 downto 20)), immidiate'length));
             when riscv32_u_immidiate =>
-                immidiate_reg := (others => '0');
-                immidiate_reg(31 downto 12) := instructionFromInstructionFetch(31 downto 12);
+                immidiate_buf := (others => '0');
+                immidiate_buf(31 downto 12) := instructionFromInstructionFetch(31 downto 12);
             when riscv32_b_immidiate =>
                 imm12(11) := instructionFromInstructionFetch(31);
                 imm12(10) := instructionFromInstructionFetch(7);
                 imm12(9 downto 4) := instructionFromInstructionFetch(30 downto 25);
                 imm12(3 downto 0) := instructionFromInstructionFetch(11 downto 8);
-                immidiate_reg := std_logic_vector(resize(signed(imm12), immidiate_reg'length - 1)) & '0';
+                immidiate_buf := std_logic_vector(resize(signed(imm12), immidiate_buf'length - 1)) & '0';
             when riscv32_s_immidiate =>
                 imm12(11 downto 5) := instructionFromInstructionFetch(31 downto 25);
                 imm12(4 downto 0) := instructionFromInstructionFetch(11 downto 7);
-                immidiate_reg := std_logic_vector(resize(signed(imm12), immidiate_reg'length));
+                immidiate_buf := std_logic_vector(resize(signed(imm12), immidiate_buf'length));
         end case;
-        immidiate_buf <= immidiate_reg;
+        immidiate <= immidiate_buf;
     end process;
 
 
@@ -118,11 +112,6 @@ begin
 
         outputAddress := std_logic_vector(jumpOffset + signed(programCounter));
         jumpTarget <= outputAddress;
-    end process;
-
-    determineBranchTarget : process(immidiate_buf, programCounter)
-    begin
-        branchTarget <= riscv32_address_type(signed(immidiate_buf) + signed(programCounter));
     end process;
 
     controlDecode : entity work.riscv32_control

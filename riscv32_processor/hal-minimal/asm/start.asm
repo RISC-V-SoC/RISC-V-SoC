@@ -8,20 +8,26 @@ __start:
     # Load stackpointer
     la      sp, _stack_start
     # Set gp to this value to detect if instructions after exception have no effect
-    li      gp, 0xffffffff
+    la      gp, 0xffffffff
 .option pop
     # Setup the trap vector
     la      a0, syncExceptionHandler
     csrw    mtvec,a0
 
-# Actual code
-    beq zero, zero, L1
-L1:
-    beq zero, zero, L2
-L2:
-    blt zero, zero, back_stop
-    mv a0, zero
-    li a1, 1
-    call auxMemWrite
+    li      a0, -1
+    li      a1, 5
+    mulh    s0, a0, a1
+    mul     s1, a0, a1
+    mulhu   s2, a0, a1
+    li      a0, 0
+    mv      a1, s0
+    call    auxMemWrite
+    li      a0, 1
+    mv      a1, s1
+    call    auxMemWrite
+    li      a0, 2
+    mv      a1, s2
+    call    auxMemWrite
+
 back_stop:
     j back_stop
