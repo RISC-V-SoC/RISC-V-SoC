@@ -97,6 +97,14 @@ begin
                 wait until rising_edge(clk);
                 wait until falling_edge(clk);
                 check_equal(requestFromBusAddress, newProgramCounterFromInterrupt);
+            elsif run("overrideProgramCounterFromEx takes priority over overrideProgramCounterFromID") then
+                overrideProgramCounterFromID <= true;
+                newProgramCounterFromID <= std_logic_vector(to_unsigned(startAddress + 8, newProgramCounterFromID'length));
+                overrideProgramCounterFromEx <= true;
+                newProgramCounterFromEx <= std_logic_vector(to_unsigned(startAddress + 12, newProgramCounterFromEx'length));
+                wait until rising_edge(clk);
+                wait until falling_edge(clk);
+                check_equal(requestFromBusAddress, newProgramCounterFromEx);
             end if;
         end loop;
         wait until rising_edge(clk);

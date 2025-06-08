@@ -42,10 +42,10 @@ begin
         if rising_edge(clk) then
             if rst then
                 current_pc := startAddress;
-            elsif overrideProgramCounterFromID then
-                current_pc := newProgramCounterFromID;
             elsif overrideProgramCounterFromEx then
                 current_pc := newProgramCounterFromEx;
+            elsif overrideProgramCounterFromID then
+                current_pc := newProgramCounterFromID;
             elsif overrideProgramCounterFromInterrupt then
                 current_pc := newProgramCounterFromInterrupt;
             elsif enable and not stall then

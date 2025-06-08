@@ -13,13 +13,15 @@ __start:
     # Setup the trap vector
     la      a0, syncExceptionHandler
     csrw    mtvec,a0
-    li      s1, 0
-    li      s2, 10
-.L1:
-    li      a0, 0
-    mv      a1, s1
-    addi    s1, s1, 1
-    call    auxMemWrite
-    bge     s2, s1, .L1
+
+# Actual code
+    beq zero, zero, L1
+L1:
+    beq zero, zero, L2
+L2:
+    blt zero, zero, back_stop
+    mv a0, zero
+    li a1, 1
+    call auxMemWrite
 back_stop:
     j back_stop
