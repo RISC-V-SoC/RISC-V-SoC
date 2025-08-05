@@ -49,6 +49,9 @@ entity riscv32_pipeline is
         exception_code : out riscv32_exception_code_type;
         interrupted_pc : out riscv32_address_type;
 
+        async_exception_pending : in boolean;
+        async_exception_code : in riscv32_exception_code_type;
+
         instructionsRetiredCount : out unsigned(63 downto 0);
         stall_out : out boolean
     );
@@ -227,6 +230,9 @@ begin
 
         instructionFromInstructionFetch => instructionToID,
         programCounter => programCounterFromIf,
+
+        async_exception_pending => async_exception_pending,
+        async_exception_code => async_exception_code,
 
         newProgramCounter => newProgramCounterFromID,
 

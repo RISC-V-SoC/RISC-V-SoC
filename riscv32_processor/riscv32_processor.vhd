@@ -148,6 +148,8 @@ begin
             interrupt_is_async => interrupt_is_async,
             exception_code => exception_code,
             interrupted_pc => interrupted_pc,
+            async_exception_pending => false,
+            async_exception_code => 0,
             instructionsRetiredCount => instructionsRetired_value,
             stall_out => pipeline_requests_stall
         );
