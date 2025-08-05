@@ -15,6 +15,10 @@ entity riscv32_pipeline_instructionDecode is
         instructionFromInstructionFetch : in riscv32_instruction_type;
         programCounter : in riscv32_address_type;
 
+        -- Async exception input
+        async_exception_pending : in boolean;
+        async_exception_code : in riscv32_exception_code_type;
+
         -- To instruction fetch: data
         newProgramCounter : out riscv32_address_type;
 
@@ -59,11 +63,14 @@ begin
     memoryControlWord <= decodedMemoryControlWord;
     executeControlWord <= decodedExecuteControlWord;
 
-    exception_code <= riscv32_exception_code_illegal_instruction;
 
-    determineException : process(illegal_instruction, decodedInstructionDecodeControlWord)
+    determineException : process(illegal_instruction, decodedInstructionDecodeControlWord, async_exception_pending, async_exception_code)
     begin
-        if illegal_instruction then
+        exception_code <= riscv32_exception_code_illegal_instruction;
+        if async_exception_pending then
+            exception_type <= exception_async;
+            exception_code <= async_exception_code;
+        elsif illegal_instruction then
             exception_type <= exception_sync;
         elsif decodedInstructionDecodeControlWord.is_exception_return then
             exception_type <= exception_return;

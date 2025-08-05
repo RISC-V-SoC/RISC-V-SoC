@@ -25,6 +25,9 @@ architecture tb of riscv32_pipeline_instructionDecode_tb is
     signal instructionFromInstructionFetch : riscv32_instruction_type := riscv32_instructionNop;
     signal programCounter : riscv32_address_type := (others => '1');
 
+    signal async_exception_pending : boolean := false;
+    signal async_exception_code : riscv32_exception_code_type := 0;
+
     signal newProgramCounter : riscv32_address_type;
 
     signal writeBackControlWord : riscv32_WriteBackControlWord_type;
@@ -120,6 +123,12 @@ begin
                 instructionFromInstructionFetch <= construct_system_instruction(opcode => riscv32_opcode_system, funct3 => riscv32_funct3_mret, funct12 => riscv32_funct12_mret);
                 wait for 1 ns;
                 check_true(exception_type = exception_return);
+            elsif run("When an async interrupt occurs, the exception output matches") then
+                async_exception_pending <= true;
+                async_exception_code <= riscv32_exception_code_machine_timer_interrupt;
+                wait for 1 ns;
+                check(exception_type = exception_async);
+                check_equal(exception_code, riscv32_exception_code_machine_timer_interrupt);
             end if;
         end loop;
         test_runner_cleanup(runner);
@@ -133,6 +142,8 @@ begin
         overrideProgramCounter => overrideProgramCounter,
         instructionFromInstructionFetch => instructionFromInstructionFetch,
         programCounter => programCounter,
+        async_exception_pending => async_exception_pending,
+        async_exception_code => async_exception_code,
         newProgramCounter => newProgramCounter,
         writeBackControlWord => writeBackControlWord,
         memoryControlWord => memoryControlWord,
