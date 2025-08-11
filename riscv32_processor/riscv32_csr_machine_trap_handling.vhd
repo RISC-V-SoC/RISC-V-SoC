@@ -12,8 +12,8 @@ entity riscv32_csr_machine_trap_handling is
         mst2slv : in riscv32_csr_mst2slv_type;
         slv2mst : out riscv32_csr_slv2mst_type;
 
-        m_timer_interrupt_pending : in boolean;
-        m_external_interrupt_pending : in boolean;
+        machine_timer_interrupt_pending : in boolean;
+        machine_external_interrupt_pending : in boolean;
 
         interrupt_is_async : in boolean;
         exception_code : in riscv32_exception_code_type;
@@ -83,8 +83,8 @@ architecture behaviourial of riscv32_csr_machine_trap_handling is
 begin
 
     pc_on_return <= mepc;
-    mip_mtip <= '1' when m_timer_interrupt_pending else '0';
-    mip_meip <= '1' when m_external_interrupt_pending else '0';
+    mip_mtip <= '1' when machine_timer_interrupt_pending else '0';
+    mip_meip <= '1' when machine_external_interrupt_pending else '0';
 
     read_handling: process(mst2slv, mscratch, mepc, mcause, mtval, mip, mtinst, mtval2)
     begin

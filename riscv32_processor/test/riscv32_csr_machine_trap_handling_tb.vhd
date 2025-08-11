@@ -23,8 +23,8 @@ architecture tb of riscv32_csr_machine_trap_handling_tb is
         signal mst2slv : riscv32_csr_mst2slv_type;
         signal slv2mst : riscv32_csr_slv2mst_type;
 
-        signal m_timer_interrupt_pending : boolean := false;
-        signal m_external_interrupt_pending : boolean := false;
+        signal machine_timer_interrupt_pending : boolean := false;
+        signal machine_external_interrupt_pending : boolean := false;
 
         signal interrupt_is_async : boolean := false;
         signal exception_code : riscv32_exception_code_type := 0;
@@ -205,26 +205,26 @@ begin
                 mst2slv.do_read <= true;
                 wait for 10 ns;
                 check_false(slv2mst.has_error);
-            elsif run("mip.mtip is high when m_timer_interrupt_pending is high") then
-                m_timer_interrupt_pending <= true;
+            elsif run("mip.mtip is high when machine_timer_interrupt_pending is high") then
+                machine_timer_interrupt_pending <= true;
                 mst2slv.address <= 16#44#;
                 mst2slv.do_read <= true;
                 wait for 10 ns;
                 check_equal(slv2mst.read_data(7), '1');
-            elsif run("mip.mtip is low when m_timer_interrupt_pending is low") then
-                m_timer_interrupt_pending <= false;
+            elsif run("mip.mtip is low when machine_timer_interrupt_pending is low") then
+                machine_timer_interrupt_pending <= false;
                 mst2slv.address <= 16#44#;
                 mst2slv.do_read <= true;
                 wait for 10 ns;
                 check_equal(slv2mst.read_data(7), '0');
-            elsif run("mip.meip is high when m_external_interrupt_pending is high") then
-                m_external_interrupt_pending <= true;
+            elsif run("mip.meip is high when machine_external_interrupt_pending is high") then
+                machine_external_interrupt_pending <= true;
                 mst2slv.address <= 16#44#;
                 mst2slv.do_read <= true;
                 wait for 10 ns;
                 check_equal(slv2mst.read_data(11), '1');
-            elsif run("mip.meip is low when m_external_interrupt_pending is low") then
-                m_external_interrupt_pending <= false;
+            elsif run("mip.meip is low when machine_external_interrupt_pending is low") then
+                machine_external_interrupt_pending <= false;
                 mst2slv.address <= 16#44#;
                 mst2slv.do_read <= true;
                 wait for 10 ns;
@@ -251,8 +251,8 @@ begin
         rst => rst,
         mst2slv => mst2slv,
         slv2mst => slv2mst,
-        m_timer_interrupt_pending => m_timer_interrupt_pending,
-        m_external_interrupt_pending => m_external_interrupt_pending,
+        machine_timer_interrupt_pending => machine_timer_interrupt_pending,
+        machine_external_interrupt_pending => machine_external_interrupt_pending,
         interrupt_is_async => interrupt_is_async,
         exception_code => exception_code,
         interrupted_pc => interrupted_pc,
