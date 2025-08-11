@@ -23,12 +23,12 @@ architecture tb of riscv32_csr_machine_trap_setup_tb is
         signal mst2slv : riscv32_csr_mst2slv_type;
         signal slv2mst : riscv32_csr_slv2mst_type;
 
-        signal interrupts_enabled : boolean;
+        signal machine_interrupts_enabled : boolean;
         signal interrupt_trigger : boolean := false;
         signal interrupt_resolved : boolean := false;
 
-        signal m_timer_interrupt_enabled : boolean;
-        signal m_external_interrupt_enabled : boolean;
+        signal machine_timer_interrupt_enabled : boolean;
+        signal machine_external_interrupt_enabled : boolean;
 
         signal interrupt_base_address : riscv32_address_type;
 begin
@@ -53,23 +53,23 @@ begin
                 mst2slv.do_write <= true;
                 mst2slv.write_data <= x"00000008";
                 wait for clk_period;
-                check_true(interrupts_enabled);
+                check_true(machine_interrupts_enabled);
             elsif run("Interrupts are default disabled") then
-                check_false(interrupts_enabled);
+                check_false(machine_interrupts_enabled);
             elsif run("Writing 1 to mstatus.MIE in wrong register does not enable interrupts") then
                 mst2slv.address <= 16#2#;
                 mst2slv.do_read <= true;
                 mst2slv.do_write <= true;
                 mst2slv.write_data <= x"00000008";
                 wait for clk_period;
-                check_false(interrupts_enabled);
+                check_false(machine_interrupts_enabled);
             elsif run("On do_write is false, write is ignored") then
                 mst2slv.address <= 16#2#;
                 mst2slv.do_read <= true;
                 mst2slv.do_write <= false;
                 mst2slv.write_data <= x"00000008";
                 wait for clk_period;
-                check_false(interrupts_enabled);
+                check_false(machine_interrupts_enabled);
             elsif run("Write 1 to mstatus.MIE then read mstatus.MIE results in 1") then
                 mst2slv.address <= 16#0#;
                 mst2slv.do_read <= true;
@@ -95,7 +95,7 @@ begin
                 wait for clk_period;
                 interrupt_trigger <= false;
                 -- Interrupts should be disabled
-                check_false(interrupts_enabled);
+                check_false(machine_interrupts_enabled);
                 check_equal(slv2mst.read_data(3), '0');
                 -- mstatus.MPP should be equal to machine mode
                 check_equal(slv2mst.read_data(12 downto 11), riscv32_privilege_level_machine);
@@ -112,7 +112,7 @@ begin
                 wait for clk_period;
                 interrupt_trigger <= false;
                 -- Interrupts should be disabled
-                check_false(interrupts_enabled);
+                check_false(machine_interrupts_enabled);
                 check_equal(slv2mst.read_data(3), '0');
                 -- mstatus.MPP should be equal to machine mode
                 check_equal(slv2mst.read_data(12 downto 11), riscv32_privilege_level_machine);
@@ -127,7 +127,7 @@ begin
                 interrupt_resolved <= true;
                 mst2slv.do_write <= false;
                 wait for clk_period;
-                check_true(interrupts_enabled);
+                check_true(machine_interrupts_enabled);
                 check_equal(slv2mst.read_data(3), '1');
                 check_equal(slv2mst.read_data(7), '1');
             elsif run("On interrupt resolved with mstatus.MPIE = 0, mstatus.MIE turns to 0") then
@@ -139,7 +139,7 @@ begin
                 interrupt_resolved <= true;
                 mst2slv.do_write <= false;
                 wait for clk_period;
-                check_false(interrupts_enabled);
+                check_false(machine_interrupts_enabled);
                 check_equal(slv2mst.read_data(3), '0');
             elsif run("reset resets mstatus") then
                 mst2slv.address <= 16#0#;
@@ -196,14 +196,14 @@ begin
                 mst2slv.do_write <= true;
                 mst2slv.write_data <= (7 => '1', others => '0');
                 wait for clk_period;
-                check_true(m_timer_interrupt_enabled);
+                check_true(machine_timer_interrupt_enabled);
             elsif run("Setting mie.MEIE enables machine external interrupt") then
                 mst2slv.address <= 16#4#;
                 mst2slv.do_read <= true;
                 mst2slv.do_write <= true;
                 mst2slv.write_data <= (11 => '1', others => '0');
                 wait for clk_period;
-                check_true(m_external_interrupt_enabled);
+                check_true(machine_external_interrupt_enabled);
             elsif run("All other bits are readonly zero in mie") then
                 mst2slv.address <= 16#4#;
                 mst2slv.do_read <= true;
@@ -287,11 +287,11 @@ begin
         rst => rst,
         mst2slv => mst2slv,
         slv2mst => slv2mst,
-        interrupts_enabled => interrupts_enabled,
+        machine_interrupts_enabled => machine_interrupts_enabled,
         interrupt_trigger => interrupt_trigger,
         interrupt_resolved => interrupt_resolved,
-        m_timer_interrupt_enabled => m_timer_interrupt_enabled,
-        m_external_interrupt_enabled => m_external_interrupt_enabled,
+        machine_timer_interrupt_enabled => machine_timer_interrupt_enabled,
+        machine_external_interrupt_enabled => machine_external_interrupt_enabled,
         interrupt_base_address => interrupt_base_address
     );
 end architecture;

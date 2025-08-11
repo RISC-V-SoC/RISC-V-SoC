@@ -12,12 +12,12 @@ entity riscv32_csr_machine_trap_setup is
         mst2slv : in riscv32_csr_mst2slv_type;
         slv2mst : out riscv32_csr_slv2mst_type;
 
-        interrupts_enabled : out boolean;
+        machine_interrupts_enabled : out boolean;
         interrupt_trigger : in boolean;
         interrupt_resolved : in boolean;
 
-        m_timer_interrupt_enabled : out boolean;
-        m_external_interrupt_enabled : out boolean;
+        machine_timer_interrupt_enabled : out boolean;
+        machine_external_interrupt_enabled : out boolean;
 
         interrupt_base_address : out riscv32_address_type
     );
@@ -114,9 +114,9 @@ architecture behaviourial of riscv32_csr_machine_trap_setup is
     alias mstatush_wpri_31_6 : std_logic_vector(25 downto 0) is mstatush(31 downto 6);
 
 begin
-    interrupts_enabled <= mstatus_mie = '1';
-    m_timer_interrupt_enabled <= mie_mtie = '1';
-    m_external_interrupt_enabled <= mie_meie = '1';
+    machine_interrupts_enabled <= mstatus_mie = '1';
+    machine_timer_interrupt_enabled <= mie_mtie = '1';
+    machine_external_interrupt_enabled <= mie_meie = '1';
     interrupt_base_address <= (interrupt_base_address'high downto 2 => mtvec_base, others => '0');
 
     read_handling : process(mst2slv, mstatus, misa, mie, mtvec, mstatush)
