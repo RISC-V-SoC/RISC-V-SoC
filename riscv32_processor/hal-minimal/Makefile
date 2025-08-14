@@ -2,6 +2,7 @@ AS:=riscv-none-elf-as
 GCC:=riscv-none-elf-gcc
 LD:=riscv-none-elf-ld
 OBJCOPY:=riscv-none-elf-objcopy
+OBJDUMP:=riscv-none-elf-objdump
 ASMDIR:=asm/
 SRCDIR:=src/
 ODIR=obj/
@@ -12,12 +13,13 @@ OFILES := $(patsubst $(SRCDIR)%,$(ODIR)%,$(OFILES))
 TARGET:=final
 TARGETBIN:=final.bin
 TARGETTXT:=final.txt
+TARGETASMDUMP := final.disas
 LDFLAGS := -Wl,--gc-sections
 ARCHFLAGS := -march=rv32im -mabi=ilp32
 .PHONY: all release clean
 
 all: release
-release: $(TARGETTXT)
+release: $(TARGETTXT) $(TARGETASMDUMP)
 
 $(ODIR):
 	mkdir -p $(@)
@@ -37,5 +39,8 @@ $(TARGETBIN): $(TARGET)
 $(TARGETTXT): $(TARGETBIN)
 	od --address-radix=n --output-duplicates --width=4 --format=x4 $^ | tr -d ' ' > $@
 
+$(TARGETASMDUMP): $(TARGET)
+	$(OBJDUMP) -D $< > $@
+
 clean:
-	rm -rf $(ODIR) $(TARGET) $(TARGETBIN) $(TARGETTXT)
+	rm -rf $(ODIR) $(TARGET) $(TARGETBIN) $(TARGETTXT) $(TARGETASMDUMP)

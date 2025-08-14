@@ -116,6 +116,19 @@ begin
                 machine_level_timer_interrupt_pending <= false;
                 wait until falling_edge(clk);
                 check(not async_exception_pending);
+            elsif run("machine_interrupts_enable is respected immidiately") then
+                machine_interrupts_enabled <= true;
+                machine_level_external_interrupt_enabled <= true;
+                machine_level_external_interrupt_pending <= true;
+                machine_level_software_interrupt_enabled <= true;
+                machine_level_software_interrupt_pending <= true;
+                machine_level_timer_interrupt_enabled <= true;
+                machine_level_timer_interrupt_pending <= true;
+                wait until falling_edge(clk);
+                check(async_exception_pending);
+                machine_interrupts_enabled <= false;
+                wait for 1 fs;
+                check(not async_exception_pending);
             end if;
         end loop;
         wait until rising_edge(clk);

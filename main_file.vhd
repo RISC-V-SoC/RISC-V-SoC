@@ -172,7 +172,9 @@ begin
         slv2memory => arbiter2memory,
         reset_request => reset_request,
         do_flush(0) => l2cache_do_flush,
-        flush_busy(0) => l2cache_flush_busy
+        flush_busy(0) => l2cache_flush_busy,
+        machine_level_external_interrupt_pending => false,
+        machine_level_timer_interrupt_pending => false
     );
 
     arbiter : entity work.bus_arbiter

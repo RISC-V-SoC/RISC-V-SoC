@@ -35,7 +35,10 @@ entity riscv32_processor is
         reset_request : out boolean;
 
         do_flush : out boolean_vector(external_memory_count - 1 downto 0);
-        flush_busy : in boolean_vector(external_memory_count - 1 downto 0) := (others => false)
+        flush_busy : in boolean_vector(external_memory_count - 1 downto 0) := (others => false);
+
+        machine_level_external_interrupt_pending : in boolean;
+        machine_level_timer_interrupt_pending : in boolean
     );
 end entity;
 
@@ -100,6 +103,9 @@ architecture behaviourial of riscv32_processor is
     signal machine_trap_handling2demux : riscv32_csr_slv2mst_type;
 
     signal interrupt_vector_base_address : riscv32_address_type;
+    signal machine_interrupts_enabled : boolean;
+    signal machine_timer_interrupt_enabled : boolean;
+    signal machine_external_interrupt_enabled : boolean;
     signal interrupt_trigger : boolean;
     signal interrupt_resolve : boolean;
     signal interrupt_is_async : boolean;
@@ -112,6 +118,9 @@ architecture behaviourial of riscv32_processor is
 
     signal flush_manager_do_flush : boolean;
     signal flush_manager_busy : boolean;
+
+    signal async_exception_pending : boolean;
+    signal async_exception_code : riscv32_exception_code_type;
 begin
     pipelineStall <= controllerStall or instructionStall or memoryStall or pipeline_requests_stall;
     forbidBusInteraction <= controllerStall;
@@ -148,8 +157,8 @@ begin
             interrupt_is_async => interrupt_is_async,
             exception_code => exception_code,
             interrupted_pc => interrupted_pc,
-            async_exception_pending => false,
-            async_exception_code => 0,
+            async_exception_pending => async_exception_pending,
+            async_exception_code => async_exception_code,
             instructionsRetiredCount => instructionsRetired_value,
             stall_out => pipeline_requests_stall
         );
@@ -247,6 +256,25 @@ begin
         ext_flush_busy => flush_busy
     );
 
+    async_exception_handler : entity work.riscv32_async_exception_handler
+    port map (
+        clk => clk,
+
+        async_exception_pending => async_exception_pending,
+        async_exception_code => async_exception_code,
+
+        machine_interrupts_enabled => machine_interrupts_enabled,
+
+        machine_level_external_interrupt_pending => machine_level_external_interrupt_pending,
+        machine_level_external_interrupt_enabled => machine_external_interrupt_enabled,
+
+        machine_level_timer_interrupt_pending => machine_level_timer_interrupt_pending,
+        machine_level_timer_interrupt_enabled => machine_timer_interrupt_enabled,
+
+        machine_level_software_interrupt_pending => false,
+        machine_level_software_interrupt_enabled => false
+    );
+
     systemtimer : entity work.riscv32_systemtimer
     generic map (
         clk_period => clk_period,
@@ -302,8 +330,11 @@ begin
         rst => rst,
         mst2slv => demux2machine_trap_setup,
         slv2mst => machine_trap_setup2demux,
+        machine_interrupts_enabled => machine_interrupts_enabled,
         interrupt_trigger => interrupt_trigger,
         interrupt_resolved => interrupt_resolve,
+        machine_timer_interrupt_enabled => machine_timer_interrupt_enabled,
+        machine_external_interrupt_enabled => machine_external_interrupt_enabled,
         interrupt_base_address => interrupt_vector_base_address
     );
 
@@ -313,8 +344,8 @@ begin
         rst => rst,
         mst2slv => demux2machine_trap_handling,
         slv2mst => machine_trap_handling2demux,
-        machine_timer_interrupt_pending => false,
-        machine_external_interrupt_pending => false,
+        machine_timer_interrupt_pending => machine_level_timer_interrupt_pending,
+        machine_external_interrupt_pending => machine_level_external_interrupt_pending,
         interrupt_is_async => interrupt_is_async,
         exception_code => exception_code,
         interrupted_pc => interrupted_pc,

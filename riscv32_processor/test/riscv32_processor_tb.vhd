@@ -61,6 +61,9 @@ architecture tb of riscv32_processor_tb is
 
     signal reset_request : boolean;
 
+    signal machine_level_external_interrupt_pending : boolean := false;
+    signal machine_level_timer_interrupt_pending : boolean := false;
+
     constant address_map : addr_range_and_mapping_array := (
         address_range_and_map(
             low => std_logic_vector(to_unsigned(controllerAddress, bus_address_type'length)),
@@ -361,6 +364,22 @@ begin
                 expectedReadData := std_logic_vector(to_signed(4, expectedReadData'length));
                 readAddr := std_logic_vector(to_unsigned(16#8#, bus_address_type'length));
                 check_word_at_address_in_outMem(net, readAddr, expectedReadData);
+            elsif run("Machine interrupt test") then
+                simulated_bus_memory_pkg.write_file_to_address(net, memActor, 0, "./riscv32_processor/test/programs/machineInterrupt.txt");
+                start_cpu(test2slv, slv2test);
+                wait for 20 us;
+                machine_level_external_interrupt_pending <= true;
+                machine_level_timer_interrupt_pending <= true;
+                wait for 60 us;
+                expectedReadData := std_logic_vector(to_signed(1, expectedReadData'length));
+                readAddr := std_logic_vector(to_unsigned(16#0#, bus_address_type'length));
+                check_word_at_address_in_outMem(net, readAddr, expectedReadData);
+                expectedReadData := std_logic_vector(to_signed(2, expectedReadData'length));
+                readAddr := std_logic_vector(to_unsigned(16#4#, bus_address_type'length));
+                check_word_at_address_in_outMem(net, readAddr, expectedReadData);
+                expectedReadData := std_logic_vector(to_signed(0, expectedReadData'length));
+                readAddr := std_logic_vector(to_unsigned(16#8#, bus_address_type'length));
+                check_word_at_address_in_outMem(net, readAddr, expectedReadData);
             end if;
         end loop;
         wait until rising_edge(clk);
@@ -387,7 +406,9 @@ begin
         slv2instructionFetch => arbiter2instructionFetch,
         memory2slv => memory2arbiter,
         slv2memory => arbiter2memory,
-        reset_request => reset_request
+        reset_request => reset_request,
+        machine_level_external_interrupt_pending => machine_level_external_interrupt_pending,
+        machine_level_timer_interrupt_pending => machine_level_timer_interrupt_pending
     );
 
     arbiter : entity src.bus_arbiter

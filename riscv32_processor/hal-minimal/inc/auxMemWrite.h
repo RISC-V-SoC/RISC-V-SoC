@@ -4,3 +4,5 @@
 #include <stddef.h>
 
 void auxMemWrite(size_t index, uint32_t data);
+
+uint32_t auxMemRead(size_t index);

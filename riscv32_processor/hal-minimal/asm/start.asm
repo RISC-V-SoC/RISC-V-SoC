@@ -11,23 +11,24 @@ __start:
     la      gp, 0xffffffff
 .option pop
     # Setup the trap vector
-    la      a0, syncExceptionHandler
+    la      a0, trapVector
     csrw    mtvec,a0
-
-    li      a0, -1
-    li      a1, 5
-    mulh    s0, a0, a1
-    mul     s1, a0, a1
-    mulhu   s2, a0, a1
+    # Zero out relevant parts of the aux mem
     li      a0, 0
-    mv      a1, s0
+    li      a1, 0
     call    auxMemWrite
     li      a0, 1
-    mv      a1, s1
+    li      a1, 0
     call    auxMemWrite
     li      a0, 2
-    mv      a1, s2
+    li      a1, 0
     call    auxMemWrite
+    # Enable both timer and external interrupt
+    li      a0, 0x880
+    csrs    mie, a0
+    # Enable machine interrupts
+    li      a0, 0x8
+    csrs    mstatus, a0
 
 back_stop:
     j back_stop
