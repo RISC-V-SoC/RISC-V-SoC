@@ -215,6 +215,13 @@ begin
                 force_service_request <= true;
                 wait until falling_edge(clk);
                 check_true(requires_service);
+            elsif run("During a bubble, an exception from stage is ignored") then
+                wait until falling_edge(clk);
+                isBubbleIn <= true;
+                exception_from_stage <= exception_sync;
+                exception_from_stage_code <= riscv32_exception_code_illegal_instruction;
+                wait until falling_edge(clk);
+                check_true(exception_data_out.exception_type = exception_none);
             end if;
         end loop;
         wait until rising_edge(clk);

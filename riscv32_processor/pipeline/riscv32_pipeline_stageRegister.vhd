@@ -71,7 +71,7 @@ begin
     begin
         if rising_edge(clk) then
 
-            if exception_from_stage /= exception_none then
+            if exception_from_stage /= exception_none and not isBubbleIn then
                 exception_data_buf.exception_type := exception_from_stage;
                 exception_data_buf.exception_code := exception_from_stage_code;
                 exception_data_buf.interrupted_pc := exception_data_in.interrupted_pc;
