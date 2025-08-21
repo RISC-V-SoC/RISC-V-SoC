@@ -1,3 +1,3 @@
---recurse=yes 
---exclude=.git 
---exclude=project/vunit_out
+--recurse=yes
+--exclude=.git
+--exclude=vunit_out
