@@ -269,6 +269,10 @@ begin
                 check_stream(net, slave_uart_slave_stream, X"21");
                 check_stream(net, slave_uart_slave_stream, X"0D");
                 check_stream(net, slave_uart_slave_stream, X"0A");
+            elsif run("mtime interrupt test") then
+                write_file(net, spimem0_start_address, "./complete_system/test/programs/mtimerInterruptTest.txt");
+                write(net, processor_controller_start_address, X"00000000");
+                check_stream(net, slave_uart_slave_stream, X"40");
             end if;
         end loop;
         wait until rising_edge(clk) or falling_edge(clk);

@@ -68,6 +68,9 @@ architecture Behavioral of main_file is
     constant gpioDeviceStartAddress : natural := 16#3000#;
     constant gpioDeviceMappingSize : natural := 16#12#;
 
+    constant mtimeStartAddress : natural := 16#4000#;
+    constant mtimeMappingSize : natural := 16;
+
     constant spiMemStartAddress : natural := 16#100000#;
     constant spiMemMappingSize : natural := 16#60000#;
 
@@ -80,6 +83,7 @@ architecture Behavioral of main_file is
         create_address_map_entry(spiDeviceStartAddress, spiDeviceInfoMappingSize),
         create_address_map_entry(riscvControlStartAddress, riscvControlMappingSize),
         create_address_map_entry(gpioDeviceStartAddress, gpioDeviceMappingSize),
+        create_address_map_entry(mtimeStartAddress, mtimeMappingSize),
         create_address_map_entry(spiMemStartAddress, spiMemMappingSize)
     );
 
@@ -110,6 +114,9 @@ architecture Behavioral of main_file is
     signal demux2gpio : bus_mst2slv_type;
     signal gpio2demux : bus_slv2mst_type;
 
+    signal demux2mtime : bus_mst2slv_type;
+    signal mtime2demux : bus_slv2mst_type;
+
     signal demuxToL2cache : bus_mst2slv_type;
     signal l2cacheToDemux : bus_slv2mst_type;
 
@@ -129,10 +136,13 @@ architecture Behavioral of main_file is
     signal spi_mem_reset : boolean;
     signal spi_master_reset : boolean;
     signal gpio_reset : boolean;
+    signal mtime_reset : boolean;
     signal l2cache_reset : boolean;
 
     signal l2cache_do_flush : boolean;
     signal l2cache_flush_busy : boolean;
+
+    signal mtime_interrupt_pending : boolean;
 begin
 
     mem_spi_sio_in <= JA_gpio;
@@ -174,7 +184,7 @@ begin
         do_flush(0) => l2cache_do_flush,
         flush_busy(0) => l2cache_flush_busy,
         machine_level_external_interrupt_pending => false,
-        machine_level_timer_interrupt_pending => false
+        machine_level_timer_interrupt_pending => mtime_interrupt_pending
     );
 
     arbiter : entity work.bus_arbiter
@@ -204,13 +214,15 @@ begin
         demux2slv(2) => demux2spiDevice,
         demux2slv(3) => demux2control,
         demux2slv(4) => demux2gpio,
-        demux2slv(5) => demuxToL2cache,
+        demux2slv(5) => demux2mtime,
+        demux2slv(6) => demuxToL2cache,
         slv2demux(0) => uartSlave2demux,
         slv2demux(1) => staticInfo2demux,
         slv2demux(2) => spiDevice2demux,
         slv2demux(3) => control2demux,
         slv2demux(4) => gpio2demux,
-        slv2demux(5) => l2cacheToDemux
+        slv2demux(5) => mtime2demux,
+        slv2demux(6) => l2cacheToDemux
     );
 
     uart_bus_slave : entity work.uart_bus_slave
@@ -255,6 +267,18 @@ begin
         slv2mst => gpio2demux
     );
 
+    timer_register : entity work.timer_register
+    generic map (
+        clk_period => clk_period,
+        timer_period => 1 us
+    ) port map (
+        clk => clk,
+        reset => mtime_reset,
+        timer_interrupt_pending => mtime_interrupt_pending,
+        mst2slv => demux2mtime,
+        slv2mst => mtime2demux
+    );
+
     bus_cache : entity work.bus_cache
     generic map (
         words_per_line_log2b => l2cache_words_per_line_log2b,
@@ -288,7 +312,7 @@ begin
     reset_controller : entity work.reset_controller
     generic map (
         master_count => 2,
-        slave_count => 4
+        slave_count => 5
     ) port map (
         clk => clk,
         do_reset => reset_request,
@@ -297,7 +321,8 @@ begin
         slave_reset(0) => uart_bus_slave_reset,
         slave_reset(1) => spi_mem_reset,
         slave_reset(2) => spi_master_reset,
-        slave_reset(3) => gpio_reset
+        slave_reset(3) => gpio_reset,
+        slave_reset(4) => mtime_reset
     );
 
 end Behavioral;
