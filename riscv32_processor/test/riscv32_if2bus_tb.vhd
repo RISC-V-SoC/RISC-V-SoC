@@ -214,6 +214,39 @@ begin
                 wait until rising_edge(clk);
                 wait until rising_edge(clk);
                 check(mst2slv.readReady = '0');
+            elsif run("If readEnable turns to false and true during a transaction, the transaction has no effect") then
+                requestAddress <= X"00100000";
+                wait until rising_edge(clk) and bus_requesting(mst2slv);
+                readEnabled <= false;
+                wait for 2*clk_period;
+                readEnabled <= true;
+                wait until rising_edge(clk);
+                slv2mst.valid <= true;
+                slv2mst.readData <= X"33221100";
+                wait until rising_edge(clk);
+                slv2mst <= BUS_SLV2MST_IDLE;
+                wait until rising_edge(clk) and bus_requesting(mst2slv);
+            elsif run("Test readEnable false and address change") then
+                requestAddress <= X"00100000";
+                wait until rising_edge(clk) and bus_requesting(mst2slv);
+                readEnabled <= false;
+                wait for 2*clk_period;
+                requestAddress <= X"00100004";
+                readEnabled <= true;
+                wait for 2*clk_period;
+                check(mst2slv.address = X"00100000");
+            elsif run("If readEnable turns to false on the last cycle of a transaction, the transaction has no effect") then
+                requestAddress <= X"00100000";
+                wait until rising_edge(clk) and bus_requesting(mst2slv);
+                wait until rising_edge(clk);
+                slv2mst.valid <= true;
+                slv2mst.readData <= X"33221100";
+                readEnabled <= false;
+                wait until rising_edge(clk);
+                slv2mst <= BUS_SLV2MST_IDLE;
+                wait until rising_edge(clk);
+                readEnabled <= true;
+                wait until rising_edge(clk) and bus_requesting(mst2slv);
             end if;
         end loop;
         wait until rising_edge(clk);

@@ -69,6 +69,7 @@ begin
         variable mst2slv_buf : bus_mst2slv_type := BUS_MST2SLV_IDLE;
         variable faultData_buf : bus_fault_type := bus_fault_no_fault;
         variable transactionFinished_buf : boolean := false;
+        variable transactionInvalidated : boolean := false;
     begin
         if rising_edge(clk) then
             transactionFinished_buf := false;
@@ -76,6 +77,7 @@ begin
                 mst2slv_buf := BUS_MST2SLV_IDLE;
                 hasFault_buf <= false;
                 faultData_buf := bus_fault_no_fault;
+                transactionInvalidated := false;
             else
                 if icache_write then
                     icache_write <= false;
@@ -85,14 +87,19 @@ begin
                         hasFault_buf <= true;
                         faultData_buf := slv2mst.faultData;
                         exception_code <= riscv32_exception_code_instruction_access_fault;
-                    elsif read_transaction(mst2slv_buf, slv2mst) then
+                    elsif read_transaction(mst2slv_buf, slv2mst) and readEnabled then
                         instruction_from_bus <= slv2mst.readData(instruction'range);
-                        icache_write <= true;
+                        icache_write <= not transactionInvalidated;
                     end if;
                     mst2slv_buf := BUS_MST2SLV_IDLE;
+                    transactionInvalidated := false;
                 elsif hasFault_buf then
                     if faulty_address /= requestAddress then
                         hasFault_buf <= false;
+                    end if;
+                elsif bus_requesting(mst2slv_buf) then
+                    if not readEnabled then
+                        transactionInvalidated := true;
                     end if;
                 elsif forbidBusInteraction then
                     -- Pass
