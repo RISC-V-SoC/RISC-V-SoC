@@ -90,7 +90,7 @@ begin
     byteMask_indicates_full_word <= byteMask = "1111";
     cache_flush_busy <= cache_flush_required;
 
-    state_machine_output : process (current_state, cache_miss, interactor_completed, doRead, cached_read_required, uncached_read_required, cached_write_required, uncached_write_required, cache_flush_required, cache_flush_write_required)
+    state_machine_output : process (all)
     begin
         next_state <= current_state;
         case current_state is
@@ -178,7 +178,7 @@ begin
         end if;
     end process;
 
-    determine_stallout : process(cache_miss, doRead, address_in_dcache_range, volatile_cache_valid, cached_write_required, fsm_write_busy, flush_cache, cache_flush_required, uncached_write_required, byteMask_indicates_full_word, doWrite)
+    determine_stallout : process(all)
     begin
         stallOut <= false;
         if flush_cache or cache_flush_required then
@@ -226,7 +226,7 @@ begin
         end if;
     end process;
 
-    command_and_control : process(byteMask_indicates_full_word, cache_miss, cache_line_dirty, doWrite, doRead, cache_reconstructedAddr, cache_dataOut, dataIn, address, volatile_cache_valid, fsm_write_busy, address_in_dcache_range, cache_flush_reconstructedAddr, cache_flush_line_data_out, cache_flush_allowed, byteMask)
+    command_and_control : process(all)
     begin
         -- Cover all default cases
         cached_write_required <= false;
