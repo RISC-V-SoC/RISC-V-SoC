@@ -47,6 +47,9 @@ tb_library.add_source_files(SRC_PATH / "spi_master_device" / "test" / "*.vhd")
 src_library.add_source_files(SRC_PATH / "timer_register" / "*.vhd")
 tb_library.add_source_files(SRC_PATH / "timer_register" / "test" / "*.vhd")
 
+src_library.add_source_files(SRC_PATH / "platform_level_interrupt_controller" / "*.vhd")
+tb_library.add_source_files(SRC_PATH / "platform_level_interrupt_controller" / "test" / "*.vhd")
+
 src_library.add_source_files(SRC_PATH / "riscv32_processor" / "*.vhd")
 tb_library.add_source_files(SRC_PATH / "riscv32_processor" / "test" / "*.vhd")
 
