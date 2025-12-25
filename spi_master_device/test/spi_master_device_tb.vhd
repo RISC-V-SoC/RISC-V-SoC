@@ -22,6 +22,8 @@ architecture tb of spi_master_device_tb is
     signal spi_clk : std_logic;
     signal mst2slv : bus_pkg.bus_mst2slv_type := bus_pkg.BUS_MST2SLV_IDLE;
     signal slv2mst : bus_pkg.bus_slv2mst_type;
+    signal tx_count_interrupt_requested : boolean;
+    signal rx_count_interrupt_requested : boolean;
 begin
     clk <= not clk after (clk_period/2);
     process
@@ -258,6 +260,213 @@ begin
                 mst2slv <= bus_pkg.bus_mst2slv_read(X"00000000");
                 wait until rising_edge(clk) and bus_pkg.read_transaction(mst2slv, slv2mst);
                 check_equal(slv2mst.readData(2 downto 0), std_logic_vector'("000"));
+            elsif run("interrupt request is true if interrupt on tx count is 8 and there are not tx messages") then
+                -- Set clock divider to 10
+                address := std_logic_vector(to_unsigned(8, address'length));
+                data := std_logic_vector(to_unsigned(10, data'length));
+                byte_mask := "1111";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                -- Set device enabled, CPOL to 1
+                address := std_logic_vector(to_unsigned(0, address'length));
+                data := std_logic_vector(to_unsigned(3, data'length));
+                byte_mask := "0001";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                address := std_logic_vector(to_unsigned(12, address'length));
+                data := std_logic_vector(to_unsigned(8, data'length));
+                byte_mask := "0011";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                mst2slv <= bus_pkg.BUS_MST2SLV_IDLE;
+                wait until rising_edge(clk) and tx_count_interrupt_requested;
+            elsif run("Set and read interrupt on tx count") then
+                -- Set clock divider to 10
+                address := std_logic_vector(to_unsigned(8, address'length));
+                data := std_logic_vector(to_unsigned(10, data'length));
+                byte_mask := "1111";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                -- Set device enabled, CPOL to 1
+                address := std_logic_vector(to_unsigned(0, address'length));
+                data := std_logic_vector(to_unsigned(3, data'length));
+                byte_mask := "0001";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                address := std_logic_vector(to_unsigned(12, address'length));
+                data := std_logic_vector(to_unsigned(8, data'length));
+                byte_mask := "0011";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                mst2slv <= bus_pkg.bus_mst2slv_read(address, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.read_transaction(mst2slv, slv2mst);
+                check_equal(slv2mst.readData(15 downto 0), data(15 downto 0));
+            elsif run("Interrupt on tx count = 0 means no interrupt") then
+                -- Set clock divider to 10
+                address := std_logic_vector(to_unsigned(8, address'length));
+                data := std_logic_vector(to_unsigned(10, data'length));
+                byte_mask := "1111";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                -- Set device enabled, CPOL to 1
+                address := std_logic_vector(to_unsigned(0, address'length));
+                data := std_logic_vector(to_unsigned(3, data'length));
+                byte_mask := "0001";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                address := std_logic_vector(to_unsigned(12, address'length));
+                data := std_logic_vector(to_unsigned(0, data'length));
+                byte_mask := "0011";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                mst2slv <= bus_pkg.BUS_MST2SLV_IDLE;
+                check_false(tx_count_interrupt_requested);
+            elsif run("If SPI device is disabled, then there is no interrupt") then
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                address := std_logic_vector(to_unsigned(12, address'length));
+                data := std_logic_vector(to_unsigned(8, data'length));
+                byte_mask := "0011";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                mst2slv <= bus_pkg.BUS_MST2SLV_IDLE;
+                check_false(tx_count_interrupt_requested);
+            elsif run("If TX queue count is above interrupt on tx count then there is no interrupt") then
+                -- Set clock divider to 100
+                address := std_logic_vector(to_unsigned(8, address'length));
+                data := std_logic_vector(to_unsigned(100, data'length));
+                byte_mask := "1111";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                -- Set device enabled, CPOL to 1
+                address := std_logic_vector(to_unsigned(0, address'length));
+                data := std_logic_vector(to_unsigned(3, data'length));
+                byte_mask := "0001";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                -- Set interrupt on tx count to 2
+                address := std_logic_vector(to_unsigned(12, address'length));
+                data := std_logic_vector(to_unsigned(2, data'length));
+                byte_mask := "0011";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                mst2slv <= bus_pkg.BUS_MST2SLV_IDLE;
+                -- Initially, there is an interrupt
+                check_true(tx_count_interrupt_requested);
+                -- Set 2 transmit bytes
+                address := std_logic_vector(to_unsigned(1, address'length));
+                data(7 downto 0) := "10101010";
+                byte_mask := "0001";
+                -- Push 3 bytes since the first one will be popped from the queue almost immidiately
+                for i in 0 to 2 loop
+                    mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                    wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                end loop;
+                wait until rising_edge(clk) and not tx_count_interrupt_requested;
+            elsif run("Set and read interrupt on rx count") then
+                -- Set clock divider to 10
+                address := std_logic_vector(to_unsigned(8, address'length));
+                data := std_logic_vector(to_unsigned(10, data'length));
+                byte_mask := "1111";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                -- Set device enabled, CPOL to 1
+                address := std_logic_vector(to_unsigned(0, address'length));
+                data := std_logic_vector(to_unsigned(3, data'length));
+                byte_mask := "0001";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                -- Set and read interrupt on rx count
+                address := std_logic_vector(to_unsigned(14, address'length));
+                data := std_logic_vector(to_unsigned(8, data'length));
+                byte_mask := "0011";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                mst2slv <= bus_pkg.bus_mst2slv_read(address, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.read_transaction(mst2slv, slv2mst);
+                check_equal(slv2mst.readData(15 downto 0), data(15 downto 0));
+            elsif run("Interrupt on rx count = 16 means no interrupt") then
+                -- Set clock divider to 10
+                address := std_logic_vector(to_unsigned(8, address'length));
+                data := std_logic_vector(to_unsigned(10, data'length));
+                byte_mask := "1111";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                -- Set device enabled, CPOL to 1
+                address := std_logic_vector(to_unsigned(0, address'length));
+                data := std_logic_vector(to_unsigned(3, data'length));
+                byte_mask := "0001";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                address := std_logic_vector(to_unsigned(14, address'length));
+                data := std_logic_vector(to_unsigned(16, data'length));
+                byte_mask := "0011";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                mst2slv <= bus_pkg.BUS_MST2SLV_IDLE;
+                check_false(rx_count_interrupt_requested);
+            elsif run("Interrupt on rx count = 1 and one element in rx queue means no interrupt") then
+                -- Set clock divider to 10
+                address := std_logic_vector(to_unsigned(8, address'length));
+                data := std_logic_vector(to_unsigned(10, data'length));
+                byte_mask := "1111";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                -- Set device enabled, CPOL to 1
+                address := std_logic_vector(to_unsigned(0, address'length));
+                data := std_logic_vector(to_unsigned(3, data'length));
+                byte_mask := "0001";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                -- Set interrupt on rx count to 1
+                address := std_logic_vector(to_unsigned(14, address'length));
+                data := std_logic_vector(to_unsigned(1, data'length));
+                byte_mask := "0011";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                -- Transmit and receive the single byte
+                address := std_logic_vector(to_unsigned(1, address'length));
+                data(7 downto 0) := "10101010";
+                byte_mask := "0001";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                loop
+                    address := std_logic_vector(to_unsigned(6, address'length));
+                    byte_mask := "0011";
+                    mst2slv <= bus_pkg.bus_mst2slv_read(address, byte_mask);
+                    wait until rising_edge(clk) and bus_pkg.read_transaction(mst2slv, slv2mst);
+                    exit when slv2mst.readData(15 downto 0) = X"0001";
+                end loop;
+                check_false(rx_count_interrupt_requested);
+            elsif run("Interrupt on rx count = 1 and two elements in rx queue means interrupt") then
+                -- Set clock divider to 10
+                address := std_logic_vector(to_unsigned(8, address'length));
+                data := std_logic_vector(to_unsigned(10, data'length));
+                byte_mask := "1111";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                -- Set device enabled, CPOL to 1
+                address := std_logic_vector(to_unsigned(0, address'length));
+                data := std_logic_vector(to_unsigned(3, data'length));
+                byte_mask := "0001";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                -- Set interrupt on rx count to 1
+                address := std_logic_vector(to_unsigned(14, address'length));
+                data := std_logic_vector(to_unsigned(1, data'length));
+                byte_mask := "0011";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                -- Transmit and receive the two bytes
+                address := std_logic_vector(to_unsigned(1, address'length));
+                data(7 downto 0) := "10101010";
+                byte_mask := "0001";
+                mst2slv <= bus_pkg.bus_mst2slv_write(address, data, byte_mask);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                wait until rising_edge(clk) and bus_pkg.write_transaction(mst2slv, slv2mst);
+                loop
+                    address := std_logic_vector(to_unsigned(6, address'length));
+                    byte_mask := "0011";
+                    mst2slv <= bus_pkg.bus_mst2slv_read(address, byte_mask);
+                    wait until rising_edge(clk) and bus_pkg.read_transaction(mst2slv, slv2mst);
+                    exit when slv2mst.readData(15 downto 0) = X"0002";
+                end loop;
+                check_true(rx_count_interrupt_requested);
             end if;
         end loop;
         wait until rising_edge(clk) or falling_edge(clk);
@@ -275,6 +484,8 @@ begin
         miso => spi_mosi_miso,
         spi_clk => spi_clk,
         mst2slv => mst2slv,
-        slv2mst => slv2mst
+        slv2mst => slv2mst,
+        tx_count_interrupt_request => tx_count_interrupt_requested,
+        rx_count_interrupt_request => rx_count_interrupt_requested
     );
 end architecture;

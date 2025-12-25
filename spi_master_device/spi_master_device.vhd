@@ -15,7 +15,10 @@ entity spi_master_device is
         spi_clk : out std_logic;
 
         mst2slv : in bus_pkg.bus_mst2slv_type;
-        slv2mst : out bus_pkg.bus_slv2mst_type
+        slv2mst : out bus_pkg.bus_slv2mst_type;
+
+        tx_count_interrupt_request : out boolean;
+        rx_count_interrupt_request : out boolean
     );
 end entity;
 
@@ -23,13 +26,19 @@ architecture behavioral of spi_master_device is
     -- Address 0, bit 0: Enable
     -- Address 0, bit 1: CPOL, 0 means spi_clk low on idle, 1 means spi clk high on idle
     -- Address 0, bit 2: CPHA, 0 means data sampled on rising edge, 1 means data samples on falling edge. Data is shifted on opposite edge
-    -- Address 0, bits 3 - 7: Reserved.
+    -- Address 0, bit 3 - 7: Reserved.
     -- Address 1: TX data, WO.
     -- Address 2: RX data, RO.
     -- Address 3: Reserved.
     -- Address 4-5: TX queue count.
     -- Address 6-7: RX queue count.
     -- Address 8-11: Clock divider, RW when disabled, RO when enabled.
+    -- Address 12-13: Interrupt on TX count. Sends out an interrupt request if the TX count is below this number. 0 implicitly disables the interrupt.
+    -- Address 14-15: Interrupt on RX count. Sends out an interrupt request if the RX count is above this number. >=16 implicitly disables the interrupt.
+
+    constant queue_depth_log2b : natural := 4;
+    constant queue_depth : natural := 2**queue_depth_log2b;
+
     signal slv2mst_buf : bus_pkg.bus_slv2mst_type := bus_pkg.BUS_SLV2MST_IDLE;
 
     signal enabled : boolean := false;
@@ -37,6 +46,12 @@ architecture behavioral of spi_master_device is
     signal sample_on_falling_edge : boolean := false;
 
     signal baud_clk_ticks : unsigned(31 downto 0) := (others => '0');
+
+    constant interrupt_on_tx_count_default : unsigned(15 downto 0) := unsigned'(X"0000");
+    signal interrupt_on_tx_count : unsigned(15 downto 0) := interrupt_on_tx_count_default;
+
+    constant interrupt_on_rx_count_default : unsigned(15 downto 0) := unsigned'(X"0010");
+    signal interrupt_on_rx_count : unsigned(15 downto 0) := interrupt_on_rx_count_default;
 
     signal spi_clk_buf : std_logic := '0';
     signal spi_clk_enable : boolean;
@@ -67,7 +82,7 @@ begin
 
     bus_handling : process(clk)
         variable slv2mst_tmp : bus_pkg.bus_slv2mst_type := bus_pkg.BUS_SLV2MST_IDLE;
-        variable address : natural range 0 to 12;
+        variable address : natural range 0 to 16;
         variable subAddress : natural range 0 to 3;
         variable byte_in : std_logic_vector(7 downto 0);
         variable byte_out : std_logic_vector(7 downto 0);
@@ -81,6 +96,8 @@ begin
                 sample_on_falling_edge <= false;
                 slv2mst_tmp := bus_pkg.BUS_SLV2MST_IDLE;
                 slv2mst_buf <= bus_pkg.BUS_SLV2MST_IDLE;
+                interrupt_on_tx_count <= interrupt_on_tx_count_default;
+                interrupt_on_rx_count <= interrupt_on_rx_count_default;
             elsif bus_pkg.any_transaction(mst2slv, slv2mst_buf) then
                 slv2mst_buf <= bus_pkg.BUS_SLV2MST_IDLE;
                 slv2mst_tmp := bus_pkg.BUS_SLV2MST_IDLE;
@@ -138,6 +155,22 @@ begin
                         byte_out := std_logic_vector(baud_clk_ticks(subAddress * 8 + 7 downto subAddress*8));
                     end if;
 
+                    if address + i >= 12 and address + i < 14 then
+                        subAddress := address + i - 12;
+                        if mst2slv.writeReady = '1' then
+                            interrupt_on_tx_count(subAddress * 8 + 7 downto subAddress*8) <= unsigned(byte_in);
+                        end if;
+                        byte_out := std_logic_vector(interrupt_on_tx_count(subAddress * 8 + 7 downto subAddress*8));
+                    end if;
+
+                    if address + i >= 14 and address + i < 16 then
+                        subAddress := address + i - 14;
+                        if mst2slv.writeReady = '1' then
+                            interrupt_on_rx_count(subAddress * 8 + 7 downto subAddress*8) <= unsigned(byte_in);
+                        end if;
+                        byte_out := std_logic_vector(interrupt_on_rx_count(subAddress * 8 + 7 downto subAddress*8));
+                    end if;
+
                     slv2mst_tmp.readData(i*8 + 7 downto i*8) := byte_out;
 
                 end loop;
@@ -162,6 +195,23 @@ begin
         end if;
     end process;
 
+    interrupt_check : process(clk)
+    begin
+        if rising_edge(clk) then
+            if enabled and tx_queue_count < interrupt_on_tx_count then
+                tx_count_interrupt_request <= true;
+            else
+                tx_count_interrupt_request <= false;
+            end if;
+
+            if enabled and rx_queue_count > interrupt_on_rx_count then
+                rx_count_interrupt_request <= true;
+            else
+                rx_count_interrupt_request <= false;
+            end if;
+        end if;
+    end process;
+
 
     tx_side : entity work.spi_master_device_tx
     port map (
@@ -178,7 +228,7 @@ begin
 
     tx_queue : entity work.generic_fifo
     generic map (
-        depth_log2b => 4,
+        depth_log2b => queue_depth_log2b,
         word_size_log2b => 3
     )
     port map (
@@ -213,7 +263,7 @@ begin
 
     rx_queue : entity work.generic_fifo
     generic map (
-        depth_log2b => 4,
+        depth_log2b => queue_depth_log2b,
         word_size_log2b => 3
     )
     port map (
