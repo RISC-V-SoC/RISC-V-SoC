@@ -60,7 +60,7 @@ architecture Behavioral of main_file is
     constant staticDeviceInfoMappingSize : natural := 16#4#;
 
     constant spiDeviceStartAddress : natural := 16#1010#;
-    constant spiDeviceInfoMappingSize : natural := 16#c#;
+    constant spiDeviceMappingSize : natural := 16#f#;
 
     constant riscvControlStartAddress : natural := 16#2000#;
     constant riscvControlMappingSize : natural := 16#100#;
@@ -80,7 +80,7 @@ architecture Behavioral of main_file is
     constant address_map : addr_range_and_mapping_array := (
         create_address_map_entry(uartDeviceStartAddress, uartDeviceMappingSize),
         create_address_map_entry(staticDeviceInfoStartAddress, staticDeviceInfoMappingSize),
-        create_address_map_entry(spiDeviceStartAddress, spiDeviceInfoMappingSize),
+        create_address_map_entry(spiDeviceStartAddress, spiDeviceMappingSize),
         create_address_map_entry(riscvControlStartAddress, riscvControlMappingSize),
         create_address_map_entry(gpioDeviceStartAddress, gpioDeviceMappingSize),
         create_address_map_entry(mtimeStartAddress, mtimeMappingSize),
