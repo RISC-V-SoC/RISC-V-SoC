@@ -74,6 +74,9 @@ architecture Behavioral of main_file is
     constant spiMemStartAddress : natural := 16#100000#;
     constant spiMemMappingSize : natural := 16#60000#;
 
+    constant plicStartAddress : natural := 16#1000000#;
+    constant plicMappingSize : natural := 16#4000000#;
+
     constant procStartAddress : bus_address_type := std_logic_vector(to_unsigned(spiMemStartAddress, bus_address_type'length));
     constant clk_period : time := (1 sec) / clk_freq_hz;
 
@@ -84,7 +87,8 @@ architecture Behavioral of main_file is
         create_address_map_entry(riscvControlStartAddress, riscvControlMappingSize),
         create_address_map_entry(gpioDeviceStartAddress, gpioDeviceMappingSize),
         create_address_map_entry(mtimeStartAddress, mtimeMappingSize),
-        create_address_map_entry(spiMemStartAddress, spiMemMappingSize)
+        create_address_map_entry(spiMemStartAddress, spiMemMappingSize),
+        create_address_map_entry(plicStartAddress, plicMappingSize)
     );
 
     signal extMaster2arbiter : bus_mst2slv_type;
@@ -123,6 +127,9 @@ architecture Behavioral of main_file is
     signal l2cacheToSpimem : bus_mst2slv_type;
     signal spimemToL2cache : bus_slv2mst_type;
 
+    signal demux2plic : bus_mst2slv_type;
+    signal plic2demux : bus_slv2mst_type;
+
     signal mem_spi_sio_out : std_logic_vector(3 downto 0);
     signal mem_spi_sio_in : std_logic_vector(3 downto 0);
     signal mem_spi_cs_n : std_logic_vector(2 downto 0);
@@ -138,11 +145,15 @@ architecture Behavioral of main_file is
     signal gpio_reset : boolean;
     signal mtime_reset : boolean;
     signal l2cache_reset : boolean;
+    signal plic_reset : boolean;
 
     signal l2cache_do_flush : boolean;
     signal l2cache_flush_busy : boolean;
 
     signal mtime_interrupt_pending : boolean;
+
+    signal spi_interrupt_set : boolean_vector(1 downto 0);
+    signal plic_interrupt_pending : boolean;
 begin
 
     mem_spi_sio_in <= JA_gpio;
@@ -183,7 +194,7 @@ begin
         reset_request => reset_request,
         do_flush(0) => l2cache_do_flush,
         flush_busy(0) => l2cache_flush_busy,
-        machine_level_external_interrupt_pending => false,
+        machine_level_external_interrupt_pending => plic_interrupt_pending,
         machine_level_timer_interrupt_pending => mtime_interrupt_pending
     );
 
@@ -216,13 +227,15 @@ begin
         demux2slv(4) => demux2gpio,
         demux2slv(5) => demux2mtime,
         demux2slv(6) => demuxToL2cache,
+        demux2slv(7) => demux2plic,
         slv2demux(0) => uartSlave2demux,
         slv2demux(1) => staticInfo2demux,
         slv2demux(2) => spiDevice2demux,
         slv2demux(3) => control2demux,
         slv2demux(4) => gpio2demux,
         slv2demux(5) => mtime2demux,
-        slv2demux(6) => l2cacheToDemux
+        slv2demux(6) => l2cacheToDemux,
+        slv2demux(7) => plic2demux
     );
 
     uart_bus_slave : entity work.uart_bus_slave
@@ -252,7 +265,9 @@ begin
         miso => spi_miso,
         spi_clk => spi_clk,
         mst2slv => demux2spiDevice,
-        slv2mst => spiDevice2demux
+        slv2mst => spiDevice2demux,
+        tx_count_interrupt_request => spi_interrupt_set(0),
+        rx_count_interrupt_request => spi_interrupt_set(1)
     );
 
     gpio_controller : entity work.gpio_controller
@@ -309,10 +324,24 @@ begin
         slv2mst => spimemToL2cache
     );
 
+    plic : entity work.platform_level_interrupt_controller
+    generic map (
+        context_count => 1,
+        interrupt_source_count => 3,
+        interrupt_priority_level_count_log2b => 2
+    ) port map (
+        clk => clk,
+        reset => plic_reset,
+        mst2slv => demux2plic,
+        slv2mst => plic2demux,
+        interrupt_signal_from_source(2 downto 1) => spi_interrupt_set,
+        interrupt_notification_to_context(0) => plic_interrupt_pending
+    );
+
     reset_controller : entity work.reset_controller
     generic map (
         master_count => 2,
-        slave_count => 5
+        slave_count => 6
     ) port map (
         clk => clk,
         do_reset => reset_request,
@@ -322,7 +351,7 @@ begin
         slave_reset(1) => spi_mem_reset,
         slave_reset(2) => spi_master_reset,
         slave_reset(3) => gpio_reset,
-        slave_reset(4) => mtime_reset
+        slave_reset(4) => mtime_reset,
+        slave_reset(5) => plic_reset
     );
-
 end Behavioral;
