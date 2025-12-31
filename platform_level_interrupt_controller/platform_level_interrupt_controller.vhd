@@ -77,6 +77,8 @@ architecture behavioral of platform_level_interrupt_controller is
 
         variable target_lo : natural;
         variable target_hi : natural;
+
+        variable temp_vec : boolean_vector(31 downto 0) := (others => false);
     begin
         assert(start_index mod 32 = 0);
         source_lo := start_index;
@@ -95,7 +97,9 @@ architecture behavioral of platform_level_interrupt_controller is
 
         target_lo := source_lo mod 32;
         target_hi := source_hi mod 32;
-        retval(target_hi downto target_lo) := bool_vec_to_std_logic_vec(input_vector(source_hi downto source_lo));
+        -- Vivado errors out if you turn this into a direct assignment to retval
+        temp_vec(target_hi downto target_lo) := input_vector(source_hi downto source_lo);
+        retval := bool_vec_to_std_logic_vec(temp_vec);
         return retval;
     end function;
 
@@ -103,12 +107,13 @@ architecture behavioral of platform_level_interrupt_controller is
         reference_vector : boolean_vector;
         update_vector : std_logic_vector;
         start_index : natural) return boolean_vector is
-        variable retVal : boolean_vector(reference_vector'range) := reference_vector;
+        variable retval : boolean_vector(reference_vector'range) := reference_vector;
         variable source_lo : natural;
         variable source_hi : natural;
 
         variable target_lo : natural;
         variable target_hi : natural;
+        variable temp_vec : std_logic_vector(reference_vector'range) := (others => '0');
     begin
         assert(start_index mod 32 = 0);
         target_lo := start_index;
@@ -127,7 +132,9 @@ architecture behavioral of platform_level_interrupt_controller is
 
         source_lo := target_lo mod 32;
         source_hi := target_hi mod 32;
-        retval(target_hi downto target_lo) := std_logic_vec_to_bool_vec(update_vector(source_hi downto source_lo));
+        -- Vivado errors out if you turn this into a direct assignment to retval
+        temp_vec(target_hi downto target_lo) := update_vector(source_hi downto source_lo);
+        retval := std_logic_vec_to_bool_vec(temp_vec);
         return retval;
     end function;
 begin
