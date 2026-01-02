@@ -273,6 +273,14 @@ begin
                 write_file(net, spimem0_start_address, "./complete_system/test/programs/mtimerInterruptTest.txt");
                 write(net, processor_controller_start_address, X"00000000");
                 check_stream(net, slave_uart_slave_stream, X"40");
+            elsif run("Test SPI interrupts") then
+                write_file(net, spimem0_start_address, "./complete_system/test/programs/spiInterruptTest.txt");
+                write(net, processor_controller_start_address, X"00000000");
+                check_stream(net, slave_uart_slave_stream, X"00");
+                check_stream(net, slave_uart_slave_stream, X"01");
+                check_stream(net, slave_uart_slave_stream, X"02");
+                check_stream(net, slave_uart_slave_stream, X"03");
+                check_stream(net, slave_uart_slave_stream, X"04");
             end if;
         end loop;
         wait until rising_edge(clk) or falling_edge(clk);
