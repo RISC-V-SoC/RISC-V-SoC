@@ -74,7 +74,7 @@ architecture Behavioral of main_file is
     constant spiMemStartAddress : natural := 16#100000#;
     constant spiMemMappingSize : natural := 16#60000#;
 
-    constant plicStartAddress : natural := 16#1000000#;
+    constant plicStartAddress : natural := 16#10000000#;
     constant plicMappingSize : natural := 16#4000000#;
 
     constant procStartAddress : bus_address_type := std_logic_vector(to_unsigned(spiMemStartAddress, bus_address_type'length));
