@@ -83,11 +83,15 @@ begin
                 is_in_exception := false;
                 exception_data_out <= riscv32_exception_data_idle;
                 push_nop := true;
+            elsif force_service_request then
+                exception_data_out <= exception_data_buf;
+                is_in_exception := true;
+                push_nop := true;
             elsif stall then
                 -- pass
             elsif not is_in_exception then
                 exception_data_out <= exception_data_buf;
-                is_in_exception := exception_data_buf.exception_type /= exception_none or force_service_request;
+                is_in_exception := exception_data_buf.exception_type /= exception_none;
                 push_nop := is_in_exception;
             else
                 exception_data_out <= riscv32_exception_data_idle;

@@ -222,6 +222,11 @@ begin
                 exception_from_stage_code <= riscv32_exception_code_illegal_instruction;
                 wait until falling_edge(clk);
                 check_true(exception_data_out.exception_type = exception_none);
+            elsif run("When a service request is forced during a stall, the service request takes precedence") then
+                force_service_request <= true;
+                stall <= true;
+                wait until falling_edge(clk);
+                check_true(requires_service);
             end if;
         end loop;
         wait until rising_edge(clk);
