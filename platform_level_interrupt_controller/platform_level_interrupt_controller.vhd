@@ -28,12 +28,17 @@ architecture behavioral of platform_level_interrupt_controller is
 
     constant priority_mask : std_logic_vector(31 downto 0) := std_logic_vector(to_unsigned(2**interrupt_priority_level_count_log2b - 1, 32));
 
+    constant interrupt_word_count : natural := (interrupt_signal_from_source'high + 31)/32;
+    constant interrupt_word_range_high : natural := interrupt_word_count*32 - 1;
+    constant interrupt_word_range_low : natural := 0;
+    subtype interrupt_word_range is natural range interrupt_word_range_high downto interrupt_word_range_low;
+
     type interrupt_priority_level_array_type is array (1 to interrupt_source_count - 1) of unsigned(31 downto 0);
     signal interrupt_priority_level_array : interrupt_priority_level_array_type := (others => (others => '0'));
 
-    signal interrupt_pending_vector : boolean_vector(interrupt_signal_from_source'range);
+    signal interrupt_pending_vector : boolean_vector(interrupt_word_range);
 
-    type interrupt_enable_for_context_type is array(0 to context_count - 1) of boolean_vector(interrupt_signal_from_source'range);
+    type interrupt_enable_for_context_type is array(0 to context_count - 1) of boolean_vector(interrupt_word_range);
     signal interrupt_enable_for_context : interrupt_enable_for_context_type := (others => (others => false));
 
     type interrupt_priority_treshold_for_context_vector_type is array(0 to context_count - 1) of unsigned(31 downto 0);
@@ -42,9 +47,9 @@ architecture behavioral of platform_level_interrupt_controller is
     type interrupt_pending_for_context_vector_type is array(0 to context_count - 1) of natural;
     signal interrupt_pending_for_context_vector : interrupt_pending_for_context_vector_type := (others => 0);
 
-    signal is_interrupt_claimed_vector : boolean_vector(interrupt_signal_from_source'range) := (others => false);
+    signal is_interrupt_claimed_vector : boolean_vector(interrupt_word_range) := (others => false);
 
-    signal pending_claimed_merged_vector : boolean_vector(interrupt_signal_from_source'range) := (others => false);
+    signal pending_claimed_merged_vector : boolean_vector(interrupt_word_range) := (others => false);
 
     pure function bool_vec_to_std_logic_vec(
         input : boolean_vector
@@ -68,75 +73,6 @@ architecture behavioral of platform_level_interrupt_controller is
         return ret;
     end function;
 
-    pure function bool_vec_to_std_logic_word(
-        input_vector : boolean_vector;
-        start_index : natural) return std_logic_vector is
-        variable retval : std_logic_vector(31 downto 0) := (others => '0');
-        variable source_lo : natural;
-        variable source_hi : natural;
-
-        variable target_lo : natural;
-        variable target_hi : natural;
-
-        variable temp_vec : boolean_vector(31 downto 0) := (others => false);
-    begin
-        assert(start_index mod 32 = 0);
-        source_lo := start_index;
-        if source_lo < input_vector'low then
-            source_lo := input_vector'low;
-        end if;
-
-        if source_lo > input_vector'high then
-            return retval;
-        end if;
-
-        source_hi := source_lo + 31;
-        if source_hi > input_vector'high then
-            source_hi := input_vector'high;
-        end if;
-
-        target_lo := source_lo mod 32;
-        target_hi := source_hi mod 32;
-        -- Vivado errors out if you turn this into a direct assignment to retval
-        temp_vec(target_hi downto target_lo) := input_vector(source_hi downto source_lo);
-        retval := bool_vec_to_std_logic_vec(temp_vec);
-        return retval;
-    end function;
-
-    pure function update_bool_vec_with_std_logic_word(
-        reference_vector : boolean_vector;
-        update_vector : std_logic_vector;
-        start_index : natural) return boolean_vector is
-        variable retval : boolean_vector(reference_vector'range) := reference_vector;
-        variable source_lo : natural;
-        variable source_hi : natural;
-
-        variable target_lo : natural;
-        variable target_hi : natural;
-        variable temp_vec : std_logic_vector(reference_vector'range) := (others => '0');
-    begin
-        assert(start_index mod 32 = 0);
-        target_lo := start_index;
-        if target_lo < reference_vector'low then
-            target_lo := reference_vector'low;
-        end if;
-
-        if target_lo > reference_vector'high then
-            return retval;
-        end if;
-
-        target_hi := target_lo + 31;
-        if target_hi > reference_vector'high then
-            target_hi := reference_vector'high;
-        end if;
-
-        source_lo := target_lo mod 32;
-        source_hi := target_hi mod 32;
-        -- Vivado errors out if you turn this into a direct assignment to retval
-        temp_vec(target_hi downto target_lo) := update_vector(source_hi downto source_lo);
-        retval := std_logic_vec_to_bool_vec(temp_vec);
-        return retval;
-    end function;
 begin
     slv2mst <= slv2mst_buf;
     pending_claimed_merged_vector <= interrupt_pending_vector and not is_interrupt_claimed_vector;
@@ -149,6 +85,7 @@ begin
 
         variable context_id : natural;
         variable interrupt_id : natural;
+        variable register_index : natural;
 
         variable priority_to_beat : unsigned(31 downto 0);
         variable interrupt_priority : unsigned(31 downto 0);
@@ -193,21 +130,22 @@ begin
 
                     if base_address >= 16#001000# and base_address < 16#001080# then
                         address := base_address - 16#001000#;
-                        slv2mst_tmp.readData := bool_vec_to_std_logic_word(pending_claimed_merged_vector, address * 8);
+                        register_index := address / 4;
+                        if register_index < interrupt_word_count then
+                            slv2mst_tmp.readData := bool_vec_to_std_logic_vec(pending_claimed_merged_vector(register_index * 32 + 31 downto register_index*32));
+                        end if;
                     end if;
 
                     if base_address >= 16#002000# and base_address < 16#1F2000# then
                         address := base_address - 16#002000#;
                         context_id := address / 16#80#;
-                        if context_id < context_count then
+                        register_index := (address mod 16#80#) / 4;
+                        if context_id < context_count and register_index < interrupt_word_count then
                             interrupt_id := (address mod 16#80#) * 8;
-                            slv2mst_tmp.readData := bool_vec_to_std_logic_word(interrupt_enable_for_context(context_id), interrupt_id);
+                            slv2mst_tmp.readData := bool_vec_to_std_logic_vec(interrupt_enable_for_context(context_id)(register_index*32 + 31 downto register_index*32));
                             if is_write_op then
-                                interrupt_enable_for_context(context_id) <=
-                                    update_bool_vec_with_std_logic_word(
-                                        interrupt_enable_for_context(context_id),
-                                        mst2slv.writeData,
-                                        interrupt_id);
+                                interrupt_enable_for_context(context_id)(register_index*32 + 31 downto register_index*32) <=
+                                    std_logic_vec_to_bool_vec(mst2slv.writeData);
                             end if;
                         end if;
                     end if;
@@ -273,7 +211,16 @@ begin
                     interrupt_notification_to_context(context_index) <= false;
                 end if;
             end loop;
+
+            for i in interrupt_word_range loop
+                if i < interrupt_signal_from_source'low or i > interrupt_signal_from_source'high then
+                    interrupt_pending_vector(i) <= false;
+                    is_interrupt_claimed_vector(i) <= false;
+                    for context_index in 0 to context_count - 1 loop
+                        interrupt_enable_for_context(context_index)(i) <= false;
+                    end loop;
+                end if;
+            end loop;
         end if;
     end process;
-
 end architecture;
