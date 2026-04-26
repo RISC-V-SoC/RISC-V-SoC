@@ -38,7 +38,7 @@ architecture tb of riscv32_write_back_dcache_tb is
     signal dirty : boolean;
     signal miss : boolean;
 
-    signal line_address : natural := 0;
+    signal line_address : natural range 0 to 2**word_count_log2b - 1 := 0;
     signal line_reconstructedAddr : bus_aligned_address_type;
     signal line_dataOut : bus_data_type;
     signal line_dirty : boolean;

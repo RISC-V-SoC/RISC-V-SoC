@@ -29,17 +29,17 @@ architecture tb of bus_cache_director_tb is
     signal rst : boolean := false;
 
     signal address : bus_aligned_address_type := (others => '0');
-    signal line_index : natural := 0;
+    signal line_index : natural range 0 to total_line_count - 1;
     signal index_mode : boolean := false;
 
-    signal word_index_from_frontend : natural := 0;
+    signal word_index_from_frontend : natural range 0 to words_per_line - 1 := 0;
     signal data_from_frontend : bus_data_type := (others => '0');
     signal bytemask_from_frontend : bus_byte_mask_type := (others => '0');
     signal data_to_frontend : bus_data_type;
     signal do_write_from_frontend : boolean := false;
     signal do_read_from_frontend : boolean := false;
 
-    signal word_index_from_backend : natural := 0;
+    signal word_index_from_backend : natural range 0 to words_per_line - 1 := 0;
     signal data_from_backend : bus_data_type := (others => '0');
     signal data_to_backend : bus_data_type;
     signal do_write_from_backend : boolean := false;

@@ -31,7 +31,7 @@ architecture behaviourial of riscv32_flush_manager is
     signal cur_state : state_type := idle;
     signal next_state : state_type := idle;
 
-    signal ext_mem_index : natural range 0 to max_ext_mem_index := 0;
+    signal ext_mem_index : natural range 0 to max_ext_mem_index;
 
     signal selected_ext_mem_do_flush : boolean := false;
     signal selected_ext_mem_busy : boolean;
