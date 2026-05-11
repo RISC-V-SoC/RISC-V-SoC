@@ -34,17 +34,11 @@ entity riscv32_if2bus is
 end entity;
 
 architecture behaviourial of riscv32_if2bus is
-    constant cache_range_low : natural := to_integer(unsigned(range_to_cache.low));
-    constant cache_range_high : natural := to_integer(unsigned(range_to_cache.high));
-    constant cache_range : natural := cache_range_high - cache_range_low;
-    constant cache_range_log2 : natural := integer(ceil(log2(real(cache_range))));
-    constant tag_size : natural := cache_range_log2 - cache_word_count_log2b + bus_byte_size_log2b - bus_address_width_log2b;
-
     signal instruction_from_bus : riscv32_instruction_type;
     signal icache_write : boolean := false;
     signal icache_miss : boolean;
     signal icache_fault : boolean;
-    signal icache_reset : std_logic;
+    signal icache_reset : boolean;
     signal faulty_address : riscv32_address_type := (others => '0');
     signal hasFault_buf : boolean := false;
     signal output_fault : boolean := false;
@@ -53,7 +47,7 @@ begin
     hasFault <= output_fault;
     output_fault <= hasFault_buf and requestAddress = faulty_address;
     icache_fault <= not bus_addr_in_range(requestAddress, range_to_cache);
-    icache_reset <= '1' when flushCache or rst else '0';
+    icache_reset <= true when flushCache or rst else false;
     unaligned_address <= requestAddress(1 downto 0) /= "00";
 
     generate_stall : process(icache_miss, icache_fault, unaligned_address, output_fault, readEnabled)
@@ -129,16 +123,15 @@ begin
 
     icache : entity work.riscv32_icache
     generic map (
-        word_count_log2b => cache_word_count_log2b,
-        tag_size => tag_size
+        line_count_log2b => cache_word_count_log2b,
+        bank_count_log2b => 0
     ) port map (
         clk => clk,
         rst => icache_reset,
         requestAddress => requestAddress,
         instructionOut => instruction,
         instructionIn => instruction_from_bus,
-        doWrite => icache_write,
+        do_write => icache_write,
         miss => icache_miss
     );
-
 end architecture;

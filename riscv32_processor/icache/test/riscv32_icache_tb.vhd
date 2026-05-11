@@ -16,15 +16,15 @@ end entity;
 
 architecture tb of riscv32_icache_tb is
     constant clk_period : time := 20 ns;
-    constant word_count_log2b : natural := 8;
+    constant line_count_log2b : natural := 8;
 
     signal clk : std_logic := '0';
-    signal rst : std_logic := '0';
+    signal rst : boolean := false;
 
     signal requestAddress : riscv32_address_type := (others => '0');
     signal instructionOut : riscv32_instruction_type;
     signal instructionIn : riscv32_instruction_type := riscv32_instructionNop;
-    signal doWrite : boolean := false;
+    signal do_write : boolean := false;
     signal miss : boolean;
 begin
 
@@ -43,32 +43,32 @@ begin
                 wait until falling_edge(clk);
                 requestAddress <= X"00100004";
                 instructionIn <= X"01020304";
-                doWrite <= true;
+                do_write <= true;
                 wait until falling_edge(clk);
                 check(not miss);
             elsif run("Not storing incoming data does not lead to hit") then
                 wait until falling_edge(clk);
                 requestAddress <= X"00100004";
                 instructionIn <= X"01020304";
-                doWrite <= false;
+                do_write <= false;
                 wait until falling_edge(clk);
                 check(miss);
             elsif run("Cache can hold instruction") then
                 wait until falling_edge(clk);
                 requestAddress <= X"00100004";
                 instructionIn <= X"01020304";
-                doWrite <= true;
+                do_write <= true;
                 wait until falling_edge(clk);
                 check_equal(instructionOut, instructionIn);
             elsif run("Cache can hold two instructions") then
                 wait until falling_edge(clk);
                 requestAddress <= X"00100004";
                 instructionIn <= X"01020304";
-                doWrite <= true;
+                do_write <= true;
                 wait until falling_edge(clk);
                 requestAddress <= X"00100008";
                 instructionIn <= X"F1F2F3F4";
-                doWrite <= true;
+                do_write <= true;
                 wait until falling_edge(clk);
                 requestAddress <= X"00100004";
                 wait for 1 ns;
@@ -77,14 +77,26 @@ begin
                 wait until falling_edge(clk);
                 requestAddress <= X"00100000";
                 instructionIn <= X"01020304";
-                doWrite <= true;
+                do_write <= true;
                 wait until falling_edge(clk);
                 requestAddress <= X"00100400";
                 instructionIn <= X"F1F2F3F4";
-                doWrite <= true;
+                do_write <= true;
                 wait until falling_edge(clk);
+                do_write <= false;
                 requestAddress <= X"00100000";
                 wait for 1 ns;
+                check(miss);
+            elsif run("Reset resets") then
+                wait until falling_edge(clk);
+                requestAddress <= X"00100004";
+                instructionIn <= X"01020304";
+                do_write <= true;
+                wait until falling_edge(clk);
+                do_write <= false;
+                rst <= true;
+                wait until falling_edge(clk);
+                rst <= false;
                 check(miss);
             end if;
         end loop;
@@ -97,15 +109,15 @@ begin
 
     icache : entity src.riscv32_icache
     generic map (
-        word_count_log2b => word_count_log2b,
-        tag_size => 8
+        line_count_log2b => line_count_log2b,
+        bank_count_log2b => 0
     ) port map (
         clk => clk,
         rst => rst,
         requestAddress => requestAddress,
         instructionOut => instructionOut,
         instructionIn => instructionIn,
-        doWrite => doWrite,
+        do_write => do_write,
         miss => miss
     );
 
