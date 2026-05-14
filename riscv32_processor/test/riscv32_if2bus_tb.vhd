@@ -260,7 +260,8 @@ begin
     if2bus : entity src.riscv32_if2bus
     generic map (
         range_to_cache => range_to_cache,
-        cache_word_count_log2b => word_count_log2b
+        cache_word_count_log2b => word_count_log2b,
+        cache_bank_count_log2b => 0
     ) port map (
         clk => clk,
         rst => rst,

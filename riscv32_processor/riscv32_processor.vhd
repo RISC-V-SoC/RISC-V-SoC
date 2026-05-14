@@ -12,6 +12,7 @@ entity riscv32_processor is
         clk_period : time;
         iCache_range : addr_range_type;
         iCache_word_count_log2b : natural;
+        iCache_bank_count_log2b : natural;
         dCache_range : addr_range_type;
         dCache_word_count_log2b : natural;
         external_memory_count : natural
@@ -182,7 +183,8 @@ begin
     if2bus : entity work.riscv32_if2bus
     generic map (
         range_to_cache => iCache_range,
-        cache_word_count_log2b => iCache_word_count_log2b
+        cache_word_count_log2b => iCache_word_count_log2b,
+        cache_bank_count_log2b => iCache_bank_count_log2b
     ) port map (
         clk => clk,
         rst => rst,

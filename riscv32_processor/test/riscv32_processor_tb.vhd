@@ -31,6 +31,7 @@ architecture tb of riscv32_processor_tb is
             mapping => bus_map_constant(bus_address_type'high - 18, '0') & bus_map_range(18, 0)
         );
     constant iCache_word_count_log2b : natural := 8;
+    constant iCache_bank_count_log2b : natural := 1;
     constant dCache_word_count_log2b : natural := 8;
 
     constant memActor : actor_t := new_actor("slave");
@@ -394,6 +395,7 @@ begin
         clk_period => clk_period,
         iCache_range => iCache_rangeMap.addr_range,
         iCache_word_count_log2b => iCache_word_count_log2b,
+        iCache_bank_count_log2b => iCache_bank_count_log2b,
         dCache_range => iCache_rangeMap.addr_range,
         dCache_word_count_log2b => dCache_word_count_log2b,
         external_memory_count => 0

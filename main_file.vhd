@@ -11,6 +11,7 @@ entity main_file is
         clk_freq_hz : natural;
         baud_rate : positive := 115200;
         icache_word_count_log2b : natural := 8;
+        icache_bank_count_log2b : natural := 1;
         dcache_word_count_log2b : natural := 8;
         l2cache_words_per_line_log2b : natural := 3;
         l2cache_total_line_count_log2b : natural := 10;
@@ -179,6 +180,7 @@ begin
         clk_period => clk_period,
         iCache_range => create_address_map_entry(spiMemStartAddress, spiMemMappingSize).addr_range,
         iCache_word_count_log2b => icache_word_count_log2b,
+        iCache_bank_count_log2b => icache_bank_count_log2b,
         dCache_range => create_address_map_entry(spiMemStartAddress, spiMemMappingSize).addr_range,
         dCache_word_count_log2b => dcache_word_count_log2b,
         external_memory_count => 1

@@ -10,7 +10,8 @@ use work.riscv32_pkg.all;
 entity riscv32_if2bus is
     generic (
         range_to_cache : addr_range_type;
-        cache_word_count_log2b : natural
+        cache_word_count_log2b : natural;
+        cache_bank_count_log2b : natural
     );
     port (
         clk : in std_logic;
@@ -124,7 +125,7 @@ begin
     icache : entity work.riscv32_icache
     generic map (
         line_count_log2b => cache_word_count_log2b,
-        bank_count_log2b => 0
+        bank_count_log2b => cache_bank_count_log2b
     ) port map (
         clk => clk,
         rst => icache_reset,
