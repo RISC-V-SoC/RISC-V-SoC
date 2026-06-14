@@ -36,10 +36,6 @@ entity riscv32_memToBus is
 end entity;
 
 architecture behaviourial of riscv32_memToBus is
-    constant cache_range_low : natural := to_integer(unsigned(range_to_cache.low));
-    constant cache_range_high : natural := to_integer(unsigned(range_to_cache.high));
-    constant cache_range : natural := cache_range_high - cache_range_low;
-
     type state_type is (idle, cached_read_busy, uncached_read_busy, cached_write_busy, uncached_write_busy, cache_flushing);
     signal current_state : state_type := idle;
     signal next_state : state_type := idle;
@@ -445,9 +441,7 @@ begin
 
     dcache : entity work.riscv32_write_back_dcache
     generic map (
-        word_count_log2b => cache_word_count_log2b,
-        cache_range_size => cache_range,
-        cached_base_address => range_to_cache.low(bus_aligned_address_type'range)
+        line_count_log2b => cache_word_count_log2b
     ) port map (
         clk => clk,
         rst => rst or cache_reset,

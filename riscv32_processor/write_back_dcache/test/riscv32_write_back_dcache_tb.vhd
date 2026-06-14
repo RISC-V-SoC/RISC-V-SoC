@@ -17,9 +17,7 @@ end entity;
 
 architecture tb of riscv32_write_back_dcache_tb is
     constant clk_period : time := 20 ns;
-    constant word_count_log2b : natural := 4;
-    constant cache_range_size : natural := 16#10000#;
-    constant cached_base_address : bus_address_type := X"00020000";
+    constant line_count_log2b : natural := 4;
 
     signal clk : std_logic := '0';
     signal rst : boolean := false;
@@ -38,7 +36,7 @@ architecture tb of riscv32_write_back_dcache_tb is
     signal dirty : boolean;
     signal miss : boolean;
 
-    signal line_address : natural range 0 to 2**word_count_log2b - 1 := 0;
+    signal line_address : natural range 0 to 2**line_count_log2b - 1 := 0;
     signal line_reconstructedAddr : bus_aligned_address_type;
     signal line_dataOut : bus_data_type;
     signal line_dirty : boolean;
@@ -186,13 +184,14 @@ begin
                 bus_doWrite <= false;
                 line_address <= 0;
                 wait until falling_edge(clk);
-                check_equal(line_reconstructedAddr, cached_base_address(line_reconstructedAddr'range));
+                fullAddress := std_logic_vector(to_unsigned(16#0#, fullAddress'length));
+                check_equal(line_reconstructedAddr, fullAddress(reconstructedAddr'range));
                 check_equal(line_dataOut, proc_dataIn);
                 check_true(line_dirty);
                 line_address <= 1;
                 wait until falling_edge(clk);
-                actualAddress := std_logic_vector((unsigned(cached_base_address) + 4));
-                check_equal(line_reconstructedAddr, actualAddress(line_reconstructedAddr'range));
+                fullAddress := std_logic_vector(to_unsigned(16#4#, fullAddress'length));
+                check_equal(line_reconstructedAddr, fullAddress(reconstructedAddr'range));
                 check_equal(line_dataOut, bus_dataIn);
                 check_false(line_dirty);
             end if;
@@ -206,9 +205,7 @@ begin
 
     dcache : entity src.riscv32_write_back_dcache
     generic map (
-        word_count_log2b => word_count_log2b,
-        cache_range_size => cache_range_size,
-        cached_base_address => cached_base_address(bus_aligned_address_type'range)
+        line_count_log2b => line_count_log2b
     ) port map (
         clk => clk,
         rst => rst,

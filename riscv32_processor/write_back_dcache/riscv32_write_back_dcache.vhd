@@ -9,9 +9,7 @@ use work.bus_pkg.all;
 
 entity riscv32_write_back_dcache is
     generic (
-        word_count_log2b : natural;
-        cache_range_size : natural;
-        cached_base_address : bus_aligned_address_type
+        line_count_log2b : natural
     );
     port (
         clk : in std_logic;
@@ -31,7 +29,7 @@ entity riscv32_write_back_dcache is
         dirty : out boolean;
         miss : out boolean;
 
-        line_address : in natural range 0 to 2**word_count_log2b - 1;
+        line_address : in natural range 0 to 2**line_count_log2b - 1;
         line_reconstructedAddr : out bus_aligned_address_type;
         line_dataOut : out bus_data_type;
         line_dirty : out boolean
@@ -39,50 +37,47 @@ entity riscv32_write_back_dcache is
 end entity;
 
 architecture behaviourial of riscv32_write_back_dcache is
-    constant cache_range_size_log2 : natural := integer(ceil(log2(real(cache_range_size))));
-    constant tag_size : natural := cache_range_size_log2 - word_count_log2b + bus_byte_size_log2b - bus_address_width_log2b;
-    constant line_address_part_lsb : natural := bus_bytes_per_word_log2b;
-    constant line_address_part_msb : natural := line_address_part_lsb + word_count_log2b - 1;
-    constant tag_part_lsb : natural := line_address_part_msb + 1;
-    constant tag_part_msb : natural := tag_part_lsb + tag_size - 1;
+    constant sub_word_part_lsb : natural := 0;
+    constant sub_word_part_msb : natural := riscv32_address_width_log2b - riscv32_byte_width_log2b - 1;
+    constant index_part_lsb : natural := riscv32_address_width_log2b - riscv32_byte_width_log2b;
+    constant index_part_msb : natural := index_part_lsb + line_count_log2b - 1;
+    constant tag_part_lsb : natural := index_part_msb + 1;
+    constant tag_part_msb : natural := riscv32_data_type'high;
 
-    constant word_count : natural := 2**word_count_log2b;
+    constant line_count : natural := 2**line_count_log2b;
 
-    type tag_array is array (natural range 0 to word_count - 1) of std_logic_vector(tag_size - 1 downto 0);
-    type valid_array is array (natural range 0 to word_count - 1) of boolean;
+    subtype tag_type is std_logic_vector(tag_part_msb - tag_part_lsb downto 0);
+    type tag_type_array is array(line_count - 1 downto 0) of tag_type;
 
-    signal cachedTag : std_logic_vector(tag_size - 1 downto 0);
+    signal cachedTag : tag_type;
 
-    signal line_address_cachedTag : std_logic_vector(tag_size - 1 downto 0);
+    signal line_address_cachedTag : tag_type;
 begin
     reconstruct_address : process(cachedTag, addressIn)
     begin
-        reconstructedAddr <= cached_base_address;
-        reconstructedAddr(line_address_part_msb downto line_address_part_lsb) <= addressIn(line_address_part_msb downto line_address_part_lsb);
+        reconstructedAddr(index_part_msb downto index_part_lsb) <= addressIn(index_part_msb downto index_part_lsb);
         reconstructedAddr(tag_part_msb downto tag_part_lsb) <= cachedTag;
     end process;
 
     reconstruct_line_address : process(line_address, line_address_cachedTag)
     begin
-        line_reconstructedAddr <= cached_base_address;
-        line_reconstructedAddr(line_address_part_msb downto line_address_part_lsb) <= std_logic_vector(to_unsigned(line_address, line_address_part_msb - line_address_part_lsb + 1));
+        line_reconstructedAddr(index_part_msb downto index_part_lsb) <= std_logic_vector(to_unsigned(line_address, index_part_msb - index_part_lsb + 1));
         line_reconstructedAddr(tag_part_msb downto tag_part_lsb) <= line_address_cachedTag;
     end process;
 
     cache_bank : process(clk, addressIn)
-        variable lineAddress : natural range 0 to word_count - 1;
-        variable data_bank : riscv32_data_array(0 to word_count - 1);
-        variable tag_bank : tag_array;
-        variable valid_bank : boolean_vector(0 to word_count - 1) := (others => false);
-        variable dirty_bank : boolean_vector(0 to word_count - 1) := (others => false);
+        variable lineAddress : natural range 0 to line_count - 1;
+        variable data_bank : riscv32_data_array(0 to line_count - 1);
+        variable tag_bank : tag_type_array;
+        variable valid_bank : boolean_vector(0 to line_count - 1) := (others => false);
+        variable dirty_bank : boolean_vector(0 to line_count - 1) := (others => false);
         variable byte_lsb : natural;
         variable byte_msb : natural;
-        variable tag : std_logic_vector(tag_size - 1 downto 0);
+        variable tag : tag_type;
     begin
-        lineAddress := to_integer(unsigned(addressIn(line_address_part_msb downto line_address_part_lsb)));
+        lineAddress := to_integer(unsigned(addressIn(index_part_msb downto index_part_lsb)));
         tag := addressIn(tag_part_msb downto tag_part_lsb);
         if rising_edge(clk) then
-
             line_address_cachedTag <= tag_bank(line_address);
             line_dataOut <= data_bank(line_address);
             line_dirty <= dirty_bank(line_address);
