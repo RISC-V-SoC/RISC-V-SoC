@@ -34,6 +34,8 @@ package riscv32_pkg is
     type riscv32_immidiate_type is (riscv32_i_immidiate, riscv32_u_immidiate, riscv32_b_immidiate, riscv32_s_immidiate);
     type riscv32_exec_type is (riscv32_exec_alu_imm, riscv32_exec_alu_rtype, riscv32_exec_calcReturn, riscv32_exec_lui, riscv32_exec_auipc, riscv32_exec_muldiv);
     type riscv32_alu_cmd is (cmd_alu_add, cmd_alu_slt, cmd_alu_sltu, cmd_alu_and, cmd_alu_or, cmd_alu_xor, cmd_alu_sub, cmd_alu_sll, cmd_alu_srl, cmd_alu_sra);
+    type riscv32_f32_cmd is (f32_cmd_add, f32_cmd_sub, f32_cmd_mul, f32_cmd_div, f32_cmd_sqrt, f32_cmd_min, f32_cmd_max, f32_cmd_madd, f32_cmd_msub_f32_cmd_nmadd, f32_cmd_nmsub, f32_cmd_itof, f32_cmd_ftoi, f32_cmd_utof, f32_cmd_ftou);
+    type riscv32_f32_rounding_mode is (f32_rounding_rne, f32_rounding_rtz, f32_rounding_rdn, f32_rounding_rup, f32_rounding_rmm, f32_rounding_dyn);
     type riscv32_branch_cmd is (cmd_branch_eq, cmd_branch_ne, cmd_branch_lt, cmd_branch_ltu, cmd_branch_ge, cmd_branch_geu, cmd_branch_jalr);
     type riscv32_csr_cmd is (csr_rw, csr_rs, csr_rc);
     type riscv32_pipeline_exception_type is (exception_none, exception_sync, exception_async, exception_return);
@@ -122,6 +124,14 @@ package riscv32_pkg is
         interrupted_pc : riscv32_address_type;
     end record;
 
+    type riscv32_f32_exception_flags is record
+        invalid_operation : boolean;
+        divide_by_zero : boolean;
+        overflow : boolean;
+        underflow : boolean;
+        inexact : boolean;
+    end record;
+
     constant riscv32_registerControlWordAllFalse : riscv32_RegisterControlWord_type := (
         no_dependencies => false,
         ignore_rs2_dependencies => false
@@ -166,6 +176,14 @@ package riscv32_pkg is
         exception_type => exception_none,
         exception_code => 0,
         interrupted_pc => (others => '0')
+    );
+
+    constant riscv32_f32_exception_flags_default: riscv32_f32_exception_flags := (
+        invalid_operation => false,
+        divide_by_zero => false,
+        overflow => false,
+        underflow => false,
+        inexact => false
     );
 
     -- The nop is addi x0,x0,0
