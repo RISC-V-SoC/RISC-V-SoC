@@ -39,7 +39,9 @@ entity riscv32_processor is
         flush_busy : in boolean_vector(external_memory_count - 1 downto 0) := (others => false);
 
         machine_level_external_interrupt_pending : in boolean;
-        machine_level_timer_interrupt_pending : in boolean
+        machine_level_timer_interrupt_pending : in boolean;
+
+        mtime_in : in unsigned(63 downto 0)
     );
 end entity;
 
@@ -90,7 +92,6 @@ architecture behaviourial of riscv32_processor is
     signal csr_to_pipeline : riscv32_from_csr_type;
 
     signal cycleCounter_value : unsigned(63 downto 0);
-    signal systemtimer_value : unsigned(63 downto 0);
     signal instructionsRetired_value : unsigned(63 downto 0);
 
     signal demux2user_readonly : riscv32_csr_mst2slv_type;
@@ -277,16 +278,6 @@ begin
         machine_level_software_interrupt_enabled => false
     );
 
-    systemtimer : entity work.riscv32_systemtimer
-    generic map (
-        clk_period => clk_period,
-        timer_period => 1 us
-    ) port map (
-        clk => clk,
-        reset => rst,
-        value => systemtimer_value
-    );
-
     cycleCounter : entity work.riscv32_cycleCounter
     port map (
         clk => clk,
@@ -314,7 +305,7 @@ begin
     csr_user_readonly : entity work.riscv32_csr_user_readonly
     port map (
         cycleCounter_value => cycleCounter_value,
-        systemtimer_value => systemtimer_value,
+        systemtimer_value => mtime_in,
         instructionsRetired_value => instructionsRetired_value,
         mst2slv => demux2user_readonly,
         slv2mst => user_readonly2demux

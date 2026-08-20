@@ -152,6 +152,7 @@ architecture Behavioral of main_file is
     signal l2cache_flush_busy : boolean;
 
     signal mtime_interrupt_pending : boolean;
+    signal mtime_value : unsigned(63 downto 0);
 
     signal spi_interrupt_set : boolean_vector(1 downto 0);
     signal plic_interrupt_pending : boolean;
@@ -197,7 +198,8 @@ begin
         do_flush(0) => l2cache_do_flush,
         flush_busy(0) => l2cache_flush_busy,
         machine_level_external_interrupt_pending => plic_interrupt_pending,
-        machine_level_timer_interrupt_pending => mtime_interrupt_pending
+        machine_level_timer_interrupt_pending => mtime_interrupt_pending,
+        mtime_in => mtime_value
     );
 
     arbiter : entity work.bus_arbiter
@@ -293,7 +295,8 @@ begin
         reset => mtime_reset,
         timer_interrupt_pending => mtime_interrupt_pending,
         mst2slv => demux2mtime,
-        slv2mst => mtime2demux
+        slv2mst => mtime2demux,
+        timer_value => mtime_value
     );
 
     bus_cache : entity work.bus_cache

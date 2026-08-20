@@ -17,7 +17,9 @@ entity timer_register is
         timer_interrupt_pending : out boolean;
 
         mst2slv : in bus_pkg.bus_mst2slv_type;
-        slv2mst : out bus_pkg.bus_slv2mst_type
+        slv2mst : out bus_pkg.bus_slv2mst_type;
+
+        timer_value : out unsigned(63 downto 0)
     );
 end entity;
 
@@ -39,6 +41,7 @@ architecture behaviourial of timer_register is
 begin
     slv2mst <= slv2mst_buf;
     timer_interrupt_pending <= mtime >= mtimecmp;
+    timer_value <= mtime;
 
     process (clk)
         variable slv2mst_tmp : bus_pkg.bus_slv2mst_type := bus_pkg.BUS_SLV2MST_IDLE;

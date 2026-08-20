@@ -410,7 +410,8 @@ begin
         slv2memory => arbiter2memory,
         reset_request => reset_request,
         machine_level_external_interrupt_pending => machine_level_external_interrupt_pending,
-        machine_level_timer_interrupt_pending => machine_level_timer_interrupt_pending
+        machine_level_timer_interrupt_pending => machine_level_timer_interrupt_pending,
+        mtime_in => (others => '0')
     );
 
     arbiter : entity src.bus_arbiter
