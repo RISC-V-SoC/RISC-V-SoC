@@ -29,6 +29,9 @@ tb_library.add_source_files(SRC_PATH / "triple_23lc1024_controller"/ "test" / "*
 src_library.add_source_files(SRC_PATH / "common" / "*.vhd")
 tb_library.add_source_files(SRC_PATH / "common" / "test" / "*.vhd")
 
+src_library.add_source_files(SRC_PATH / "debug_module" / "*.vhd")
+tb_library.add_source_files(SRC_PATH / "debug_module" / "test" / "*.vhd")
+
 src_library.add_source_files(SRC_PATH / "uart_bus_master" / "*.vhd")
 tb_library.add_source_files(SRC_PATH / "uart_bus_master" / "test" / "*.vhd")
 
