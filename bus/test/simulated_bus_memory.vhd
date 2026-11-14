@@ -20,6 +20,7 @@ entity simulated_bus_memory is
         constant actor : actor_t;
         constant read_delay : natural := 0;
         constant write_delay : natural := 0;
+        constant fault_delay : natural := 0;
         constant logger : logger_t := get_logger("simulated_bus_memory");
         constant checker : checker_t := new_checker("simulated_bus_memory checker")
     );
@@ -38,6 +39,7 @@ architecture behavioral of simulated_bus_memory is
 
     signal read_delay_left : natural := read_delay;
     signal write_delay_left : natural := write_delay;
+    signal fault_delay_left : natural := fault_delay;
     signal mem2mst_internal : bus_slv2mst_type;
 
     signal vcom_request_write : std_logic := '0';
@@ -90,29 +92,36 @@ begin
         end if;
     end process;
 
-    bus_output_handling : process(mst2mem, read_delay_left, write_delay_left)
+    bus_output_handling : process(mst2mem, read_delay_left, write_delay_left, fault_delay_left)
         variable address : natural;
+        variable has_fault : boolean := false;
     begin
         mem2mst_internal <= BUS_SLV2MST_IDLE;
         if bus_requesting(mst2mem) then
             -- Check for faults
             address := to_integer(unsigned(mst2mem.address));
             if not(allow_unaligned_access or bus_addr_is_aligned_to_bus(mst2mem.address)) then
-                mem2mst_internal.fault <= '1';
+                has_fault := true;
                 mem2mst_internal.faultData <= bus_fault_unaligned_access;
             elsif address > ram'high then
-                mem2mst_internal.fault <= '1';
+                has_fault := true;
                 mem2mst_internal.faultData <= bus_fault_address_out_of_range;
+            else
+                has_fault := false;
             end if;
 
-            if mem2mst_internal.fault = '1' then
+            if has_fault and fault_delay_left = 0 then
+                mem2mst_internal.fault <= '1';
                 info(logger, "Fault transaction for address " & to_hstring(mst2mem.address) & " fault is " & to_hstring(mem2mst_internal.faultData));
-            end if;
-
-            if mst2mem.readReady = '1' and read_delay_left = 0 then
+            elsif has_fault then
+                -- pass
+            elsif mst2mem.readReady = '1' and read_delay_left = 0 then
                 mem2mst_internal.valid <= true;
+                mem2mst_internal.readData <= (others => '-');
                 for i in 0 to bus_bytes_per_word - 1 loop
-                    mem2mst_internal.readData((i+1)*bus_byte_type'length - 1 downto i*bus_byte_type'length) <= ram(address + i);
+                    if mst2mem.byteMask(i) = '1' then
+                        mem2mst_internal.readData((i+1)*bus_byte_type'length - 1 downto i*bus_byte_type'length) <= ram(address + i);
+                    end if;
                 end loop;
             elsif mst2mem.writeReady = '1' and write_delay_left = 0 then
                 mem2mst_internal.valid <= true;
@@ -130,11 +139,15 @@ begin
                 if write_delay_left > 0 then
                     write_delay_left <= write_delay_left - 1;
                 end if;
+                if fault_delay_left > 0 then
+                    fault_delay_left <= fault_delay_left - 1;
+                end if;
             end if;
 
             if any_transaction(mst2mem, mem2mst_internal) then
                 write_delay_left <= write_delay;
                 read_delay_left <= read_delay;
+                fault_delay_left <= fault_delay;
             end if;
         end if;
     end process;
