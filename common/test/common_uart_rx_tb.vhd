@@ -8,12 +8,12 @@ context vunit_lib.vc_context;
 
 library src;
 
-entity uart_bus_slave_reader_tb is
+entity common_uart_rx_tb is
     generic (
         runner_cfg : string);
 end entity;
 
-architecture tb of uart_bus_slave_reader_tb is
+architecture tb of common_uart_rx_tb is
     constant uart_master_bfm : uart_master_t := new_uart_master(initial_baud_rate => 115200);
     constant uart_master_stream : stream_master_t := as_stream(uart_master_bfm);
     constant clk_period : time := 20 ns;
@@ -69,7 +69,7 @@ begin
         end if;
     end process;
 
-    uart_bus_slave_reader : entity src.uart_bus_slave_reader
+    common_uart_rx : entity src.common_uart_rx
     port map (
         clk => clk,
         reset => reset,

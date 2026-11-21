@@ -30,26 +30,22 @@ architecture behavioral of uart_bus_slave is
     signal handle_bus_request : boolean := false;
 
     -- tx_queue_signals
-    signal tx_queue_data_in : std_logic_vector(7 downto 0) := (others => '0');
-    signal tx_queue_push_data : boolean := false;
-    signal tx_queue_data_out : std_logic_vector(7 downto 0);
-    signal tx_queue_pop_data : boolean;
-    signal tx_queue_empty : boolean;
-    signal tx_queue_count : natural range 0 to 16;
     signal tx_queue_count_converted : std_logic_vector(15 downto 0);
-
-    -- rx_queue_signals
-    signal rx_queue_data_in : std_logic_vector(7 downto 0);
-    signal rx_queue_push_data : boolean;
-    signal rx_queue_data_out : std_logic_vector(7 downto 0);
-    signal rx_queue_pop_data : boolean := false;
-    signal rx_queue_empty : boolean;
-    signal rx_queue_count : natural range 0 to 16;
     signal rx_queue_count_converted : std_logic_vector(15 downto 0);
-begin
 
-    tx_queue_count_converted <= std_logic_vector(to_unsigned(tx_queue_count, tx_queue_count_converted'length));
-    rx_queue_count_converted <= std_logic_vector(to_unsigned(rx_queue_count, rx_queue_count_converted'length));
+    -- receive data
+    signal receive_data : std_ulogic_vector(7 downto 0);
+    signal receive_data_pop : boolean;
+    signal receive_fifo_count : natural range 0 to 16;
+
+    -- transmit data
+    signal transmit_data : std_ulogic_vector(7 downto 0);
+    signal transmit_data_push : boolean;
+    signal transmit_fifo_count : natural range 0 to 16;
+
+begin
+    tx_queue_count_converted <= std_logic_vector(to_unsigned(transmit_fifo_count, tx_queue_count_converted'length));
+    rx_queue_count_converted <= std_logic_vector(to_unsigned(receive_fifo_count, rx_queue_count_converted'length));
     slv2mst <= slv2mst_buf;
 
     bus_request_handler : process(clk)
@@ -58,8 +54,8 @@ begin
        variable data_byte : std_logic_vector(7 downto 0);
     begin
         if rising_edge(clk) then
-            tx_queue_push_data <= false;
-            rx_queue_pop_data <= false;
+            transmit_data_push <= false;
+            receive_data_pop <= false;
             if reset then
                 tx_reset_internal <= true;
                 rx_reset_internal <= true;
@@ -72,8 +68,8 @@ begin
                     data_byte := mst2slv.writeData(i*8 + 7 downto i*8);
                     if mst2slv.byteMask(i) = '1' then
                         if address + i = 0 and mst2slv.writeReady = '1' then
-                            tx_queue_push_data <= true;
-                            tx_queue_data_in <= data_byte;
+                            transmit_data_push <= true;
+                            transmit_data <= data_byte;
                         end if;
 
                         if address + i = 1 then
@@ -85,8 +81,8 @@ begin
                         end if;
 
                         if address + i = 2 and mst2slv.readReady = '1' then
-                            rx_queue_pop_data <= true;
-                            slv2mst_internal.readData(i*8 + 7 downto i*8) <= rx_queue_data_out;
+                            receive_data_pop <= true;
+                            slv2mst_internal.readData(i*8 + 7 downto i*8) <= receive_data;
                         end if;
 
                         if address + i = 3 then
@@ -145,56 +141,23 @@ begin
         end if;
     end process;
 
-    uart_bus_slave_writer : entity work.uart_bus_slave_writer
-    port map (
+    common_fifo_uart : entity work.common_fifo_uart
+    generic map (
+        receive_fifo_depth_log2b => 4,
+        transmit_fifo_depth_log2b => 4
+    ) port map (
         clk => clk,
-        reset => tx_reset_internal,
-        half_baud_clk_ticks => '0' & baud_clk_ticks(31 downto 1),
-        tx => tx,
-        data_in => tx_queue_data_out,
-        data_available => not tx_queue_empty,
-        data_pop => tx_queue_pop_data
-    );
-
-    uart_bus_slave_reader : entity work.uart_bus_slave_reader
-    port map (
-        clk => clk,
-        reset => rx_reset_internal,
-        half_baud_clk_ticks => '0' & baud_clk_ticks(31 downto 1),
+        reset => reset,
         rx => rx,
-        data_out => rx_queue_data_in,
-        data_ready => rx_queue_push_data
-    );
-
-    tx_queue : entity work.generic_fifo
-    generic map (
-        depth_log2b => 4,
-        word_size_log2b => 3
-    )
-    port map (
-        clk => clk,
-        reset => tx_reset_internal,
-        empty => tx_queue_empty,
-        data_in => tx_queue_data_in,
-        push_data => tx_queue_push_data,
-        data_out => tx_queue_data_out,
-        pop_data => tx_queue_pop_data,
-        count => tx_queue_count
-    );
-
-    rx_queue : entity work.generic_fifo
-    generic map (
-        depth_log2b => 4,
-        word_size_log2b => 3
-    )
-    port map (
-        clk => clk,
-        reset => rx_reset_internal,
-        empty => rx_queue_empty,
-        data_in => rx_queue_data_in,
-        push_data => rx_queue_push_data,
-        data_out => rx_queue_data_out,
-        pop_data => rx_queue_pop_data,
-        count => rx_queue_count
+        tx => tx,
+        baud_clk_ticks => baud_clk_ticks,
+        rx_enabled => not rx_reset_internal,
+        tx_enabled => not tx_reset_internal,
+        receive_data => receive_data,
+        receive_data_pop => receive_data_pop,
+        receive_fifo_count => receive_fifo_count,
+        transmit_data => transmit_data,
+        transmit_data_push => transmit_data_push,
+        transmit_fifo_count => transmit_fifo_count
     );
 end architecture;

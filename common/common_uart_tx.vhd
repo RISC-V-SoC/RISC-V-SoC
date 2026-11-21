@@ -2,13 +2,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity uart_bus_slave_writer is
+entity common_uart_tx is
     port (
         clk : in std_logic;
         reset : in boolean;
 
         half_baud_clk_ticks : in unsigned(31 downto 0);
-        
+
         tx : out std_logic;
         data_in : in std_logic_vector(7 downto 0);
         data_available : in boolean;
@@ -16,7 +16,7 @@ entity uart_bus_slave_writer is
     );
 end entity;
 
-architecture behavioral of uart_bus_slave_writer is
+architecture behavioral of common_uart_tx is
     signal timer_reset : boolean;
     signal timer_done : boolean;
 begin
@@ -85,7 +85,7 @@ begin
         timer_reset <= timer_reset_buf;
         tx <= tx_buf;
     end process;
-    
+
     configurable_timer : entity work.configurable_multishot_timer
     port map (
         clk => clk,

@@ -8,12 +8,12 @@ context vunit_lib.vc_context;
 
 library src;
 
-entity uart_bus_slave_writer_tb is
+entity common_uart_tx_tb is
     generic (
         runner_cfg : string);
 end entity;
 
-architecture tb of uart_bus_slave_writer_tb is
+architecture tb of common_uart_tx_tb is
     constant uart_slave_bfm : uart_slave_t := new_uart_slave(initial_baud_rate => 115200);
     constant uart_slave_stream : stream_slave_t := as_stream(uart_slave_bfm);
     constant clk_period : time := 20 ns;
@@ -76,7 +76,7 @@ begin
 
     test_runner_watchdog(runner, 1 ms);
 
-    uart_bus_slave_writer : entity src.uart_bus_slave_writer
+    common_uart_tx : entity src.common_uart_tx
     port map (
         clk => clk,
         reset => reset,
